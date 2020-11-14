@@ -136,6 +136,122 @@ def loadXmlUi(fileName, parent):
     # load UI
     PyQt5.uic.loadUi(fileName, parent)
 
+def buildIcon(icons):
+    """Return a QIcon from given icons"""
+    if isinstance(icons, QIcon):
+        return icons
+    elif isinstance(icons, list) and len(icons)>0:
+        returned = QIcon()
+        for icon in icons:
+            returned.addPixmap(*icon)
+        return returned
+    else:
+        raise EInvalidType("Given `icons` must be a list of tuples")
+
+def buildQAction(icons, title, parent):
+    """Build a QAction and store icons resource path as properties
+
+    Tricky method to be able to reload icons on the fly when theme is modified
+    """
+    pixmapList=[]
+    propertyList=[]
+    for icon in icons:
+        if isinstance(icon[0], QPixmap):
+            pixmapListItem=[icon[0]]
+            propertyListPath=''
+        elif isinstance(icon[0], str):
+            pixmapListItem=[QPixmap(icon[0])]
+            propertyListPath=icon[0]
+
+        for index in range(1,3):
+            if index == 1:
+                if len(icon) >= 2:
+                    pixmapListItem.append(icon[index])
+                else:
+                    pixmapListItem.append(QIcon.Normal)
+            elif index == 2:
+                if len(icon) >= 3:
+                    pixmapListItem.append(icon[index])
+                else:
+                    pixmapListItem.append(QIcon.Off)
+
+        pixmapList.append(tuple(pixmapListItem))
+
+        key = '__bcIcon_'
+        if pixmapListItem[1]==QIcon.Normal:
+            key+='normal'
+        elif pixmapListItem[1]==QIcon.Active:
+            key+='active'
+        elif pixmapListItem[1]==QIcon.Disabled:
+            key+='disabled'
+        elif pixmapListItem[1]==QIcon.Selected:
+            key+='selected'
+        if pixmapListItem[2]==QIcon.Off:
+            key+='off'
+        else:
+            key+='on'
+
+        propertyList.append( (key, propertyListPath) )
+
+    returnedAction=QAction(buildIcon(pixmapList), title, parent)
+
+    for property in propertyList:
+        returnedAction.setProperty(*property)
+
+    return returnedAction
+
+def buildQMenu(icons, title, parent):
+    """Build a QMenu and store icons resource path as properties
+
+    Tricky method to be able to reload icons on the fly when theme is modified
+    """
+    pixmapList=[]
+    propertyList=[]
+    for icon in icons:
+        if isinstance(icon[0], QPixmap):
+            pixmapListItem=[icon[0]]
+            propertyListPath=''
+        elif isinstance(icon[0], str):
+            pixmapListItem=[QPixmap(icon[0])]
+            propertyListPath=icon[0]
+
+        for index in range(1,3):
+            if index == 1:
+                if len(icon) >= 2:
+                    pixmapListItem.append(icon[index])
+                else:
+                    pixmapListItem.append(QIcon.Normal)
+            elif index == 2:
+                if len(icon) >= 3:
+                    pixmapListItem.append(icon[index])
+                else:
+                    pixmapListItem.append(QIcon.Off)
+
+        pixmapList.append(tuple(pixmapListItem))
+
+        key = '__bcIcon_'
+        if pixmapListItem[1]==QIcon.Normal:
+            key+='normal'
+        elif pixmapListItem[1]==QIcon.Active:
+            key+='active'
+        elif pixmapListItem[1]==QIcon.Disabled:
+            key+='disabled'
+        elif pixmapListItem[1]==QIcon.Selected:
+            key+='selected'
+        if pixmapListItem[2]==QIcon.Off:
+            key+='off'
+        else:
+            key+='on'
+
+        propertyList.append( (key, propertyListPath) )
+
+    returnedMenu=QMenu(title, parent)
+    returnedMenu.setIcon(buildIcon(pixmapList))
+
+    for property in propertyList:
+        returnedMenu.setProperty(*property)
+
+    return returnedMenu
 
 # ------------------------------------------------------------------------------
 

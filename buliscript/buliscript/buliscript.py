@@ -47,6 +47,8 @@ if __name__ != '__main__':
             EInvalidValue,
             PkTk
         )
+
+    from .bs.bsuicontroller import BSUIController
     from .bs.bsutils import checkKritaVersion
 else:
     # Execution from 'Scripter' plugin?
@@ -68,6 +70,8 @@ else:
             EInvalidValue,
             PkTk
         )
+
+    from buliscript.bs.bsuicontroller import BSUIController
     from buliscript.bs.bsutils import checkKritaVersion
 
     print("======================================")
@@ -93,9 +97,36 @@ class BuliScript(Extension):
         self.__isKritaVersionOk = checkKritaVersion(*REQUIRED_KRITA_VERSION)
 
 
+    def __initUiController(self, kritaIsStarting=False):
+        """Initialise UI controller
+
+        `kritaIsStarting` set to True if UiConbtroller is intialised during Krita's startup,
+        otherwise set to False (initialised on first manual execution)
+        """
+        try:
+            Krita.instance().notifier().applicationClosing.disconnect()
+        except Exception as e:
+            pass
+
+        if self.__uiController is None:
+            # no controller, create it
+            # (otherwise, with Krita 5.0.0, can be triggered more than once time - on each new window)
+            self.__uiController = BSUIController(PLUGIN_MENU_ENTRY, PLUGIN_VERSION, kritaIsStarting)
+
+
     def setup(self):
         """Is executed at Krita's startup"""
-        pass
+        @pyqtSlot()
+        def windowCreated():
+            # the best place to initialise controller (just after main window is created)
+            self.__initUiController(True)
+
+        if not self.__isKritaVersionOk:
+            return
+
+        if checkKritaVersion(5,0,0):
+            # windowCreated signal has been implemented with krita 5.0.0
+            Krita.instance().notifier().windowCreated.connect(windowCreated)
 
 
     def createActions(self, window):
@@ -114,8 +145,10 @@ class BuliScript(Extension):
                                     )
             return
 
-        #BSMainWindow(PLUGIN_MENU_ENTRY, PLUGIN_VERSION)
-        print('--Started--')
+        if self.__uiController is None:
+            # with krita 5.0.0, might be created at krita startup
+            self.__initUiController(False)
+        self.__uiController.start()
 
 if __PLUGIN_EXEC_FROM__ == 'SCRIPTER_PLUGIN':
     sys.stdout = sys.__stdout__
