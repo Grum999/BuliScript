@@ -29,6 +29,10 @@ from PyQt5.QtWidgets import (
         QWidget,
         QPlainTextEdit
     )
+from .bssyntaxhighlighter import BSSyntaxHighlighter
+from .bslanguagedef import (
+        BSLanguageDef
+    )
 
 
 class BSColorProp:
@@ -58,12 +62,26 @@ class BSWCodeEditor(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.__highlightCurrentLine)
 
         # define editor properties
-        self.__colorGutter=BSColorProp(QColor('#000000'), QColor('#cccccc'))
-        self.__colorHighlightedLine=BSColorProp(QColor('#000000'), QColor('#66ffffaa'))
+        self.__colorGutter=BSColorProp(QColor('#4c5363'), QColor('#282c34'))
+        self.__colorHighlightedLine=BSColorProp(QColor('#000000'), QColor('#2d323c'))
+
+        font = QFont()
+        font.setFamily("Monospace")
+        font.setFixedPitch(True)
+        font.setPointSize(10)
+        self.setFont(font)
+
+        palette = self.palette()
+        palette.setColor(QPalette.Active, QPalette.Base, QColor('#282c34'))
+        palette.setColor(QPalette.Inactive, QPalette.Base, QColor('#282c34'))
+
+
+        self.__highlighter = BSSyntaxHighlighter(self.document(), BSLanguageDef())
 
         # default values
         self.__updateLineNumberAreaWidth()
         self.__highlightCurrentLine()
+
 
     def __updateLineNumberAreaWidth(self, dummy=None):
         """Called on signal blockCountChanged()
@@ -165,7 +183,8 @@ class BSWCodeEditor(QPlainTextEdit):
         XXXX lines => 4 digits
         ...
         """
-        digits = 1
+        # start with 2digits (always have space for one digit more)
+        digits = 2
         maxBlock = max(1, self.blockCount())
         while maxBlock >= 10:
             maxBlock /= 10
@@ -173,7 +192,6 @@ class BSWCodeEditor(QPlainTextEdit):
 
         # width = (witdh for digit '9') * (number of digits) + 3pixels
         return 3 + self.fontMetrics().width('9') * digits
-
 
 
 class BSWLineNumberArea(QWidget):
