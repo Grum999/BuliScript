@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="buli">
+    <file alias="buli-rounded-border">png/buli-powered-64x64-rounded-border.png</file>
+  </qresource>
+  <qresource prefix="images"/>
+  <qresource prefix="images_d"/>
+</RCC>

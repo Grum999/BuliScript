@@ -80,6 +80,11 @@
             <attribute name="title">
              <string>Tab 1</string>
             </attribute>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="BSWCodeEditor" name="plainTextEdit"/>
+             </item>
+            </layout>
            </widget>
            <widget class="QWidget" name="tab_2">
             <attribute name="title">
@@ -394,6 +399,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>BSWCodeEditor</class>
+   <extends>QPlainTextEdit</extends>
+   <header>buliscript.bs.bswcodeeditor</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
