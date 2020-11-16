@@ -60,5 +60,4 @@ class BSSyntaxHighlighter(QSyntaxHighlighter):
         #        position=match.capturedEnd(index)
 
         while not (token:=tokens.next()) is None:
-            print(token)
             self.setFormat(token.positionStart(), token.length(), token.style())

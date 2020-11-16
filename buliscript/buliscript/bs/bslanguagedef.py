@@ -58,15 +58,40 @@ class BSLanguageRule:
 
 class BSLanguageToken:
     """A token"""
+    __LINE_NUMBER = 0
+    __LINE_POSSTART = 0
+
+    @staticmethod
+    def resetTokenizer():
+        BSLanguageToken.__LINE_NUMBER = 1
+        BSLanguageToken.__LINE_POSSTART = 0
+
     def __init__(self, text, rule, positionStart, positionEnd, length):
-        self.__text = text
+        self.__text = text.lstrip()
         self.__rule = rule
         self.__positionStart=positionStart
         self.__positionEnd=positionEnd
         self.__length=length
+        self.__lineNumber=BSLanguageToken.__LINE_NUMBER
+        self.__linePositionStart=(positionStart - BSLanguageToken.__LINE_POSSTART)+1
+        self.__linePositionEnd=self.__linePositionStart + length
+
+        if self.__rule.familly()==BSLanguageDef.TOKEN_SPACE_NL:
+            self.__indent=0
+            BSLanguageToken.__LINE_NUMBER+=1
+            BSLanguageToken.__LINE_POSSTART=positionEnd
+        else:
+            self.__indent=len(text) - len(self.__text)
 
     def __repr__(self):
-        return f"<BSLanguageToken('{self.__text}', {self.type()}, {self.familly()}, {self.__positionStart}, {self.__positionEnd}, {self.__length})>"
+        if self.__rule.familly()==BSLanguageDef.TOKEN_SPACE_NL:
+            txt=''
+        else:
+            txt=self.__text
+        return (f"<BSLanguageToken({self.__indent}, '{txt}', Type[{self.type()}], Familly[{self.familly()}], "
+                f"Length: {self.__length}, "
+                f"Global[Start: {self.__positionStart}, End: {self.__positionEnd}], "
+                f"Line[Start: {self.__linePositionStart}, End: {self.__linePositionEnd}, Number: {self.__lineNumber}])>")
 
     def type(self):
         """return token type"""
@@ -92,6 +117,10 @@ class BSLanguageToken:
         """Return text length"""
         return self.__length
 
+    def indent(self):
+        """Return token indentation"""
+        return self.__indent
+
 
 
 class BSLanguageDef:
@@ -110,6 +139,7 @@ class BSLanguageDef:
     TOKEN_UNCOMPLETEFLOW = 11
     TOKEN_CONSTANT = 12
     TOKEN_UNKNOWN = 13
+    TOKEN_SPACE_NL = 14
 
     # define token types
     ACTION_ID_UNCOMPLETE = 'uncomplete'
@@ -175,6 +205,8 @@ class BSLanguageDef:
     TYPE_STRING = 'typeStr'
     TYPE_NUMBER = 'typeNum'
 
+    SPACE_NL = 'spNl'
+
     COMMENT = 'comment'
 
     # styles identifier
@@ -203,6 +235,8 @@ class BSLanguageDef:
         """set language rules"""
         rules = [   (r'"[^"\\]*(?:\\.[^"\\]*)*"', BSLanguageDef.TYPE_STRING),
                     (r"'[^'\\]*(?:\\.[^'\\]*)*'", BSLanguageDef.TYPE_STRING),
+
+                    (r"\n", BSLanguageDef.SPACE_NL),
 
                     (r'#[^\n]*', BSLanguageDef.COMMENT),
 
@@ -441,7 +475,7 @@ class BSLanguageDef:
             self.__rules.append(BSLanguageRule(rule[0], rule[1], self))
 
         # main regular expression use for lexer
-        self.__regEx=QRegularExpression('|'.join(regEx), QRegularExpression.CaseInsensitiveOption)
+        self.__regEx=QRegularExpression('|'.join(regEx), QRegularExpression.CaseInsensitiveOption|QRegularExpression.MultilineOption)
 
 
     def __initialiseStyles(self):
@@ -467,6 +501,7 @@ class BSLanguageDef:
                 BSLanguageDef.BRACES_ID_PARENTHESIS_OPEN: BSLanguageDef.TOKEN_BRACES,
                 BSLanguageDef.BRACES_ID_PARENTHESIS_CLOSE: BSLanguageDef.TOKEN_BRACES,
                 BSLanguageDef.SEPARATOR_ID: BSLanguageDef.TOKEN_OPERATOR,
+                BSLanguageDef.SPACE_NL: BSLanguageDef.TOKEN_SPACE_NL,
 
                 BSLanguageDef.ACTION_ID_UNCOMPLETE: BSLanguageDef.TOKEN_UNCOMPLETE,
                 BSLanguageDef.ACTION_ID_SET: BSLanguageDef.TOKEN_ACTION,
@@ -518,7 +553,8 @@ class BSLanguageDef:
                         (BSLanguageDef.TOKEN_BRACES, '#c278da', False, False),
                         (BSLanguageDef.TOKEN_CONSTANT, '#62b6c1', False, False),
                         (BSLanguageDef.TOKEN_UNCOMPLETE, '#FFFF88', False, True, '#ffb770', i18n('Action instruction is not complete')),
-                        (BSLanguageDef.TOKEN_UNKNOWN, '#880000', True, True, '#d29090')
+                        (BSLanguageDef.TOKEN_UNKNOWN, '#880000', True, True, '#d29090'),
+                        (BSLanguageDef.TOKEN_SPACE_NL, None, False, True)
                     ],
                 BSLanguageDef.STYLE_LIGHT: [
                         (BSLanguageDef.TOKEN_STRING, '#9ac07c', False, False),
@@ -534,7 +570,8 @@ class BSLanguageDef:
                         (BSLanguageDef.TOKEN_BRACES, '#c278da', False, False),
                         (BSLanguageDef.TOKEN_CONSTANT, '#62b6c1', False, False),
                         (BSLanguageDef.TOKEN_UNCOMPLETE, '#FFFF88', False, True, '#ffb770'),
-                        (BSLanguageDef.TOKEN_UNKNOWN, '#880000', True, True, '#d29090')
+                        (BSLanguageDef.TOKEN_UNKNOWN, '#880000', True, True, '#d29090'),
+                        (BSLanguageDef.TOKEN_SPACE_NL, None, False, True)
                     ]
             }
 
@@ -558,11 +595,12 @@ class BSLanguageDef:
     def setStyle(self, themeId, tokenFamilly, fgColor, bold, italic, bgColor=None, tooltip=None):
         """Define style for a token familly"""
         textFmt = QTextCharFormat()
-        textFmt.setForeground(QColor(fgColor))
         textFmt.setFontItalic(italic)
         if bold:
             textFmt.setFontWeight(QFont.Bold)
 
+        if not fgColor is None:
+            textFmt.setForeground(QColor(fgColor))
         if not bgColor is None:
             textFmt.setBackground(QColor(bgColor))
         if not tooltip is None:
@@ -605,6 +643,8 @@ class BSLanguageDef:
         Each list item is BSLanguageToken object
         """
         matchIterator = self.__regEx.globalMatch(text)
+
+        BSLanguageToken.resetTokenizer()
 
         returned=[]
         # iterate all found tokens
