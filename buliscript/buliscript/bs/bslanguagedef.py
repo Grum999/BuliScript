@@ -140,6 +140,7 @@ class BSLanguageDef:
     TOKEN_CONSTANT = 12
     TOKEN_UNKNOWN = 13
     TOKEN_SPACE_NL = 14
+    TOKEN_COLOR = 15
 
     # define token types
     ACTION_ID_UNCOMPLETE = 'uncomplete'
@@ -204,10 +205,13 @@ class BSLanguageDef:
 
     TYPE_STRING = 'typeStr'
     TYPE_NUMBER = 'typeNum'
+    TYPE_COLOR = 'typeCol'
 
     SPACE_NL = 'spNl'
 
     COMMENT = 'comment'
+
+    UNKNOWN = 'unknown'
 
     # styles identifier
     STYLE_DARK = 'dark'
@@ -238,6 +242,7 @@ class BSLanguageDef:
 
                     (r"\n", BSLanguageDef.SPACE_NL),
 
+                    (r'#(?:\b[a-f0-9]{6}\b|[a-f0-9]{8}\b)', BSLanguageDef.TYPE_COLOR),
                     (r'#[^\n]*', BSLanguageDef.COMMENT),
 
                     (r"-?(?:\d+\.\d*|\.\d+|\d+)", BSLanguageDef.TYPE_NUMBER),
@@ -466,7 +471,9 @@ class BSLanguageDef:
                     (r"\+|-|\*|//|/|%|<=|<|>=|>|!=|==|=", BSLanguageDef.OPERATORS_ID),
                     (r",|\.", BSLanguageDef.SEPARATOR_ID),
                     (r"\(", BSLanguageDef.BRACES_ID_PARENTHESIS_OPEN),
-                    (r"\)", BSLanguageDef.BRACES_ID_PARENTHESIS_CLOSE)
+                    (r"\)", BSLanguageDef.BRACES_ID_PARENTHESIS_CLOSE),
+
+                    (r"[^\s]+", BSLanguageDef.UNKNOWN)
                 ]
 
         regEx=[]
@@ -484,6 +491,7 @@ class BSLanguageDef:
                 BSLanguageDef.COMMENT: BSLanguageDef.TOKEN_COMMENT,
                 BSLanguageDef.TYPE_STRING: BSLanguageDef.TOKEN_STRING,
                 BSLanguageDef.TYPE_NUMBER: BSLanguageDef.TOKEN_NUMBER,
+                BSLanguageDef.TYPE_COLOR: BSLanguageDef.TOKEN_COLOR,
                 BSLanguageDef.CONSTANT_ID_SETONOFF: BSLanguageDef.TOKEN_CONSTANT,
                 BSLanguageDef.CONSTANT_ID_SETUNITCOORD: BSLanguageDef.TOKEN_CONSTANT,
                 BSLanguageDef.CONSTANT_ID_SETUNITROT: BSLanguageDef.TOKEN_CONSTANT,
@@ -533,7 +541,9 @@ class BSLanguageDef:
 
                 BSLanguageDef.FUNCTION_ID_MATH: BSLanguageDef.TOKEN_FUNCTION,
                 BSLanguageDef.FUNCTION_ID_STR: BSLanguageDef.TOKEN_FUNCTION,
-                BSLanguageDef.FUNCTION_ID_COLOR: BSLanguageDef.TOKEN_FUNCTION
+                BSLanguageDef.FUNCTION_ID_COLOR: BSLanguageDef.TOKEN_FUNCTION,
+
+                BSLanguageDef.UNKNOWN: BSLanguageDef.TOKEN_UNKNOWN
             }
 
         self.__tokenStyles = {}
@@ -542,6 +552,7 @@ class BSLanguageDef:
                 BSLanguageDef.STYLE_DARK: [
                         (BSLanguageDef.TOKEN_STRING, '#9ac07c', False, False),
                         (BSLanguageDef.TOKEN_NUMBER, '#c9986a', False, False),
+                        (BSLanguageDef.TOKEN_COLOR, '#c9986a', False, False),
                         (BSLanguageDef.TOKEN_COMMENT, '#5d636f', False, True),
                         (BSLanguageDef.TOKEN_ACTION, '#FFFF00', True, False),
                         (BSLanguageDef.TOKEN_FLOW, '#c278da', True, False),
@@ -559,6 +570,7 @@ class BSLanguageDef:
                 BSLanguageDef.STYLE_LIGHT: [
                         (BSLanguageDef.TOKEN_STRING, '#9ac07c', False, False),
                         (BSLanguageDef.TOKEN_NUMBER, '#c9986a', False, False),
+                        (BSLanguageDef.TOKEN_COLOR, '#c9986a', False, False),
                         (BSLanguageDef.TOKEN_COMMENT, '#5d636f', False, True),
                         (BSLanguageDef.TOKEN_ACTION, '#FFFF00', True, False),
                         (BSLanguageDef.TOKEN_FLOW, '#c278da', True, False),
