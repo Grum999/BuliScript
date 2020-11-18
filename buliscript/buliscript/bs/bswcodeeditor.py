@@ -59,6 +59,7 @@ class BSWCodeEditor(QPlainTextEdit):
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
     KEY_TOGGLE_COMMENT = 'toggleComment'
+    KEY_AUTOINDENT = 'autoIndent'
 
     CTRL_KEY_TRUE = True
     CTRL_KEY_FALSE = False
@@ -89,6 +90,9 @@ class BSWCodeEditor(QPlainTextEdit):
                 },
             Qt.Key_Slash: {
                     BSWCodeEditor.CTRL_KEY_TRUE: BSWCodeEditor.KEY_TOGGLE_COMMENT
+                },
+            Qt.Key_Return: {
+                    BSWCodeEditor.CTRL_KEY_FALSE: BSWCodeEditor.KEY_AUTOINDENT
                 }
         }
 
@@ -294,6 +298,8 @@ class BSWCodeEditor(QPlainTextEdit):
             self.dedent()
         elif action == BSWCodeEditor.KEY_TOGGLE_COMMENT:
             self.toggleComment()
+        elif action == BSWCodeEditor.KEY_AUTOINDENT:
+            self.autoIndent()
 
 
     def shortCut(self, key, modifiers):
@@ -354,6 +360,46 @@ class BSWCodeEditor(QPlainTextEdit):
                 raise EInvalidType("Given `value`must be an integer greater than 0")
         else:
             raise EInvalidType("Given `value`must be an integer greater than 0")
+
+
+    def autoIndent(self):
+        """Indent current line to match indent of previous line
+
+        if no previous exists, then, no indent...
+        """
+
+        cursor = self.textCursor()
+
+        selectionStart = cursor.selectionStart()
+        selectionEnd = cursor.selectionEnd()
+
+        # determinate block numbers
+        cursor.setPosition(selectionStart)
+        startBlock = cursor.blockNumber()
+
+        cursor.setPosition(selectionEnd)
+        endBlock = cursor.blockNumber()
+
+        cursor.movePosition(QTextCursor.Start)
+
+        indentSize=0
+        if startBlock>0:
+            cursor.movePosition(QTextCursor.NextBlock, n=startBlock-1)
+            # calculate indentation of previous block
+            indentSize=len(cursor.block().text()) - len(cursor.block().text().lstrip())
+            cursor.movePosition(QTextCursor.NextBlock)
+        else:
+            cursor.movePosition(QTextCursor.NextBlock, n=startBlock)
+
+        # determinate if spaces have to be added or removed
+        nbChar=indentSize - (len(cursor.block().text()) - len(cursor.block().text().lstrip()))
+
+        cursor.movePosition(QTextCursor.StartOfLine)
+        if nbChar > 0:
+            cursor.insertText(" " * nbChar)
+        else:
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, -nbChar)
+            cursor.removeSelectedText()
 
 
     def indent(self):
