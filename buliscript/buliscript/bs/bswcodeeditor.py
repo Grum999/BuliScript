@@ -80,6 +80,14 @@ class BSWCodeEditor(QPlainTextEdit):
         self.__colorHighlightedLine=BSColorProp(QColor('#000000'), QColor('#2d323c'))
         self.__indentWidth=4
 
+        self.__rightLimitVisible=True
+        self.__rightLimitPosition=80
+        self.__rightLimitColor=QColor('#88555555')
+
+        self.__spacesVisible=True
+        self.__spaceColor=QColor("#88666666")
+
+
         self.__shortCuts={
             Qt.Key_Tab: {
                     BSWCodeEditor.CTRL_KEY_FALSE: BSWCodeEditor.KEY_INDENT
@@ -262,6 +270,98 @@ class BSWCodeEditor(QPlainTextEdit):
             super(BSWCodeEditor, self).keyPressEvent(event)
 
         self.doAction(action)
+
+
+    def paintEvent(self, event):
+        """Customize painting"""
+        super(BSWCodeEditor, self).paintEvent(event)
+
+        if not(self.__rightLimitVisible or self.__spacesVisible):
+            return
+
+        rect = event.rect()
+        font = self.currentCharFormat().font()
+        charWidth = QFontMetricsF(font).averageCharWidth()
+        leftOffset = self.contentOffset().x() + self.document().documentMargin()
+
+        painter = QPainter(self.viewport())
+
+        if self.__rightLimitVisible:
+            # draw right limit
+            position = round(charWidth * self.__rightLimitPosition) + leftOffset
+            painter.setPen(self.__rightLimitColor)
+            painter.drawLine(position, rect.top(), position, rect.bottom())
+
+        # draw spaces and/or level indent
+        block = self.firstVisibleBlock()
+
+        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        bottom = top + self.blockBoundingRect(block).height()
+
+        painter.setPen(self.__spaceColor)
+        previousIndent=0
+
+        while block.isValid() and top <= event.rect().bottom():
+            # Check if the block is visible in addition to check if it is in the areas viewport
+            #   a block can, for example, be hidden by a window placed over the text edit
+            if block.isVisible() and bottom >= event.rect().top():
+                result=re.search("(\s*)$", block.text())
+                posSpacesRight=0
+                nbSpacesLeft = len(re.match("(\s*)", block.text()).groups()[0])
+                nbSpacesRight = len(result.groups()[0])
+                if nbSpacesRight>0:
+                    posSpacesRight=result.start()
+
+                left = leftOffset
+
+                if self.__spacesVisible:
+                    for i in range(nbSpacesLeft):
+                        painter.drawText(left, top, charWidth, self.fontMetrics().height(), Qt.AlignLeft, '.')
+                        left+=charWidth
+
+                    left = leftOffset + charWidth * posSpacesRight
+                    for i in range(nbSpacesRight):
+                        painter.drawText(left, top, charWidth, self.fontMetrics().height(), Qt.AlignLeft, '.')
+                        left+=charWidth
+
+                # draw level indent
+                if nbSpacesLeft>0 or previousIndent>0:
+                    # if spaces or previous indent, check if level indent have to be drawn
+                    if len(block.text()) == 0:
+                        # current block is empty (even no spaces)
+                        # look forward for next block with level > 0
+                        # if found, keep current indent otherwhise, no indent
+                        nBlockText=block.next()
+                        while nBlockText.blockNumber() > -1 and nBlockText.isVisible():
+                            if nBlockText is None:
+                                break
+                            if len(nBlockText.text())>0:
+                                nNbSpacesLeft = len(re.match("(\s*)", nBlockText.text()).groups()[0])
+                                if nNbSpacesLeft == 0:
+                                    nbSpacesLeft = 0
+                                else:
+                                    nbSpacesLeft=previousIndent
+                                break
+                            nBlockText=nBlockText.next()
+                    elif len(block.text().strip()) == 0:
+                        # current block is only spaces, then draw level indent
+                        nbSpacesLeft=max(previousIndent, nbSpacesLeft)
+                    else:
+                        previousIndent=nbSpacesLeft
+
+                    left = leftOffset + round(charWidth*2/3,0)
+                    nbChar = 0
+                    while nbChar < nbSpacesLeft:
+                        position = round(charWidth * nbChar) + leftOffset
+                        painter.drawLine(position, top, position, top + self.blockBoundingRect(block).height() - 1)
+                        nbChar+=self.__indentWidth
+                elif len(block.text().strip()) > 0:
+                    previousIndent=0
+
+
+            block = block.next()
+            top = bottom
+            bottom = top + self.blockBoundingRect(block).height()
 
 
     # endregion: event overload ------------------------------------------------
