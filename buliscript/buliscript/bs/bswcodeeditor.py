@@ -364,6 +364,16 @@ class BSWCodeEditor(QPlainTextEdit):
             bottom = top + self.blockBoundingRect(block).height()
 
 
+    def insertFromMimeData(self, source):
+        """Data from clipboad are being pasted
+
+        replace tabs by spaces and paste content
+        """
+        if source.hasText():
+            text = source.text().replace('\t', ' ' *self.__indentWidth)
+            cursor = self.textCursor()
+            cursor.insertText(text);
+
     # endregion: event overload ------------------------------------------------
 
 
