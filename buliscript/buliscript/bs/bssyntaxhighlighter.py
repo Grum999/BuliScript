@@ -33,18 +33,16 @@ from PyQt5.QtGui import (
 class BSSyntaxHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Buli Script language"""
 
-    def __init__(self, parent, syntaxRules, editor):
+    def __init__(self, parent, languageDef, editor):
         """When subclassing the QSyntaxHighlighter class you must pass the parent parameter to the base class constructor.
 
         The parent is the text document upon which the syntax highlighting will be applied.
 
-        Given `syntaxRules` is a BSSyntaxRules object that define language
-        Given `syntaxStyles` is a BSSyntaxStyles object that define styles to apply
+        Given `languageDef` is a BSLanguageDef object that define language
         """
         super(BSSyntaxHighlighter, self).__init__(parent)
 
-        self.__highlightingRules = syntaxRules
-        self.__cursorPosition = 0
+        self.__languageDef = languageDef
         self.__cursorLastToken = None
         self.__cursorToken = None
         self.__editor=editor
@@ -52,7 +50,7 @@ class BSSyntaxHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text):
         """Highlight given text according to the type"""
-        tokens = self.__highlightingRules.tokenized(text)
+        tokens = self.__languageDef.tokenizer().tokenize(text)
         self.__cursorToken = None
         self.__cursorPreviousToken = None
 
@@ -60,19 +58,19 @@ class BSSyntaxHighlighter(QSyntaxHighlighter):
         notCurrentLine = (self.currentBlock().firstLineNumber() != self.__editor.textCursor().block().firstLineNumber())
 
         cursor = self.__editor.textCursor()
-        self.__cursorPosition = cursor.selectionEnd()
+        cursorPosition = cursor.selectionEnd()
         cursor.movePosition(QTextCursor.StartOfLine)
-        self.__cursorPosition-=cursor.selectionEnd()
+        cursorPosition-=cursor.selectionEnd()
 
         while not (token:=tokens.next()) is None:
-            if self.__cursorPosition <= token.positionEnd():
+            if cursorPosition <= token.positionEnd():
                 self.__cursorLastToken=token
 
             if token.isUnknown() and notCurrentLine or not token.isUnknown():
                 # highlight unknown token only if leave current line, otherwise apply style
-                self.setFormat(token.positionStart(), token.length(), token.style())
+                self.setFormat(token.positionStart(), token.length(), self.__languageDef.style(token))
 
-            if not notCurrentLine and self.__cursorToken is None and self.__cursorPosition >= token.positionStart() and self.__cursorPosition <= token.positionEnd():
+            if not notCurrentLine and self.__cursorToken is None and cursorPosition >= token.positionStart() and cursorPosition <= token.positionEnd():
                 self.__cursorPreviousToken = self.__cursorToken
                 self.__cursorToken = token
 

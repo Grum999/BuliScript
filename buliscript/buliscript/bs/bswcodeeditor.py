@@ -36,7 +36,8 @@ from PyQt5.QtWidgets import (
     )
 from .bssyntaxhighlighter import BSSyntaxHighlighter
 from .bslanguagedef import (
-        BSLanguageDef
+        BSLanguageDef,
+        BSTokenFamily
     )
 
 from ..pktk.pktk import EInvalidType
@@ -74,46 +75,29 @@ class BSWCodeEditor(QPlainTextEdit):
         self.__languageDef = BSLanguageDef()
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
-        # instanciate line number area
-        self.__lineNumberArea = BSWLineNumberArea(self)
+        # ---- options ----
+        # > TODO: need to define setters/getters
 
-        # initialise signals
-        self.blockCountChanged.connect(self.__updateLineNumberAreaWidth)
-        self.updateRequest.connect(self.__updateLineNumberArea)
-        self.cursorPositionChanged.connect(self.__highlightCurrentLine)
-        self.customContextMenuRequested.connect(self.__contextMenu)
+        # Gutter colors
+        # maybe font size/family/style can be modified
+        self.__optionGutterText=QTextCharFormat()
+        self.__optionGutterText.setForeground(QColor('#4c5363'))
+        self.__optionGutterText.setBackground(QColor('#282c34'))
 
-        self.__completerModel = BSWCodeEditorCompleterModel()
+        # editor current's selected line
+        self.__optionColorHighlightedLine=QColor('#2d323c')
 
-        for rule in self.__languageDef.rules():
-            for text in rule.asText():
-                self.__completerModel.add(text, rule.familly())
-        self.__completerModel.sort()
-
-        self.__completer = QCompleter()
-        self.__completer.setModel(self.__completerModel)
-        self.__completer.setWidget(self)
-        self.__completer.setCompletionColumn(0)
-        self.__completer.setCompletionRole(Qt.DisplayRole)
-        self.__completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.__completer.setCompletionMode(QCompleter.PopupCompletion)
-        self.__completer.activated.connect(self.__insertCompletion)
-
-        # define editor properties
-        # colors
-        self.__colorGutter=BSColorProp(QColor('#4c5363'), QColor('#282c34'))
-        self.__colorHighlightedLine=BSColorProp(QColor('#000000'), QColor('#2d323c'))
-        # space indent
-        self.__indentWidth=4
+        # space indent width
+        self.__optionIndentWidth=4
 
         # right limit properties
-        self.__rightLimitVisible=True
-        self.__rightLimitPosition=80
-        self.__rightLimitColor=QColor('#88555555')
+        self.__optionRightLimitVisible=True
+        self.__optionRightLimitPosition=80
+        self.__optionRightLimitColor=QColor('#88555555')
 
         # spaces properties
-        self.__spacesVisible=True
-        self.__spaceColor=QColor("#88666666")
+        self.__optionSpacesVisible=True
+        self.__optionSpacesColor=QColor("#88666666")
 
         # autocompletion is automatic (True) or manual (False)
         self.__optionAutoCompletion = True
@@ -137,6 +121,8 @@ class BSWCodeEditor(QPlainTextEdit):
                 }
         }
 
+
+        # ---- Set default font (monospace, 10pt)
         font = QFont()
         font.setFamily("Monospace")
         font.setFixedPitch(True)
@@ -147,6 +133,40 @@ class BSWCodeEditor(QPlainTextEdit):
         palette.setColor(QPalette.Active, QPalette.Base, QColor('#282c34'))
         palette.setColor(QPalette.Inactive, QPalette.Base, QColor('#282c34'))
 
+        # ---- instanciate line number area
+        self.__lineNumberArea = BSWLineNumberArea(self)
+
+        # ---- initialise signals
+        self.blockCountChanged.connect(self.__updateLineNumberAreaWidth)
+        self.updateRequest.connect(self.__updateLineNumberArea)
+        self.cursorPositionChanged.connect(self.__highlightCurrentLine)
+        self.customContextMenuRequested.connect(self.__contextMenu)
+
+        # ---- initialise completion list model
+        self.__completerModel = BSWCodeEditorCompleterModel()
+
+        # set dictionary
+        for rule in self.__languageDef.tokenizer().rules():
+            for text in rule.readableTextList():
+                self.__completerModel.add(text, rule.family(),  self.__languageDef.style(rule))
+        self.__completerModel.sort()
+
+        # ---- initialise completer
+        self.__completer = QCompleter()
+        self.__completer.setModel(self.__completerModel)
+        self.__completer.setWidget(self)
+        self.__completer.setCompletionColumn(0)
+        self.__completer.setCompletionRole(Qt.DisplayRole)
+        self.__completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.__completer.setCompletionMode(QCompleter.PopupCompletion)
+        self.__completer.activated.connect(self.__insertCompletion)
+
+        # ---- initialise customized item rendering for completer
+        delegate=BSWCodeEditorCompleterView(self)
+        self.__completer.popup().setFont(font)
+        self.__completer.popup().setItemDelegate(delegate)
+
+        # ---- initialise highlighter for editor
         self.__highlighter = BSSyntaxHighlighter(self.document(), self.__languageDef, self)
 
         # default values
@@ -168,8 +188,8 @@ class BSWCodeEditor(QPlainTextEdit):
         """Extend default context menu for editor"""
         standardMenu = self.createStandardContextMenu()
 
-        standardMenu.addSeparator()
-        standardMenu.addAction(u'Test', self.doAction)
+        #standardMenu.addSeparator()
+        #standardMenu.addAction(u'Test', self.doAction)
 
         standardMenu.exec(QCursor.pos())
 
@@ -182,7 +202,7 @@ class BSWCodeEditor(QPlainTextEdit):
         self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
 
 
-    def __updateLineNumberArea(self, rect, dy):
+    def __updateLineNumberArea(self, rect, deltaY):
         """Called on signal updateRequest()
 
         Invoked when the editors viewport has been scrolled
@@ -190,8 +210,8 @@ class BSWCodeEditor(QPlainTextEdit):
         The given `rect` is the part of the editing area that need to be updated (redrawn)
         The given `dy` holds the number of pixels the view has been scrolled vertically
         """
-        if dy>0:
-            self.__lineNumberArea.scroll(0, dy)
+        if deltaY>0:
+            self.__lineNumberArea.scroll(0, deltaY)
         else:
             self.__lineNumberArea.update(0, rect.y(), self.__lineNumberArea.width(), rect.height())
 
@@ -206,7 +226,7 @@ class BSWCodeEditor(QPlainTextEdit):
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
 
-            selection.format.setBackground(self.__colorHighlightedLine.background())
+            selection.format.setBackground(self.__optionColorHighlightedLine)
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()
 
@@ -238,18 +258,18 @@ class BSWCodeEditor(QPlainTextEdit):
 
     def __calculateIndent(self, position):
         """Calculate indent to apply according to current position"""
-        indentValue = ceil(position/self.__indentWidth)*self.__indentWidth - position
+        indentValue = ceil(position/self.__optionIndentWidth)*self.__optionIndentWidth - position
         if indentValue == 0:
-            indentValue = self.__indentWidth
+            indentValue = self.__optionIndentWidth
         return indentValue
 
 
     def __calculateDedent(self, position):
         """calculate indent to apply according to current position"""
         if position > 0:
-            dedentValue = position%self.__indentWidth
+            dedentValue = position%self.__optionIndentWidth
             if dedentValue==0:
-                return self.__indentWidth
+                return self.__optionIndentWidth
             else:
                 return dedentValue
 
@@ -275,7 +295,7 @@ class BSWCodeEditor(QPlainTextEdit):
         painter=QPainter(self.__lineNumberArea)
 
         # set background
-        painter.fillRect(event.rect(), self.__colorGutter.background())
+        painter.fillRect(event.rect(), self.__optionGutterText.background())
 
         # Get the top and bottom y-coordinate of the first text block,
         # and adjust these values by the height of the current text block in each iteration in the loop
@@ -292,7 +312,7 @@ class BSWCodeEditor(QPlainTextEdit):
             #   a block can, for example, be hidden by a window placed over the text edit
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(blockNumber + 1)
-                painter.setPen(self.__colorGutter.foreground())
+                painter.setPen(self.__optionGutterText.foreground().color())
                 painter.drawText(0, top, self.__lineNumberArea.width(), self.fontMetrics().height(), Qt.AlignRight, number)
 
             block = block.next()
@@ -316,7 +336,7 @@ class BSWCodeEditor(QPlainTextEdit):
     def keyPressEvent(self, event):
         """Improve editor functionalities with some key bindings"""
         if self.__completer and self.__completer.popup().isVisible():
-            # completion popup is visible, keypressed is for popup
+            # completion popup is visible, so keypressed is for popup
             if event.key() in (
                         Qt.Key_Enter,
                         Qt.Key_Return,
@@ -326,11 +346,13 @@ class BSWCodeEditor(QPlainTextEdit):
                 event.ignore()
                 return
 
+        # retrieve action from current shortcut
         action = self.shortCut(event.key(), event.modifiers())
 
-        print("keyPressEvent", event.key(), int(event.modifiers()), action)
         if action is None:
             super(BSWCodeEditor, self).keyPressEvent(event)
+            # if no action is defined and autocompletion is active, display
+            # completer list automatically
             if self.__optionAutoCompletion:
                 action = BSWCodeEditor.KEY_COMPLETION
         elif event.key() == Qt.Key_Return:
@@ -343,20 +365,19 @@ class BSWCodeEditor(QPlainTextEdit):
         """Customize painting"""
         super(BSWCodeEditor, self).paintEvent(event)
 
-        if not(self.__rightLimitVisible or self.__spacesVisible):
-            return
-
+        # initialise som metrics
         rect = event.rect()
         font = self.currentCharFormat().font()
         charWidth = QFontMetricsF(font).averageCharWidth()
         leftOffset = self.contentOffset().x() + self.document().documentMargin()
 
+        # initialise painter to editor's viewport
         painter = QPainter(self.viewport())
 
-        if self.__rightLimitVisible:
+        if self.__optionRightLimitVisible:
             # draw right limit
-            position = round(charWidth * self.__rightLimitPosition) + leftOffset
-            painter.setPen(self.__rightLimitColor)
+            position = round(charWidth * self.__optionRightLimitPosition) + leftOffset
+            painter.setPen(self.__optionRightLimitColor)
             painter.drawLine(position, rect.top(), position, rect.bottom())
 
         # draw spaces and/or level indent
@@ -365,7 +386,7 @@ class BSWCodeEditor(QPlainTextEdit):
         top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
         bottom = top + self.blockBoundingRect(block).height()
 
-        painter.setPen(self.__spaceColor)
+        painter.setPen(self.__optionSpacesColor)
         previousIndent=0
 
         while block.isValid() and top <= event.rect().bottom():
@@ -381,7 +402,8 @@ class BSWCodeEditor(QPlainTextEdit):
 
                 left = leftOffset
 
-                if self.__spacesVisible:
+                if self.__optionSpacesVisible:
+                    # draw spaces
                     for i in range(nbSpacesLeft):
                         painter.drawText(left, top, charWidth, self.fontMetrics().height(), Qt.AlignLeft, '.')
                         left+=charWidth
@@ -421,7 +443,7 @@ class BSWCodeEditor(QPlainTextEdit):
                     while nbChar < nbSpacesLeft:
                         position = round(charWidth * nbChar) + leftOffset
                         painter.drawLine(position, top, position, top + self.blockBoundingRect(block).height() - 1)
-                        nbChar+=self.__indentWidth
+                        nbChar+=self.__optionIndentWidth
                 elif len(block.text().strip()) > 0:
                     previousIndent=0
 
@@ -437,14 +459,16 @@ class BSWCodeEditor(QPlainTextEdit):
         replace tabs by spaces and paste content
         """
         if source.hasText():
-            text = source.text().replace('\t', ' ' *self.__indentWidth)
+            text = source.text().replace('\t', ' ' *self.__optionIndentWidth)
             cursor = self.textCursor()
             cursor.insertText(text);
 
-    def focusInEvent(self, event):
-        if self.__completer:
-            self.__completer.setWidget(self)
-        super(BSWCodeEditor, self).focusInEvent(event)
+
+    #def focusInEvent(self, event):
+    #    if self.__completer:
+    #        self.__completer.setWidget(self)
+    #    super(BSWCodeEditor, self).focusInEvent(event)
+
 
     # endregion: event overload ------------------------------------------------
 
@@ -475,15 +499,15 @@ class BSWCodeEditor(QPlainTextEdit):
         if action is None:
             return
         elif action == BSWCodeEditor.KEY_INDENT:
-            self.indent()
+            self.doIndent()
         elif action == BSWCodeEditor.KEY_DEDENT:
-            self.dedent()
+            self.doDedent()
         elif action == BSWCodeEditor.KEY_TOGGLE_COMMENT:
-            self.toggleComment()
+            self.doToggleComment()
         elif action == BSWCodeEditor.KEY_AUTOINDENT:
-            self.autoIndent()
+            self.doAutoIndent()
         elif action == BSWCodeEditor.KEY_COMPLETION:
-            self.completionPopup()
+            self.doCompletionPopup()
 
 
     def shortCut(self, key, modifiers):
@@ -546,7 +570,7 @@ class BSWCodeEditor(QPlainTextEdit):
             raise EInvalidType("Given `value`must be an integer greater than 0")
 
 
-    def autoIndent(self):
+    def doAutoIndent(self):
         """Indent current line to match indent of previous line
 
         if no previous exists, then, no indent...
@@ -586,7 +610,7 @@ class BSWCodeEditor(QPlainTextEdit):
             cursor.removeSelectedText()
 
 
-    def indent(self):
+    def doIndent(self):
         """Indent current line or current selection"""
 
         cursor = self.textCursor()
@@ -669,7 +693,7 @@ class BSWCodeEditor(QPlainTextEdit):
             cursor.movePosition(QTextCursor.NextBlock)
 
 
-    def dedent(self):
+    def doDedent(self):
         """Dedent current line or current selection"""
         cursor = self.textCursor()
 
@@ -702,7 +726,7 @@ class BSWCodeEditor(QPlainTextEdit):
             cursor.movePosition(QTextCursor.NextBlock)
 
 
-    def toggleComment(self):
+    def doToggleComment(self):
         """Toggle comment for current line or selected lines"""
         cursor = self.textCursor()
 
@@ -772,7 +796,7 @@ class BSWCodeEditor(QPlainTextEdit):
             cursor.movePosition(QTextCursor.NextBlock)
 
 
-    def completionPopup(self):
+    def doCompletionPopup(self):
         """Display autocompletion popup"""
         hidePopup=False
         minLength = 0
@@ -780,49 +804,55 @@ class BSWCodeEditor(QPlainTextEdit):
         refToken = self.__highlighter.currentCursorToken()
         srcText=""
 
+        # Determinate current text
         if currentToken is None:
             # try with last processed token
             currentToken = self.__highlighter.lastCursorToken()
         else:
             srcText=currentToken.text()
 
-        if currentToken is None or currentToken.familly() in (BSLanguageDef.TOKEN_STRING,
-                                                              BSLanguageDef.TOKEN_NUMBER,
-                                                              BSLanguageDef.TOKEN_COMMENT,
-                                                              BSLanguageDef.TOKEN_OPERATOR,
-                                                              BSLanguageDef.TOKEN_BRACES,
-                                                              BSLanguageDef.TOKEN_SPACE_NL,
-                                                              BSLanguageDef.TOKEN_COLOR,
-                                                              BSLanguageDef.TOKEN_ACTION,
-                                                              BSLanguageDef.TOKEN_FLOW,
-                                                              BSLanguageDef.TOKEN_FUNCTION,
-                                                              BSLanguageDef.TOKEN_VARIABLE_INTERNAL,
-                                                              BSLanguageDef.TOKEN_CONSTANT):
+        if currentToken is None or currentToken.family() in (BSTokenFamily.TOKEN_STRING,
+                                                             BSTokenFamily.TOKEN_NUMBER,
+                                                             BSTokenFamily.TOKEN_COMMENT,
+                                                             BSTokenFamily.TOKEN_OPERATOR,
+                                                             BSTokenFamily.TOKEN_BRACES,
+                                                             BSTokenFamily.TOKEN_SPACE_NL,
+                                                             BSTokenFamily.TOKEN_COLOR,
+                                                             BSTokenFamily.TOKEN_ACTION,
+                                                             BSTokenFamily.TOKEN_FLOW,
+                                                             BSTokenFamily.TOKEN_FUNCTION,
+                                                             BSTokenFamily.TOKEN_VARIABLE_INTERNAL,
+                                                             BSTokenFamily.TOKEN_CONSTANT):
+            # no text, or text is a token for which we don't want to display popup
             self.__completer.popup().hide()
             return
 
         text = currentToken.text()
         if len(text)<1:
+            # if current text is less than one character, do not display popup
             self.__completer.popup().hide()
             return
 
+        # try to determinate text
         while True:
             if currentToken.previous() is None:
                 break
 
-            if not currentToken.familly() in (BSLanguageDef.TOKEN_SPACE_WC, BSLanguageDef.TOKEN_UNKNOWN) and currentToken.previous().familly() != currentToken.familly():
+            if not currentToken.family() in (BSTokenFamily.TOKEN_SPACE_WC, BSTokenFamily.TOKEN_UNKNOWN) and currentToken.previous().family() != currentToken.family():
                 break
 
             currentToken=currentToken.previous()
-            if currentToken.familly() == BSLanguageDef.TOKEN_SPACE_WC:
+            if currentToken.family() == BSTokenFamily.TOKEN_SPACE_WC:
                 text = " " + text
             else:
                 text = currentToken.text() + text
 
         proposals=self.__languageDef.getTextProposal(text)
         if len(proposals)==0:
+            # if we can't found completion values from current text, use initial text
             text = srcText
         elif len(proposals)==1 and proposals[0][0]==text:
+            # if we only found current text, do not display popup
             self.__completer.popup().hide()
             return
 
@@ -864,22 +894,15 @@ class BSWLineNumberArea(QWidget):
         self.__codeEditor.lineNumberAreaPaintEvent(event)
 
 
-class BSWCodeEditorCompleter(QCompleter):
-    def __init__(self, dictionnary=None, parent=None):
-        if dictionnary is None:
-            super(BSWCodeEditorCompleter, self).__init__(parent)
-        else:
-            super(BSWCodeEditorCompleter, self).__init__(dictionnary, parent)
-
-        self.setCompletionMode(QCompleter.PopupCompletion)
-
-
 class BSWCodeEditorCompleterModel(QAbstractListModel):
+    """Dedicated model used to list completion values"""
 
     VALUE = Qt.UserRole + 1
-    FAMILLY = Qt.UserRole + 2
+    FAMILY = Qt.UserRole + 2
+    STYLE = Qt.UserRole + 3
 
     def __init__(self, parent=None):
+        """Initialise list"""
         super().__init__(parent)
         self.__items=[]
 
@@ -887,46 +910,122 @@ class BSWCodeEditorCompleterModel(QAbstractListModel):
         print(f'<BSWCodeEditorCompleterModel({self.__items})>')
 
     def data(self, index, role=Qt.DisplayRole):
+        """Return data for index+role"""
         row = index.row()
         if role in (BSWCodeEditorCompleterModel.VALUE, Qt.DisplayRole):
             return self.__items[row]["value"]
-        if role == BSWCodeEditorCompleterModel.FAMILLY:
-            return self.__items[row]["familly"]
+        if role == BSWCodeEditorCompleterModel.FAMILY:
+            return self.__items[row]["family"]
+        if role == BSWCodeEditorCompleterModel.STYLE:
+            return self.__items[row]["style"]
 
     def rowCount(self, parent=QModelIndex()):
+        """Return total number of rows"""
         return len(self.__items)
 
     def roleNames(self):
         return {
             BSWCodeEditorCompleterModel.VALUE: b'value',
-            BSWCodeEditorCompleterModel.FAMILLY: b'familly'
+            BSWCodeEditorCompleterModel.FAMILY: b'family',
+            BSWCodeEditorCompleterModel.STYLE: b'style'
         }
 
     @pyqtSlot(str, int)
-    def add(self, value, familly):
+    def add(self, value, family, style):
+        """Add an item to model"""
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-        self.__items.append({'value': value, 'familly': familly})
+        self.__items.append({'value': value, 'family': family, 'style': style})
         self.endInsertRows()
 
     @pyqtSlot(int, str, int)
     def edit(self, row, value, age):
+        """Modify an item from model"""
         ix = self.index(row, 0)
-        self.__items[row] = {'value': value, 'familly': familly}
+        self.__items[row] = {'value': value, 'family': family, 'style': style}
         self.dataChanged.emit(ix, ix, self.roleNames())
 
     @pyqtSlot(int)
     def delete(self, row):
+        """Remove an item from model"""
         self.beginRemoveColumns(QModelIndex(), row, row)
         del self.__items[row]
         self.endRemoveRows()
 
     def clear(self):
+        """Clear model"""
         self.beginRemoveColumns(QModelIndex(), 0, len(self.__items))
         self.__items=[]
         self.endRemoveRows()
 
     def sort(self):
+        """Sort list content"""
         def sortKey(v):
-            return f'{v["familly"]:02}-{v["value"].lower()}'
+            return f'{v["family"]:02}-{v["value"].lower()}'
         self.__items.sort(key=sortKey)
+
+
+class BSWCodeEditorCompleterView(QStyledItemDelegate):
+    """Extend QStyledItemDelegate class to build an improved QCompleter list that
+    list completion value with improved style
+    """
+    def __init__(self, parent=None):
+        """Constructor, nothingspecial"""
+        super(BSWCodeEditorCompleterView, self).__init__(parent)
+
+
+    def paint(self, painter, option, index):
+        """Paint list item:
+        - completion type ('F'=flow, 'a'=action, 'v'=variable...)
+        - completion value, using editor's style
+        """
+        self.initStyleOption(option, index)
+
+        # retrieve style from token
+        style = index.data(BSWCodeEditorCompleterModel.STYLE)
+
+        # memorize curent state
+        painter.save()
+        currentFontName=painter.font().family()
+        currentFontSize=painter.font().pointSizeF()
+        color = style.foreground().color()
+
+        # -- completion type
+        rect = QRect(option.rect.left(), option.rect.top(), 2 * option.rect.height(), option.rect.height())
+        if (option.state & QStyle.State_Selected) == QStyle.State_Selected:
+            painter.fillRect(rect, QBrush(color.darker(200)))
+        else:
+            painter.fillRect(rect, QBrush(color.darker(300)))
+        font = style.font()
+        font.setFamily("DejaVu Sans [Qt Embedded]")
+        font.setBold(True)
+        font.setPointSizeF(currentFontSize * 0.65)
+
+        painter.setFont(font)
+        painter.setPen(QPen(color.lighter(300)))
+
+        painter.drawText(rect, Qt.AlignHCenter|Qt.AlignVCenter, BSTokenFamily.letter(index.data(BSWCodeEditorCompleterModel.FAMILY)))
+
+        # -- completion value
+        font = style.font()
+        font.setFamily(currentFontName)
+        font.setPointSizeF(currentFontSize)
+
+
+        painter.setFont(font)
+        painter.setPen(QPen(color))
+
+        if (option.state & QStyle.State_Selected) == QStyle.State_Selected:
+            rect = QRect(option.rect.left() + 2 * option.rect.height(), option.rect.top(), option.rect.width(), option.rect.height())
+            painter.fillRect(rect, option.palette.color(QPalette.AlternateBase))
+        rect = QRect(option.rect.left() + 2 *  option.rect.height() + 5, option.rect.top(), option.rect.width(), option.rect.height())
+        painter.drawText(rect, Qt.AlignLeft|Qt.AlignVCenter, index.data(BSWCodeEditorCompleterModel.VALUE))
+
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        """Caclulate size for rendered completion item"""
+        size = super(BSWCodeEditorCompleterView, self).sizeHint(option, index)
+        size.setWidth(size.width() + 2 * size.height() + 5)
+        return size
+
 

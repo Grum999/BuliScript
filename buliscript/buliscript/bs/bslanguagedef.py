@@ -23,185 +23,18 @@
 
 from PyQt5.Qt import *
 
-from .bslist import BSList
-
 import re
 
-class BSLanguageRule:
-    """Define a rule for language"""
-    def __init__(self, languageDef, regEx, type, asText=None):
-        if isinstance(regEx, str):
-            regEx = QRegularExpression(regEx, QRegularExpression.CaseInsensitiveOption)
-        if not regEx.isValid():
-            print("invalid regex", regEx.pattern(), type)
-        self.__regEx = regEx
-        self.__type = type
-        self.__languageDef = languageDef
-        self.__asText = []
-
-        if isinstance(asText, str):
-            self.__asText=[asText]
-        elif isinstance(asText, list):
-            self.__asText=[text for text in asText if isinstance(text, str)]
-
-    def __repr__(self):
-        return f"<BSLanguageRule({self.__regEx.pattern()}, {self.__type})>"
-
-    def regEx(self):
-        """Return regular expression for rule"""
-        return self.__regEx
-
-    def type(self):
-        """Return type for rule"""
-        return self.__type
-
-    def familly(self):
-        """Return familly for rule"""
-        return self.__languageDef.familly(self.__type)
-
-    def style(self):
-        """Return style for rule"""
-        return self.__languageDef.style(self.__type)
-
-    def asText(self):
-        """Return rule as a readable text (return list of str, or None if there's no text representation)"""
-        return self.__asText
-
-    def matchText(self, matchText):
-        """Return rule as a readable text (return list of tuple (str, rule), or empty list if there's no text representation) and
-        that match the given `matchText`
-
-        given `matchText` can be a str or a regular expression
-        """
-        returned=[]
-        if isinstance(matchText, str):
-            matchText=re.compile(re.escape(re.sub('\s+', '\x01', matchText)).replace('\x01', r'\s+'))
-
-        if isinstance(matchText, re.Pattern):
-            for text in self.__asText:
-                if matchText.match(text):
-                    returned.append((text, self))
-
-        return returned
-
-
-class BSLanguageToken:
-    """A token"""
-    __LINE_NUMBER = 0
-    __LINE_POSSTART = 0
-
-    @staticmethod
-    def resetTokenizer():
-        BSLanguageToken.__LINE_NUMBER = 1
-        BSLanguageToken.__LINE_POSSTART = 0
-
-    def __init__(self, text, rule, positionStart, positionEnd, length):
-        self.__text = text.lstrip()
-        self.__rule = rule
-        self.__positionStart=positionStart
-        self.__positionEnd=positionEnd
-        self.__length=length
-        self.__lineNumber=BSLanguageToken.__LINE_NUMBER
-        self.__linePositionStart=(positionStart - BSLanguageToken.__LINE_POSSTART)+1
-        self.__linePositionEnd=self.__linePositionStart + length
-        self.__next = None
-        self.__previous = None
-
-        if self.__rule.familly()==BSLanguageDef.TOKEN_SPACE_NL:
-            self.__indent=0
-            BSLanguageToken.__LINE_NUMBER+=1
-            BSLanguageToken.__LINE_POSSTART=positionEnd
-        else:
-            self.__indent=len(text) - len(self.__text)
-
-    def __repr__(self):
-        if self.__rule.familly()==BSLanguageDef.TOKEN_SPACE_NL:
-            txt=''
-        else:
-            txt=self.__text
-        return (f"<BSLanguageToken({self.__indent}, '{txt}', Type[{self.type()}], Familly[{self.familly()}], "
-                f"Length: {self.__length}, "
-                f"Global[Start: {self.__positionStart}, End: {self.__positionEnd}], "
-                f"Line[Start: {self.__linePositionStart}, End: {self.__linePositionEnd}, Number: {self.__lineNumber}])>")
-
-    def type(self):
-        """return token type"""
-        return self.__rule.type()
-
-    def familly(self):
-        """return token familly"""
-        return self.__rule.familly()
-
-    def style(self):
-        """return token style"""
-        return self.__rule.style()
-
-    def isUnknown(self):
-        """return if it's an unknown token"""
-        return (self.__rule.familly() == BSLanguageDef.TOKEN_UNKNOWN)
-
-    def positionStart(self):
-        """Return position (start) in text"""
-        return self.__positionStart
-
-    def positionEnd(self):
-        """Return position (end) in text"""
-        return self.__positionEnd
-
-    def length(self):
-        """Return text length"""
-        return self.__length
-
-    def indent(self):
-        """Return token indentation"""
-        return self.__indent
-
-    def text(self):
-        """Return token text"""
-        return self.__text
-
-    def rule(self):
-        """Return token rule"""
-        return self.__rule
-
-    def setNext(self, token=None):
-        """Set next token"""
-        self.__next = token
-
-    def setPrevious(self, token=None):
-        """Set previous token"""
-        self.__previous = token
-
-    def next(self):
-        """Return next token, or None if current token is the last one"""
-        return self.__next
-
-    def previous(self):
-        """Return previous token, or None if current token is the last one"""
-        return self.__previous
-
+from .bstheme import BSTheme
+from .bstokenizer import (
+            BSToken,
+            BSTokenFamily,
+            BSTokenFamilyStyle,
+            BSTokenizer,
+            BSTokenizerRule
+        )
 
 class BSLanguageDef:
-    # define token familly identifiers
-    TOKEN_STRING = 0
-    TOKEN_NUMBER = 1
-    TOKEN_COMMENT = 2
-    TOKEN_ACTION = 3
-    TOKEN_FLOW = 4
-    TOKEN_FUNCTION = 5
-    TOKEN_OPERATOR = 6
-    TOKEN_VARIABLE_INTERNAL = 7
-    TOKEN_VARIABLE_USERDEFINED = 8
-    TOKEN_BRACES = 9
-    TOKEN_UNCOMPLETE = 10
-    TOKEN_UNCOMPLETEFLOW = 11
-    TOKEN_UNCOMPLETEFUNCTION = 12
-    TOKEN_CONSTANT = 13
-    TOKEN_UNKNOWN = 14
-    TOKEN_SPACE_NL = 15
-    TOKEN_SPACE_WC = 16
-    TOKEN_COLOR = 17
-
     # define token types
     ACTION_ID_UNCOMPLETE = 'uncomplete'
     ACTION_ID_SET = 'set'
@@ -275,26 +108,17 @@ class BSLanguageDef:
 
     UNKNOWN = 'unknown'
 
-    # styles identifier
-    STYLE_DARK = 'dark'
-    STYLE_LIGHT = 'light'
 
     def __init__(self):
         """Initialise language & styles"""
-        # internal storage for rules (list of BSLanguageRule)
-        self.__rules = []
-        # a global regEx with all rules
-        self.__regEx = None
+        # styles => relation between a TOKEN type and TOKEN family
+        self.__tokenFamilies = {}
 
-        # styles => relation between a TOKEN type and TOKEN familly
-        self.__tokenFamillies = {}
-        # stylesDef => define styles applied for token
-        self.__tokenStyles = {}
-        #
-        self.__currentStyleId = 'dark'
+        self.__tokenizer = BSTokenizer()
+        self.__tokenStyle = BSTokenFamilyStyle()
 
+        self.__initialiseFamilies()
         self.__initialiseRules()
-        self.__initialiseStyles()
 
 
     def __initialiseRules(self):
@@ -621,220 +445,89 @@ class BSLanguageDef:
                     (r"[^\s]+", BSLanguageDef.UNKNOWN)
                 ]
 
-        regEx=[]
         for rule in rules:
-            regEx.append(rule[0])
-            self.__rules.append(BSLanguageRule(self, *rule))
-
-        # main regular expression use for lexer
-        self.__regEx=QRegularExpression('|'.join(regEx), QRegularExpression.CaseInsensitiveOption|QRegularExpression.MultilineOption)
+            self.__tokenizer.add(BSTokenizerRule(self, rule[0], rule[1], self.family(rule[1]), *rule[2:] ))
 
 
-    def __initialiseStyles(self):
+    def __initialiseFamilies(self):
         """Set language styles (text format for token)"""
-        self.__tokenFamillies={
-                BSLanguageDef.COMMENT: BSLanguageDef.TOKEN_COMMENT,
-                BSLanguageDef.TYPE_STRING: BSLanguageDef.TOKEN_STRING,
-                BSLanguageDef.TYPE_NUMBER: BSLanguageDef.TOKEN_NUMBER,
-                BSLanguageDef.TYPE_COLOR: BSLanguageDef.TOKEN_COLOR,
-                BSLanguageDef.CONSTANT_ID_SETONOFF: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETUNITCOORD: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETUNITROT: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETPENSTYLE: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETPENCAP: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETPENJOIN: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETFILLRULE: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETTXTHALIGN: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETTXTVALIGN: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETPAPERBLEND: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.CONSTANT_ID_SETSELECTMODE: BSLanguageDef.TOKEN_CONSTANT,
-                BSLanguageDef.VARIABLE_ID: BSLanguageDef.TOKEN_VARIABLE_USERDEFINED,
-                BSLanguageDef.VARIABLE_ID_INTERNAL: BSLanguageDef.TOKEN_VARIABLE_INTERNAL,
-                BSLanguageDef.OPERATORS_ID: BSLanguageDef.TOKEN_OPERATOR,
-                BSLanguageDef.BRACES_ID_PARENTHESIS_OPEN: BSLanguageDef.TOKEN_BRACES,
-                BSLanguageDef.BRACES_ID_PARENTHESIS_CLOSE: BSLanguageDef.TOKEN_BRACES,
-                BSLanguageDef.SEPARATOR_ID: BSLanguageDef.TOKEN_OPERATOR,
-                BSLanguageDef.SPACE_NL: BSLanguageDef.TOKEN_SPACE_NL,
-                BSLanguageDef.SPACE_WC: BSLanguageDef.TOKEN_SPACE_WC,
+        self.__tokenFamilies={
+                BSLanguageDef.COMMENT: BSTokenFamily.TOKEN_COMMENT,
+                BSLanguageDef.TYPE_STRING: BSTokenFamily.TOKEN_STRING,
+                BSLanguageDef.TYPE_NUMBER: BSTokenFamily.TOKEN_NUMBER,
+                BSLanguageDef.TYPE_COLOR: BSTokenFamily.TOKEN_COLOR,
+                BSLanguageDef.CONSTANT_ID_SETONOFF: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETUNITCOORD: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETUNITROT: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETPENSTYLE: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETPENCAP: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETPENJOIN: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETFILLRULE: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETTXTHALIGN: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETTXTVALIGN: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETPAPERBLEND: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.CONSTANT_ID_SETSELECTMODE: BSTokenFamily.TOKEN_CONSTANT,
+                BSLanguageDef.VARIABLE_ID: BSTokenFamily.TOKEN_VARIABLE_USERDEFINED,
+                BSLanguageDef.VARIABLE_ID_INTERNAL: BSTokenFamily.TOKEN_VARIABLE_INTERNAL,
+                BSLanguageDef.OPERATORS_ID: BSTokenFamily.TOKEN_OPERATOR,
+                BSLanguageDef.BRACES_ID_PARENTHESIS_OPEN: BSTokenFamily.TOKEN_BRACES,
+                BSLanguageDef.BRACES_ID_PARENTHESIS_CLOSE: BSTokenFamily.TOKEN_BRACES,
+                BSLanguageDef.SEPARATOR_ID: BSTokenFamily.TOKEN_OPERATOR,
+                BSLanguageDef.SPACE_NL: BSTokenFamily.TOKEN_SPACE_NL,
+                BSLanguageDef.SPACE_WC: BSTokenFamily.TOKEN_SPACE_WC,
 
-                BSLanguageDef.ACTION_ID_UNCOMPLETE: BSLanguageDef.TOKEN_UNCOMPLETE,
-                BSLanguageDef.ACTION_ID_SET: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_UNIT: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_PEN: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_FILL: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_TEXT: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_PAPER: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_CANVAS: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_LAYER: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_SELECTION: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SET_EXECUTION: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_DRAW: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_FILL: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_PEN: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_MOVE: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_TURN: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_POP: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_PUSH: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_FILTER: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_CANVAS: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_DOCUMENT: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_LAYER: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_SELECTION: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_CONSOLE: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_DIALOG: BSLanguageDef.TOKEN_ACTION,
-                BSLanguageDef.ACTION_ID_FLOW: BSLanguageDef.TOKEN_FLOW,
-                BSLanguageDef.ACTION_ID_UNCOMPLETEFLOW: BSLanguageDef.TOKEN_UNCOMPLETEFLOW,
+                BSLanguageDef.ACTION_ID_UNCOMPLETE: BSTokenFamily.TOKEN_UNCOMPLETE,
+                BSLanguageDef.ACTION_ID_SET: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_UNIT: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_PEN: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_FILL: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_TEXT: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_PAPER: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_CANVAS: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_LAYER: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_SELECTION: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SET_EXECUTION: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_DRAW: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_FILL: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_PEN: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_MOVE: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_TURN: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_POP: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_PUSH: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_FILTER: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_CANVAS: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_DOCUMENT: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_LAYER: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_SELECTION: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_CONSOLE: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_DIALOG: BSTokenFamily.TOKEN_ACTION,
+                BSLanguageDef.ACTION_ID_FLOW: BSTokenFamily.TOKEN_FLOW,
+                BSLanguageDef.ACTION_ID_UNCOMPLETEFLOW: BSTokenFamily.TOKEN_UNCOMPLETEFLOW,
 
-                BSLanguageDef.FUNCTION_ID_MATH: BSLanguageDef.TOKEN_FUNCTION,
-                BSLanguageDef.FUNCTION_ID_STR: BSLanguageDef.TOKEN_FUNCTION,
-                BSLanguageDef.FUNCTION_ID_COLOR: BSLanguageDef.TOKEN_FUNCTION,
-                BSLanguageDef.FUNCTION_ID_UNCOMPLETE: BSLanguageDef.TOKEN_UNCOMPLETEFUNCTION,
+                BSLanguageDef.FUNCTION_ID_MATH: BSTokenFamily.TOKEN_FUNCTION,
+                BSLanguageDef.FUNCTION_ID_STR: BSTokenFamily.TOKEN_FUNCTION,
+                BSLanguageDef.FUNCTION_ID_COLOR: BSTokenFamily.TOKEN_FUNCTION,
+                BSLanguageDef.FUNCTION_ID_UNCOMPLETE: BSTokenFamily.TOKEN_UNCOMPLETEFUNCTION,
 
-                BSLanguageDef.UNKNOWN: BSLanguageDef.TOKEN_UNKNOWN
+                BSLanguageDef.UNKNOWN: BSTokenFamily.TOKEN_UNKNOWN
             }
 
-        self.__tokenStyles = {}
 
-        styles = {
-                BSLanguageDef.STYLE_DARK: [
-                        (BSLanguageDef.TOKEN_STRING, '#9ac07c', False, False),
-                        (BSLanguageDef.TOKEN_NUMBER, '#c9986a', False, False),
-                        (BSLanguageDef.TOKEN_COLOR, '#c9986a', False, False),
-                        (BSLanguageDef.TOKEN_COMMENT, '#5d636f', False, True),
-                        (BSLanguageDef.TOKEN_ACTION, '#FFFF00', True, False),
-                        (BSLanguageDef.TOKEN_FLOW, '#c278da', True, False),
-                        (BSLanguageDef.TOKEN_UNCOMPLETEFLOW, '#c278da', True, True, None, i18n('Flow instruction is not complete')),
-                        (BSLanguageDef.TOKEN_FUNCTION, '#6aafec', False, False),
-                        (BSLanguageDef.TOKEN_UNCOMPLETEFUNCTION, '#6aafec', False, True),
-                        (BSLanguageDef.TOKEN_OPERATOR, '#c278da', False, False),
-                        (BSLanguageDef.TOKEN_VARIABLE_INTERNAL, '#e18890', False, False),
-                        (BSLanguageDef.TOKEN_VARIABLE_USERDEFINED, '#d96d77', False, False),
-                        (BSLanguageDef.TOKEN_BRACES, '#c278da', False, False),
-                        (BSLanguageDef.TOKEN_CONSTANT, '#62b6c1', False, False),
-                        (BSLanguageDef.TOKEN_UNCOMPLETE, '#FFFF88', False, True, '#ffb770', i18n('Action instruction is not complete')),
-                        (BSLanguageDef.TOKEN_UNKNOWN, '#880000', True, True, '#d29090'),
-                        (BSLanguageDef.TOKEN_SPACE_WC, None, False, False),
-                        (BSLanguageDef.TOKEN_SPACE_NL, None, False, False)
-                    ],
-                BSLanguageDef.STYLE_LIGHT: [
-                        (BSLanguageDef.TOKEN_STRING, '#9ac07c', False, False),
-                        (BSLanguageDef.TOKEN_NUMBER, '#c9986a', False, False),
-                        (BSLanguageDef.TOKEN_COLOR, '#c9986a', False, False),
-                        (BSLanguageDef.TOKEN_COMMENT, '#5d636f', False, True),
-                        (BSLanguageDef.TOKEN_ACTION, '#FFFF00', True, False),
-                        (BSLanguageDef.TOKEN_FLOW, '#c278da', True, False),
-                        (BSLanguageDef.TOKEN_UNCOMPLETEFLOW, '#c278da', True, True),
-                        (BSLanguageDef.TOKEN_FUNCTION, '#6aafec', False, False),
-                        (BSLanguageDef.TOKEN_UNCOMPLETEFUNCTION, '#6aafec', False, True),
-                        (BSLanguageDef.TOKEN_OPERATOR, '#c278da', False, False),
-                        (BSLanguageDef.TOKEN_VARIABLE_INTERNAL, '#e18890', False, False),
-                        (BSLanguageDef.TOKEN_VARIABLE_USERDEFINED, '#d96d77', False, False),
-                        (BSLanguageDef.TOKEN_BRACES, '#c278da', False, False),
-                        (BSLanguageDef.TOKEN_CONSTANT, '#62b6c1', False, False),
-                        (BSLanguageDef.TOKEN_UNCOMPLETE, '#FFFF88', False, True, '#ffb770'),
-                        (BSLanguageDef.TOKEN_UNKNOWN, '#880000', True, True, '#d29090'),
-                        (BSLanguageDef.TOKEN_SPACE_WC, None, False, False),
-                        (BSLanguageDef.TOKEN_SPACE_NL, None, False, False)
-                    ]
-            }
-
-        for style in styles:
-            for definition in styles[style]:
-                self.setStyle(style, *definition)
+    def family(self, type):
+        """Return token family for given token type"""
+        if type in self.__tokenFamilies:
+            return self.__tokenFamilies[type]
+        return BSTokenFamily.TOKEN_UNKNOWN
 
 
-    def style(self, type):
-        """Return style to apply for a token type or a token familly"""
-        if isinstance(type, int):
-            if type in self.__tokenStyles[self.__currentStyleId]:
-                return self.__tokenStyles[self.__currentStyleId][type]
-        elif isinstance(type, str):
-            if self.__tokenFamillies[type] in self.__tokenStyles[self.__currentStyleId]:
-                return self.__tokenStyles[self.__currentStyleId][self.__tokenFamillies[type]]
-        # in all other case, token style is not known...
-        return self.__tokenStyles[self.__currentStyleId][BSLanguageDef.TOKEN_UNKNOWN]
+    def tokenizer(self):
+        """Return tokenizer for language"""
+        return self.__tokenizer
 
 
-    def setStyle(self, themeId, tokenFamilly, fgColor, bold, italic, bgColor=None, tooltip=None):
-        """Define style for a token familly"""
-        textFmt = QTextCharFormat()
-        textFmt.setFontItalic(italic)
-        if bold:
-            textFmt.setFontWeight(QFont.Bold)
-
-        if not fgColor is None:
-            textFmt.setForeground(QColor(fgColor))
-        if not bgColor is None:
-            textFmt.setBackground(QColor(bgColor))
-        if not tooltip is None:
-            textFmt.setToolTip(tooltip)
-
-        if not themeId in self.__tokenStyles:
-            self.__tokenStyles[themeId]={}
-
-        self.__tokenStyles[themeId][tokenFamilly]=textFmt
-
-
-    def theme(self):
-        """Return current defined theme"""
-        return self.__currentStyleId
-
-
-    def setTheme(self, themeId):
-        """Set current theme
-
-        If theme doesn't exist, current theme is not changed"""
-        if themeId in self.__currentStyleId:
-            self.__currentStyleId=themeId
-
-
-    def familly(self, type):
-        """Return token familly for given token type"""
-        if type in self.__tokenFamillies:
-            return self.__tokenFamillies[type]
-        return BSLanguageDef.TOKEN_UNKNOWN
-
-
-    def rules(self):
-        """Return all language rules as a list of BSLanguageRule"""
-        return self.__rules
-
-
-    def tokenized(self, text):
-        """Return tokenized text as BSList
-
-        Each list item is BSLanguageToken object
-        """
-        matchIterator = self.__regEx.globalMatch(text)
-
-        BSLanguageToken.resetTokenizer()
-
-        previousToken = None
-        returned=[]
-        # iterate all found tokens
-        while matchIterator.hasNext():
-            match = matchIterator.next()
-
-            if match.hasMatch():
-                for textIndex in range(len(match.capturedTexts())):
-                    value = match.captured(textIndex)
-
-                    position = 0
-                    for rule in self.__rules:
-                        ruleMatch = rule.regEx().match(value)
-                        if ruleMatch.hasMatch():
-                            token = BSLanguageToken(match.captured(textIndex), rule,
-                                                    match.capturedStart(textIndex),
-                                                    match.capturedEnd(textIndex),
-                                                    match.capturedLength(textIndex))
-                            token.setPrevious(previousToken)
-                            if not previousToken is None:
-                                previousToken.setNext(token)
-                            returned.append(token)
-                            previousToken=token
-                            # do not need to continue to check for another token type
-                            break
-        return BSList(returned)
+    def style(self, item):
+        """Return style for given token and/or rule"""
+        return self.__tokenStyle.style(item.family())
 
 
     def getTextProposal(self, text):
@@ -844,7 +537,7 @@ class BSLanguageDef:
 
         rePattern=re.compile(re.escape(re.sub('\s+', '\x01', text)).replace('\x01', r'\s+'))
         returned=[]
-        for rule in self.__rules:
+        for rule in self.__tokenizer.rules():
             values=rule.matchText(rePattern)
             if len(values)>0:
                 returned+=values
@@ -852,13 +545,10 @@ class BSLanguageDef:
 
 
     def vocabulary(self):
-        """..."""
+        """Return vocabulary list for language"""
         returned=[]
-        for rule in self.__rules:
-            returned+=rule.asText()
+        for rule in self.__tokenizer.rules():
+            returned+=rule.readableTextList()
         return returned
 
 
-    def regEx(self):
-        """Return current built regular expression used for lexer"""
-        return self.__regEx
