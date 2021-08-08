@@ -49,7 +49,7 @@ if __name__ != '__main__':
         )
 
     from .bs.bsuicontroller import BSUIController
-    from .bs.bsutils import checkKritaVersion
+    from buliscript.pktk.modules.utils import checkKritaVersion
 else:
     # Execution from 'Scripter' plugin?
     __PLUGIN_EXEC_FROM__ = 'SCRIPTER_PLUGIN'
@@ -72,7 +72,7 @@ else:
         )
 
     from buliscript.bs.bsuicontroller import BSUIController
-    from buliscript.bs.bsutils import checkKritaVersion
+    from buliscript.pktk.modules.utils import checkKritaVersion
 
     print("======================================")
 

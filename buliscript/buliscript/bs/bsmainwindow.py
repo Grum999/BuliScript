@@ -39,11 +39,15 @@ from PyQt5.QtWidgets import (
         QMainWindow
     )
 
-from .bstheme import BSTheme
-from .bsutils import loadXmlUi
+from .bslanguagedef import BSLanguageDef
 
-from ..pktk.pktk import EInvalidType
-from ..pktk.pktk import EInvalidValue
+from buliscript.pktk.modules.uitheme import UITheme
+from buliscript.pktk.modules.utils import loadXmlUi
+from buliscript.pktk.modules.menuutils import buildQMenuTree
+from buliscript.pktk.pktk import (
+        EInvalidType,
+        EInvalidValue
+    )
 
 
 

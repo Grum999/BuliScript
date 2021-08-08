@@ -34,10 +34,8 @@ from PyQt5.QtCore import (
         QEventLoop,
         QTimer
     )
-from .bsutils import (
-        buildIcon,
-        Debug
-    )
+from buliscript.pktk.modules.utils import Debug
+from buliscript.pktk.modules.imgutils import buildIcon
 
 class BSSysTray(object):
     """Manage system tray"""
@@ -209,4 +207,3 @@ class BSSysTray(object):
     def messageCritical(title, message):
         """Display a critical message"""
         BSSysTray.__selfInstance.__popMessage(title, message, QSystemTrayIcon.Critical)
-

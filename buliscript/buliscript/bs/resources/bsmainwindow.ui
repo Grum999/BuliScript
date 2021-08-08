@@ -82,7 +82,7 @@
             </attribute>
             <layout class="QHBoxLayout" name="horizontalLayout">
              <item>
-              <widget class="BSWCodeEditor" name="plainTextEdit"/>
+              <widget class="WCodeEditor" name="plainTextEdit"/>
              </item>
             </layout>
            </widget>
@@ -117,10 +117,11 @@
     </property>
     <widget class="QMenu" name="menuScriptRecent">
      <property name="title">
-      <string>Recent scripts</string>
+      <string>&amp;Recent scripts</string>
      </property>
      <property name="icon">
-      <iconset theme="document-open-recent"/>
+      <iconset theme="document-open-recent">
+       <normaloff>.</normaloff>.</iconset>
      </property>
      <addaction name="actionScriptRecent_None"/>
     </widget>
@@ -151,9 +152,9 @@
     <addaction name="separator"/>
     <addaction name="actionEditSelectAll"/>
    </widget>
-   <widget class="QMenu" name="menuFunctions">
+   <widget class="QMenu" name="menuLanguage">
     <property name="title">
-     <string>F&amp;unctions</string>
+     <string>Lan&amp;guage</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuSettings">
@@ -185,7 +186,7 @@
    </widget>
    <addaction name="menuScript"/>
    <addaction name="menuEdit"/>
-   <addaction name="menuFunctions"/>
+   <addaction name="menuLanguage"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
@@ -193,143 +194,160 @@
   <widget class="QStatusBar" name="sbInfo"/>
   <action name="actionHelpBuliScriptHandbook">
    <property name="icon">
-    <iconset theme="help-contents"/>
+    <iconset theme="help-contents">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>BuliScript handbook...</string>
+    <string>&amp;BuliScript handbook...</string>
    </property>
   </action>
   <action name="actionHelpAboutBS">
    <property name="icon">
-    <iconset theme="help-about"/>
+    <iconset theme="help-about">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>About Buli Script...</string>
+    <string>&amp;About Buli Script...</string>
    </property>
   </action>
   <action name="actionScriptNew">
    <property name="icon">
-    <iconset theme="document-new"/>
+    <iconset theme="document-new">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>New...</string>
+    <string>&amp;New...</string>
    </property>
   </action>
   <action name="actionScriptOpen">
    <property name="icon">
-    <iconset theme="document-open"/>
+    <iconset theme="document-open">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Open...</string>
+    <string>&amp;Open...</string>
    </property>
   </action>
   <action name="actionScriptSave">
    <property name="icon">
-    <iconset theme="document-save"/>
+    <iconset theme="document-save">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Save</string>
+    <string>&amp;Save</string>
    </property>
   </action>
   <action name="actionScriptSaveAs">
    <property name="icon">
-    <iconset theme="document-save-as"/>
+    <iconset theme="document-save-as">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Save as...</string>
+    <string>Sa&amp;ve as...</string>
    </property>
   </action>
   <action name="actionScriptSaveAll">
    <property name="icon">
-    <iconset theme="document-save-all"/>
+    <iconset theme="document-save-all">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Save all</string>
+    <string>Save a&amp;ll</string>
    </property>
   </action>
   <action name="actionScriptExecute">
    <property name="icon">
-    <iconset theme="run-build"/>
+    <iconset theme="run-build">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Execute</string>
+    <string>&amp;Execute</string>
    </property>
   </action>
   <action name="actionScriptQuit">
    <property name="icon">
-    <iconset theme="application-exit"/>
+    <iconset theme="application-exit">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Quit</string>
+    <string>&amp;Quit</string>
    </property>
   </action>
   <action name="actionScriptClose">
    <property name="icon">
-    <iconset theme="document-close"/>
+    <iconset theme="document-close">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Close</string>
+    <string>&amp;Close</string>
    </property>
   </action>
   <action name="actionScriptRecent_None">
    <property name="text">
-    <string>(no recent scripts)</string>
+    <string>(&amp;no recent scripts)</string>
    </property>
   </action>
   <action name="actionEditCut">
    <property name="icon">
-    <iconset theme="edit-cut"/>
+    <iconset theme="edit-cut">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Cut</string>
+    <string>&amp;Cut</string>
    </property>
   </action>
   <action name="actionEditCopy">
    <property name="icon">
-    <iconset theme="edit-copy"/>
+    <iconset theme="edit-copy">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Copy</string>
+    <string>C&amp;opy</string>
    </property>
   </action>
   <action name="actionEditPaste">
    <property name="icon">
-    <iconset theme="edit-paste"/>
+    <iconset theme="edit-paste">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Paste</string>
+    <string>&amp;Paste</string>
    </property>
   </action>
   <action name="actionEditSelectAll">
    <property name="icon">
-    <iconset theme="edit-select-all"/>
+    <iconset theme="edit-select-all">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Select all</string>
+    <string>&amp;Select all</string>
    </property>
   </action>
   <action name="actionEditUndo">
    <property name="icon">
-    <iconset theme="edit-undo"/>
+    <iconset theme="edit-undo">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Undo</string>
+    <string>&amp;Undo</string>
    </property>
   </action>
   <action name="actionEditRedo">
    <property name="icon">
-    <iconset theme="edit-redo"/>
+    <iconset theme="edit-redo">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Redo</string>
+    <string>&amp;Redo</string>
    </property>
   </action>
   <action name="actionSettingsPreferences">
    <property name="icon">
-    <iconset theme="settings-configure"/>
+    <iconset theme="settings-configure">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Preferences...</string>
+    <string>&amp;Preferences...</string>
    </property>
   </action>
   <action name="actionViewShowCanvasGrid">
@@ -340,7 +358,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show canvas grid</string>
+    <string>Show canvas &amp;grid</string>
    </property>
   </action>
   <action name="actionViewShowCanvasOrigin">
@@ -351,7 +369,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show canvas origin</string>
+    <string>Show &amp;canvas origin</string>
    </property>
   </action>
   <action name="actionViewShowCanvasPosition">
@@ -362,7 +380,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show canvas position</string>
+    <string>Show canvas &amp;position</string>
    </property>
   </action>
   <action name="actionViewShowCanvas">
@@ -373,7 +391,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show canvas</string>
+    <string>&amp;Show canvas</string>
    </property>
   </action>
   <action name="actionViewShowConsole">
@@ -384,7 +402,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show console</string>
+    <string>S&amp;how console</string>
    </property>
   </action>
   <action name="actionSettingsSaveSessionOnExit">
@@ -395,15 +413,15 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Save session on exit</string>
+    <string>&amp;Save session on exit</string>
    </property>
   </action>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>BSWCodeEditor</class>
+   <class>WCodeEditor</class>
    <extends>QPlainTextEdit</extends>
-   <header>buliscript.bs.bswcodeeditor</header>
+   <header>buliscript.pktk.widgets.wcodeeditor</header>
   </customwidget>
  </customwidgets>
  <resources/>

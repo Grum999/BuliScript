@@ -37,25 +37,28 @@ from PyQt5.QtWidgets import (
     )
 
 
-from .bsabout import BSAboutWindow
 from .bsmainwindow import BSMainWindow
 from .bssystray import BSSysTray
-from .bstheme import BSTheme
 from .bssettings import (
         BSSettings,
         BSSettingsKey
     )
-from .bsutils import (
+
+from buliscript.pktk.modules.uitheme import UITheme
+from buliscript.pktk.modules.utils import (
         checkKritaVersion,
         Debug
     )
-from ..pktk.pktk import (
+from buliscript.pktk.modules.imgutils import buildIcon
+from buliscript.pktk.modules.about import AboutWindow
+
+from buliscript.pktk.pktk import (
         EInvalidType,
         EInvalidValue,
         EInvalidStatus
     )
 
-from ..pktk.ekrita import (
+from buliscript.pktk.modules.ekrita import (
         EKritaNode
     )
 
@@ -77,13 +80,17 @@ class BSUIController(QObject):
         self.__bsStarted = False
         self.__bsStarting = False
 
-        self.__theme = BSTheme()
+
         self.__window = None
         self.__bsName = bsName
         self.__bsVersion = bsVersion
         self.__bsTitle = "{0} - {1}".format(bsName, bsVersion)
 
         self.__settings = BSSettings('buliscript')
+
+        UITheme.load()
+        # BC theme must be loaded before systray is initialized
+        # #----- uncomment if local resources # UITheme.load(os.path.join(os.path.dirname(__file__), 'resources'))
 
         self.__systray=BSSysTray(self)
         self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE.id()))
@@ -113,8 +120,6 @@ class BSUIController(QObject):
         # Check if windows are opened and then, connect signal if needed
         self.__checkKritaWindows()
 
-        if not self.__theme is None:
-            self.__theme.loadResources()
 
         self.__initialised = False
         self.__window = BSMainWindow(self)
@@ -199,35 +204,37 @@ class BSUIController(QObject):
                         pixmaps.append( (QPixmap(widget.property(propertyName)), QIcon.Selected, QIcon.Off) )
             return pixmaps
 
-        if not self.__theme is None:
-            self.__theme.loadResources()
+        UITheme.reloadResources()
 
-            # need to apply new palette to widgets
-            # otherwise it seems they keep to refer to the old palette...
-            palette = QApplication.palette()
-            widgetList = self.__window.getWidgets()
+        # need to apply new palette to widgets
+        # otherwise it seems they keep to refer to the old palette...
+        palette = QApplication.palette()
+        widgetList = self.__window.getWidgets()
 
-            for widget in widgetList:
-                if hasattr(widget, 'setPalette'):
-                    # force palette to be applied to widget
-                    widget.setPalette(palette)
+        for widget in widgetList:
+            if isinstance(widget, BCWPathBar) or isinstance(widget, BreadcrumbsAddressBar):
+                widget.updatePalette()
+            elif hasattr(widget, 'setPalette'):
+                # force palette to be applied to widget
+                widget.setPalette(palette)
 
-                if isinstance(widget, QTabWidget):
-                    # For QTabWidget, it's not possible to set icon directly,
-                    # need to use setTabIcon()
-                    for tabIndex in range(widget.count()):
-                        tabWidget = widget.widget(tabIndex)
+            if isinstance(widget, QTabWidget):
+                # For QTabWidget, it's not possible to set icon directly,
+                # need to use setTabIcon()
+                for tabIndex in range(widget.count()):
+                    tabWidget = widget.widget(tabIndex)
 
-                        if not widget.tabIcon(tabIndex) is None:
-                            pixmaps=buildPixmapList(tabWidget)
-                            if len(pixmaps) > 0:
-                                widget.setTabIcon(tabIndex, buildIcon(pixmaps))
+                    if not widget.tabIcon(tabIndex) is None:
+                        pixmaps=buildPixmapList(tabWidget)
+                        if len(pixmaps) > 0:
+                            widget.setTabIcon(tabIndex, buildIcon(pixmaps))
 
-                # need to do something to relad icons...
-                elif hasattr(widget, 'icon'):
-                    pixmaps=buildPixmapList(widget)
-                    if len(pixmaps) > 0:
-                        widget.setIcon(buildIcon(pixmaps))
+            # need to do something to relad icons...
+            elif hasattr(widget, 'icon'):
+                pixmaps=buildPixmapList(widget)
+                if len(pixmaps) > 0:
+                    widget.setIcon(buildIcon(pixmaps))
+
 
 
     def __checkKritaWindows(self):
@@ -528,6 +535,7 @@ class BSUIController(QObject):
 
     def commandAboutBs(self):
         """Display 'About Buli Script' dialog box"""
-        BSAboutWindow(self.__bsName, self.__bsVersion)
+        AboutWindow(self.__bsName, self.__bsVersion, os.path.join(os.path.dirname(__file__), 'resources', 'png', 'buli-powered-big.png'), None, ':BuliScript')
+
 
     # endregion: define commands -----------------------------------------------
