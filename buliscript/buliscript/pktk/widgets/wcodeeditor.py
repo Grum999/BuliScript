@@ -52,12 +52,14 @@ class WCodeEditor(QPlainTextEdit):
     """Extended editor with syntax highlighting, autocompletion, line number..."""
 
     cursorCoordinatesChanged = Signal(int, int, int, int, int) # column start, row start, column end, row end, selection length, token
+    overwriteModeChanged = Signal(bool)
 
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
     KEY_TOGGLE_COMMENT = 'toggleComment'
     KEY_AUTOINDENT = 'autoIndent'
     KEY_COMPLETION = 'completion'
+    KEY_INSERTOVERWRITE_MODE = 'insertOverwriteMode'
 
     CTRL_KEY_TRUE = True
     CTRL_KEY_FALSE = False
@@ -140,6 +142,9 @@ class WCodeEditor(QPlainTextEdit):
                 },
             Qt.Key_Space: {
                     WCodeEditor.CTRL_KEY_TRUE: WCodeEditor.KEY_COMPLETION
+                },
+            Qt.Key_Insert: {
+                    WCodeEditor.CTRL_KEY_FALSE: WCodeEditor.KEY_INSERTOVERWRITE_MODE
                 }
         }
 
@@ -285,7 +290,6 @@ class WCodeEditor(QPlainTextEdit):
         if token is None:
             moveRight=0
         else:
-            print(token, self.__cursorCol)
             moveRight=token.length() - (self.__cursorCol - token.column() + 1)
 
 
@@ -476,7 +480,7 @@ class WCodeEditor(QPlainTextEdit):
             super(WCodeEditor, self).keyPressEvent(event)
             # if no action is defined and autocompletion is active, display
             # completer list automatically if key pressed is not an arrow key to move caret
-            if self.__optionAutoCompletion and not event.key() in (Qt.Key_Home, Qt.Key_End, Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Shift, Qt.Key_Control, Qt.Key_Meta, Qt.Key_Alt):
+            if self.__optionAutoCompletion and not event.key() in (Qt.Key_Insert, Qt.Key_Home, Qt.Key_End, Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Shift, Qt.Key_Control, Qt.Key_Meta, Qt.Key_Alt):
                 action = WCodeEditor.KEY_COMPLETION
         elif event.key() == Qt.Key_Return:
             super(WCodeEditor, self).keyPressEvent(event)
@@ -639,6 +643,8 @@ class WCodeEditor(QPlainTextEdit):
             self.doAutoIndent()
         elif action == WCodeEditor.KEY_COMPLETION:
             self.doCompletionPopup()
+        elif action == WCodeEditor.KEY_INSERTOVERWRITE_MODE:
+            self.doOverwriteMode()
 
 
     def shortCut(self, key, modifiers):
@@ -1009,6 +1015,26 @@ class WCodeEditor(QPlainTextEdit):
         self.__displayCompleterHint()
 
         return displayPopup
+
+
+    def doOverwriteMode(self, mode=None):
+        """Change current insert/overwrite mode
+
+        If mode is None, switch current mode
+        Otherwise given `mode` is a boolean:
+        - False = insert
+        - True = overwrite
+        """
+        changed=False
+
+        if mode is None:
+            mode=not self.overwriteMode()
+
+        changed=(mode!=self.overwriteMode())
+        if changed:
+            self.setOverwriteMode(mode)
+            self.overwriteModeChanged.emit(mode)
+
 
 
     def languageDefinition(self):
