@@ -49,7 +49,7 @@ from ..pktk import *
 
 
 class WCodeEditor(QPlainTextEdit):
-    """Extended editor with syntax highlighting, autocompletion, line nubmer..."""
+    """Extended editor with syntax highlighting, autocompletion, line number..."""
 
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
@@ -115,6 +115,9 @@ class WCodeEditor(QPlainTextEdit):
         # autocompletion is automatic (True) or manual (False)
         self.__optionAutoCompletion = True
 
+        # autocompletion popup max number of items
+        self.__optionAutoCompletionMaxItems = 25
+
         # allows key bindings
         self.__optionWheelSetFontSize=True
 
@@ -174,6 +177,7 @@ class WCodeEditor(QPlainTextEdit):
         self.__completer.setCompletionRole(Qt.DisplayRole)
         self.__completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.__completer.setCompletionMode(QCompleter.PopupCompletion)
+        self.__completer.setMaxVisibleItems(self.__optionAutoCompletionMaxItems)
         self.__completer.activated.connect(self.__insertCompletion)
         self.__completer.highlighted[QModelIndex].connect(self.__displayCompleterHint)
 
@@ -244,7 +248,7 @@ class WCodeEditor(QPlainTextEdit):
             # it's not possible to move a tooltip
             # need to set a different value to force tooltip being refreshed to new position
             QToolTip.showText(self.mapToGlobal(position), tooltipHelp+' ')
-            QToolTip.showText(self.mapToGlobal(position), tooltipHelp, self, QRect(), 240000) # 4minutes..
+            QToolTip.showText(self.mapToGlobal(position), tooltipHelp, self, QRect(), 600000) # 10minutes..
             self.__completerLastSelectedIndex = index
 
 
@@ -1184,6 +1188,18 @@ class WCodeEditor(QPlainTextEdit):
         if isinstance(value, bool) and value != self.__optionAutoCompletion:
             self.__optionAutoCompletion=value
             self.update()
+
+
+    def optionAutoCompletionMaxItems(self):
+        """Return if autoCompletion is manual or automatic"""
+        return self.__optionAutoCompletionMaxItems
+
+
+    def setOptionAutoCompletionMaxItems(self, value):
+        """Set if autoCompletion is manual or automatic"""
+        if isinstance(value, int) and value != self.__optionAutoCompletionMaxItems and value>1:
+            self.__optionAutoCompletionMaxItems=value
+            self.__completer.setMaxVisibleItems(self.__optionAutoCompletionMaxItems)
 
 
     def optionAllowWheelSetFontSize(self):
