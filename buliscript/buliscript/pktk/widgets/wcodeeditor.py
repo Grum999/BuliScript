@@ -51,6 +51,8 @@ from ..pktk import *
 class WCodeEditor(QPlainTextEdit):
     """Extended editor with syntax highlighting, autocompletion, line number..."""
 
+    cursorCoordinatesChanged = Signal(int, int, int, int, int) # column start, row start, column end, row end, selection length, token
+
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
     KEY_TOGGLE_COMMENT = 'toggleComment'
@@ -213,6 +215,25 @@ class WCodeEditor(QPlainTextEdit):
 
         # row is always 1 here as tokenized text is only current row
         self.__cursorToken=self.__cursorTokens.tokenAt(self.__cursorCol + 1, 1)
+
+        selectionStart = cursor.selectionStart()
+        selectionEnd = cursor.selectionEnd()
+
+        selLength=selectionEnd - selectionStart
+
+        if selLength==0:
+            self.cursorCoordinatesChanged.emit(self.__cursorCol, self.__cursorRow, self.__cursorCol, self.__cursorRow, 0)
+        else:
+            # determinate block numbers
+            cursor.setPosition(selectionStart)
+            cColStart = cursor.columnNumber()+1
+            cRowStart = cursor.blockNumber()+1
+
+            cursor.setPosition(selectionEnd)
+            cColEnd = cursor.columnNumber()+1
+            cRowEnd = cursor.blockNumber()+1
+
+            self.cursorCoordinatesChanged.emit(cColStart, cRowStart, cColEnd, cRowEnd, selLength)
 
 
     def __hideCompleterHint(self):
@@ -454,8 +475,8 @@ class WCodeEditor(QPlainTextEdit):
         if action is None:
             super(WCodeEditor, self).keyPressEvent(event)
             # if no action is defined and autocompletion is active, display
-            # completer list automatically
-            if self.__optionAutoCompletion:
+            # completer list automatically if key pressed is not an arrow key to move caret
+            if self.__optionAutoCompletion and not event.key() in (Qt.Key_Home, Qt.Key_End, Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Shift, Qt.Key_Control, Qt.Key_Meta, Qt.Key_Alt):
                 action = WCodeEditor.KEY_COMPLETION
         elif event.key() == Qt.Key_Return:
             super(WCodeEditor, self).keyPressEvent(event)
@@ -920,7 +941,6 @@ class WCodeEditor(QPlainTextEdit):
         currentToken=None
         displayPopup=False
         minLength = 0
-
 
         currentToken = self.cursorToken(False)
 
