@@ -1,0 +1,670 @@
+/*
+    ----------------------------------------------------------------------------
+    Buli Script
+    Copyright (C) 2020-2021 - Grum999
+    ----------------------------------------------------------------------------
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.
+    If not, see https://www.gnu.org/licenses/
+    ----------------------------------------------------------------------------
+    A Krita plugin designed to draw programmatically
+    ----------------------------------------------------------------------------
+
+    ----------------------------------------------------------------------------
+    This document define grammar for BuliScript language, using EBNF syntax
+    (Grammar is more designed for user comprehension than for a real implementation)
+
+
+    Railroad diagram can be produced from (for example) following online website
+        - https://dundalek.com/grammkit/
+        - https://www.bottlecaps.de/rr/ui
+            (used to generate document grammar-diagram.xhtml)
+
+    ----------------------------------------------------------------------------
+*/
+
+
+/*
+    ----------------------------------------------------------------------------
+    Global BuliScript body definition
+    ----------------------------------------------------------------------------
+*/
+Script  ::= Declarations_Section? ScriptBlock?
+
+ScriptBlock
+        ::= ( Comment | Action | Flow )+
+
+
+
+/*
+    ----------------------------------------------------------------------------
+    Define declarations
+
+    Declarations part can be defined by:
+    - comments
+    - variables definition
+    - import of resources
+    - macro declarations
+
+    Note that import and macro declaration can't be made anymore once body
+    script is started (ie: an action or a flow is defined)
+    ----------------------------------------------------------------------------
+*/
+Declarations_Section
+        ::= (
+                Comment |
+                ( ( Flow_Set_Variable |
+                    Flow_Import |
+                    Flow_Define_Macro )
+                )
+            )+
+
+
+
+/*
+    ----------------------------------------------------------------------------
+    Comments are currently defined as single-lines comments
+    ----------------------------------------------------------------------------
+*/
+Comment  ::= '#' [^\n]*
+
+
+
+/*
+    ----------------------------------------------------------------------------
+    Define actions
+
+    To simplify grammar/graph reading, actions are regrouped by functionnal
+    meaning
+    ----------------------------------------------------------------------------
+*/
+
+/* Functionnal perimeter for all actions */
+Action  ::= (
+                Action_Set_Unit |
+                Action_Set_Pen |
+                Action_Set_Fill |
+                Action_Set_Text |
+                Action_Set_Draw |
+                Action_Set_Canvas |
+                /*
+                Action_Set_Layer |
+                Action_Set_Selection |
+                */
+                Action_Set_Execution |
+                Action_Draw_Shape |
+                Action_Draw_Misc |
+                Action_Draw_Fill |
+                Action_Draw_Pen |
+                Action_Draw_Move |
+                Action_Draw_Turn |
+                Action_State |
+                Action_Canvas |
+                Action_UIConsole |
+                Action_UIDialog
+            )
+
+/* Settings: Units */
+Action_Set_Unit
+        ::= 'set' 'unit' (
+                ( 'canvas'   Unit_M_Expression ) |
+                ( 'rotation' Unit_R_Expression )
+            )
+
+/* Settings: Pen */
+Action_Set_Pen
+        ::= 'set' 'pen' (
+                ( 'color'     Color_Expression ) |
+                ( 'size'      Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'style'     PenStyle_Expression ) |
+                ( 'cap'       PenCap_Expression ) |
+                ( 'join'      PenJoin_Expression ) |
+                ( 'opacity'   Evaluate_Number_Expression )
+            )
+
+/* Settings: Fill */
+Action_Set_Fill
+        ::= 'set' 'fill' (
+                ( 'color'     Color_Expression ) |
+                ( 'rule'      FillRule_Expression ) |
+                ( 'opacity'   Evaluate_Number_Expression )
+            )
+
+
+/* Settings: Text */
+Action_Set_Text
+        ::= 'set' 'text' (
+                ( 'color'               Color_Expression ) |
+                ( 'opacity'             Evaluate_Number_Expression ) |
+                ( 'font'                Evaluate_String_Expression ) |
+                ( 'size'                Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'bold'                Evaluate_Boolean_Expression ) |
+                ( 'italic'              Evaluate_Boolean_Expression ) |
+                ( 'outline'             Evaluate_Boolean_Expression ) |
+                ( 'letter' 'spacing'    Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'stretch'             Evaluate_Number_Expression ) |
+                ( 'horizontal' 'alignment'
+                                        AlignH_Expression ) |
+                ( 'vertical' 'alignment'
+                                        AlignV_Expression )
+            )
+
+
+/* Settings: Drawings */
+Action_Set_Draw
+        ::= 'set' 'draw' (
+                ( 'antialiasing'   Evaluate_Boolean_Expression ) |
+                ( 'blending'       BlendingMode_Expression )
+            )
+
+
+/* Settings: Canvas grid */
+Action_Set_Canvas
+        ::= 'set' 'canvas' (
+                ( 'grid' | 'origin' | 'position' ) (
+                    ( 'color'   Color_Expression ) |
+                    ( 'style'   PenStyle_Expression ) |
+                    ( 'size'    Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? )
+                ) |
+                ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
+                'position' ( 'fulfilled' Evaluate_Boolean_Expression )
+            )
+
+
+/*
+Action_Set_Layer
+        ::= 'TODO: define Set layer'
+
+Action_Set_Selection
+        ::= 'TODO: define Set selection'
+*/
+
+Action_Set_Execution
+        ::= 'set' 'execution' 'verbose' Evaluate_Boolean_Expression
+
+
+Action_Draw_Shape
+        ::= 'draw' (
+                ( 'square' Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'round' (
+                        ('square' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
+                        ( 'rect' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
+                    )
+                ) |
+                ( 'rect' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'circle' Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'ellipse' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? ) |
+                  'dot'  |
+                  'pixel' |
+                ( 'image' Evaluate_String_Expression ) |
+                ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Evaluate_Number_Expression Unit_RM_Expression? ) |
+                ( 'text' Evaluate_String_Expression ) |
+                ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
+            )
+
+
+Action_Draw_Misc
+        ::= (
+                'clear' 'canvas'
+                /*
+                |
+                'apply' 'to' 'layer'
+                */
+            )
+
+
+Action_Draw_Fill
+        ::= 'fill' ('begin' | 'end' )
+
+
+Action_Draw_Pen
+        ::= 'pen' ( 'up' | 'down' )
+
+
+Action_Draw_Move
+        ::= 'move' (
+                'home' |
+                ( 'forward' Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'backward' Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'left' Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'right' Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'to' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? )
+            )
+
+
+Action_Draw_Turn
+        ::= 'turn' (
+                ( 'left' Evaluate_Number_Expression Unit_R_Expression? ) |
+                ( 'right' Evaluate_Number_Expression Unit_R_Expression? ) |
+                ( 'to' Evaluate_Number_Expression Unit_R_Expression? )
+            )
+
+
+Action_State
+        ::= ( 'push' | 'pop' ) 'state'
+
+
+Action_Canvas
+        ::= ( 'show' | 'hide' ) 'canvas' ( 'grid' | 'origin' | 'position' | 'background' )
+
+
+Action_UIConsole
+        ::= 'print'
+            Any_Expression+
+
+
+Action_UIDialog
+        ::= 'open' 'dialog' 'for' (
+                'message' |
+                ( 'boolean' 'input' User_Variable ) |
+                (
+                    /* NUMBER INPUT */
+                    (
+                        ( 'integer' | 'decimal' ) 'input' User_Variable
+                        (
+                            'with' ( ('minimum' | 'maximum' | 'default' ) 'value' Evaluate_Number_Expression )
+                        )*
+                    ) |
+                    /* COLOR INPUT */
+                    (
+                        'color' 'input' Variable
+                        (
+                            'with' ( 'default' 'value' Color_Expression )
+                        )?
+                    ) |
+                    /* STRING INPUT */
+                    (
+                        'string' 'input' Variable
+                        (
+                            'with' ( 'default' 'value' Evaluate_String_Expression )
+                        )?
+                    )
+                )
+            )
+            (
+                'with' (
+                    ('title' Evaluate_String_Expression ) |
+                    ('message' Evaluate_String_Expression )
+                )
+            )*
+
+
+/*
+    ----------------------------------------------------------------------------
+    Define flows
+    ----------------------------------------------------------------------------
+*/
+Flow    ::= (
+                Flow_Set_Variable |
+                Flow_Execution |
+                Flow_Call |
+                Flow_If |
+                Flow_Repeat |
+                Flow_ForEach |
+                Flow_Return
+            )
+
+
+Flow_Set_Variable
+        ::= 'set' 'variable' User_Variable '=' Any_Expression
+
+
+Flow_Import
+        ::= 'import' (
+                ( 'macro' 'from' Evaluate_String_Expression ) |
+                ( 'image' 'from' Evaluate_String_Expression 'as' String_Value )
+            )
+
+
+Flow_Define_Macro
+        ::= 'define' 'macro' String_Value
+            ('with parameters' (User_Variable)*)?
+            'as'
+            INDENT
+            ScriptBlock
+            DEDENT
+
+Flow_Execution
+        ::= 'stop' 'script'
+
+
+Flow_Call
+        ::= 'call' 'macro' String_Value (Any_Expression)*
+            ('and' 'store' 'result' 'into' 'variable' User_Variable)?
+
+
+Flow_Return
+        ::= 'return' Any_Expression?
+
+
+Flow_If ::= 'if' Evaluation_Boolean_Expression 'then'
+                INDENT
+                ScriptBlock
+                DEDENT
+                ( Flow_ElseIf | Flow_Else )?
+
+Flow_ElseIf
+        ::= 'else' 'if' Evaluation_Boolean_Expression 'then'
+                INDENT
+                ScriptBlock
+                DEDENT
+                ( Flow_ElseIf | Flow_Else )?
+
+Flow_Else
+        ::= 'else'
+                INDENT
+                ScriptBlock
+                DEDENT
+
+Flow_Repeat
+        ::= 'repeat' Evaluate_Number_Expression 'times'
+                INDENT
+                ScriptBlock
+                DEDENT
+
+Flow_ForEach
+        ::= 'for' 'each' User_Variable 'in' List_Expression 'do'
+                INDENT
+                ScriptBlock
+                DEDENT
+
+
+
+/*
+    ----------------------------------------------------------------------------
+    Define expressions
+    ----------------------------------------------------------------------------
+*/
+Any_Expression
+        ::= Evaluation_Number_Expression |
+            Evaluation_String_Expression |
+            Evaluation_Boolean_Expression |
+            Evaluation_List_Expression |
+            Color_Expression |
+            Number_Expression |
+            String_Expression |
+            Boolean_Expression |
+            List_Expression |
+            Unit_M_Expression |
+            Unit_RM_Expression |
+            Unit_R_Expression |
+            PenStyle_Expression |
+            PenCap_Expression |
+            PenJoin_Expression |
+            FillRule_Expression |
+            AlignH_Expression |
+            AlignV_Expression |
+            BlendingMode_Expression
+
+Color_Expression
+        ::= ('#' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit (HexDigit HexDigit)?) |
+            Function |
+            Variable
+
+Number_Expression
+        ::= ([0-9]+ | [0-9]* '.' [0-9]+) |
+            Function | Variable
+
+String_Expression
+        ::= (String_Value (String_Value)* ) |
+            Function |
+            Variable
+
+Boolean_Expression
+        ::= ('ON' | 'OFF') |
+            Function |
+            Variable
+
+List_Expression
+        ::= ('[' ( Any_Expression (',' Any_Expression )* )? ']') |
+            Function |
+            Variable
+
+
+Unit_M_Expression
+        ::= ( 'PX' | 'PCT' | 'MM' | 'INCH' ) | Function | Variable
+
+Unit_RM_Expression
+        ::= ( 'PX' | 'PCT' | 'MM' | 'INCH' | 'RPCT' ) | Function | Variable
+
+Unit_R_Expression
+        ::= ( 'RADIAN' | 'DEGREE' ) | Function | Variable
+
+PenStyle_Expression
+        ::= ( 'SOLID' | 'DASH' | 'DOT' | 'DASHDOT' | 'NONE' ) | Function | Variable
+
+PenCap_Expression
+        ::= ( 'SQUARE' | 'FLAT' | 'ROUNDCAP' ) | Function | Variable
+
+PenJoin_Expression
+        ::= ( 'BEVEL' | 'MITTER' | 'ROUNDJOIN' ) | Function | Variable
+
+FillRule_Expression
+        ::= ( 'EVEN' | 'WINDING' ) | Function | Variable
+
+AlignH_Expression
+        ::= ( 'LEFT' | 'CENTER' | 'RIGHT' ) | Function | Variable
+
+AlignV_Expression
+        ::= ( 'TOP' | 'MIDDLE' | 'CENTER' ) | Function | Variable
+
+BlendingMode_Expression
+        ::= ( 'NORMAL' |
+              'SOURCE_OVER' |
+              'DESTINATION_CLEAR' |
+              'DESTINATION_OVER' |
+              'SOURCE_IN' |
+              'SOURCE_OUT' |
+              'DESTINATION_IN' |
+              'DESTINATION_OUT' |
+              'DESTINATION_ATOP' |
+              'SOURCE_ATOP' |
+              'XOR' |
+              'PLUS' |
+              'MULTIPLY' |
+              'SCREEN' |
+              'OVERLAY' |
+              'DARKEN' |
+              'LIGHTEN' |
+              'ColorDODGE' |
+              'ColorBURN' |
+              'HARD_LIGHT' |
+              'SOFT_LIGHT' |
+              'DIFFERENCE' |
+              'EXCLUSION' |
+              'BITWISE_S_OR_D' |
+              'BITWISE_S_AND_D' |
+              'BITWISE_S_XOR_D' |
+              'BITWISE_S_NOR_D' |
+              'BITWISE_S_NAND_D' |
+              'BITWISE_NS_XOR_D' |
+              'BITWISE_S_NOT' |
+              'BITWISE_NS_AND_D' |
+              'BITWISE_S_AND_ND' |
+              'BITWISE_NS_OR_D' |
+              'BITWISE_CLEAR' |
+              'BITWISE_SET' |
+              'BITWISE_NOT_D' |
+              'BITWISE_S_OR_ND' ) |
+            Function |
+            Variable
+
+
+
+Evaluation_Number_Expression
+        ::= '-'?
+            (Number_Expression |
+             '(' Evaluation_Number_Expression ')'
+            )
+            ( ('+' | '-' | '*' | '/' | '//' | '%' ) Evaluation_Number_Expression )?
+
+Evaluation_String_Expression
+        ::= (String_Expression |
+             '(' Evaluation_String_Expression ')'
+            )
+            ( '+' Evaluation_String_Expression )?
+
+Evaluation_Boolean_Expression
+        ::= (( 'not'?
+              ( Boolean_Expression |
+                '(' Evaluation_Boolean_Expression ')'
+              )
+            )
+            |
+            ( Any_Expression ( '<' | '<=' | '>' | '>=' | '=' | '<>' ) Any_Expression )
+            )
+            ( ( 'and' | 'or' | 'xor' ) Evaluation_Boolean_Expression )?
+
+Evaluation_List_Expression
+        ::= (List_Expression |
+             '(' Evaluation_List_Expression ')'
+            )
+            ( '+' Evaluation_List_Expression )?
+
+
+
+
+
+
+/*
+    ----------------------------------------------------------------------------
+    Define functions
+    ----------------------------------------------------------------------------
+*/
+Function
+        ::= 'color' '.' (
+                ( 'rgb' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
+                ( 'rgba' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
+                ( 'hsl' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
+                ( 'hsla' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
+                ( 'hsv' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
+                ( 'hsva' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
+                ( 'cmyk' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
+                ( 'cmyka' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' )
+            )
+            |
+            'string' '.' (
+                ( 'length' '(' Evaluation_String_Expression ')' ) |
+                ( 'upper' '(' Evaluation_String_Expression ')' ) |
+                ( 'lower' '(' Evaluation_String_Expression ')' ) |
+                ( 'substring' '(' Evaluation_String_Expression ',' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |
+                ( 'split' '(' Evaluation_String_Expression (',' Evaluation_String_Expression)? ')' )
+            )
+            |
+            'list' '.' (
+                ( 'length' '(' Evaluation_List_Expression ')' ) |
+                ( 'join' '(' Evaluation_List_Expression (',' Evaluation_String_Expression)? ')' ) |
+                ( 'rotate' '(' Evaluation_List_Expression (',' Evaluation_Number_Expression)? ')' ) |
+                ( 'sort' '(' Evaluation_List_Expression (',' Evaluation_Boolean_Expression)? ')' ) |
+                ( 'unique' '(' Evaluation_List_Expression ')' ) |
+                ( 'shuffle' '(' Evaluation_List_Expression ')' ) |
+                ( 'pop' '(' Evaluation_List_Expression (',' Evaluation_Number_Expression)? ')' ) |
+                ( 'push' '(' Evaluation_List_Expression ',' Any_Expression ')' )
+            )
+            |
+            'math' '.' (
+                ( 'random' '(' ( Evaluation_Number_Expression ',' Evaluation_Number_Expression )?  ')' ) |
+                ( 'abs' '(' Evaluation_Number_Expression ')' ) |
+                ( 'sign' '(' Evaluation_Number_Expression ')' ) |
+                ( 'even' '(' Evaluation_Number_Expression ')' ) |
+                ( 'exp' '(' Evaluation_Number_Expression ')' ) |
+                ( 'square_root' '(' Evaluation_Number_Expression ')' ) |
+                ( 'power' '(' Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
+                ( 'logn' '(' Evaluation_Number_Expression ')' ) |
+                ( 'log' '(' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |
+                ( 'convert' '(' Evaluation_Number_Expression ',' (
+                        ( Unit_M_Expression ',' Unit_M_Expression ) |
+                        ( Unit_R_Expression ',' Unit_R_Expression )
+                    )  ')'
+                ) |
+                ( 'minimum' '(' ( Evaluation_Number_Expression | List_Expression ) ( ',' ( Evaluation_Number_Expression | List_Expression ) )* ')' ) |
+                ( 'maximum' '(' ( Evaluation_Number_Expression | List_Expression ) ( ',' ( Evaluation_Number_Expression | List_Expression ) )* ')' ) |
+                ( 'average' '(' ( Evaluation_Number_Expression | List_Expression ) ( ',' ( Evaluation_Number_Expression | List_Expression ) )* ')' ) |
+                ( 'sum' '(' ( Evaluation_Number_Expression | List_Expression ) ( ',' ( Evaluation_Number_Expression | List_Expression ) )* ')' ) |
+                ( 'product' '(' ( Evaluation_Number_Expression | List_Expression ) ( ',' ( Evaluation_Number_Expression | List_Expression ) )* ')' ) |
+                ( 'ceil' '(' Evaluation_Number_Expression ')' ) |
+                ( 'floor' '(' Evaluation_Number_Expression ')' ) |
+                ( 'round' '(' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |
+                ( 'cos' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'sin' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'tan' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'acos' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'asin' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'atan' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'cosh' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'sinh' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'tanh' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'acosh' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'asinh' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' ) |
+                ( 'atanh' '(' Evaluation_Number_Expression ( ',' Unit_R_Expression )? ')' )
+            )
+            |
+            'boolean' '.' (
+                ('isString' '(' Any_Expression  ')') |
+                ('isNumber' '(' Any_Expression  ')') |
+                ('isInteger' '(' Any_Expression  ')') |
+                ('isDecimal' '(' Any_Expression  ')') |
+                ('isBoolean' '(' Any_Expression  ')') |
+                ('isColor' '(' Any_Expression  ')') |
+                ('isList' '(' Any_Expression  ')')
+            )
+
+
+
+
+
+
+
+/*
+    ----------------------------------------------------------------------------
+    Define values
+    ----------------------------------------------------------------------------
+*/
+
+String_Value
+        ::= ('"' [^"]* '"' ) |
+            ("'" [^']* "'" ) |
+            ('`' [^`]* '`' )
+
+Variable
+    ::= User_Variable | Reserved_Variable
+
+User_Variable
+        ::= (':' [A-Z]+ ( [A-Z0-9] |  '.' [A-Z] | '_'+ [A-Z] )*) - Reserved_Variable
+
+Reserved_Variable
+        ::= ':' (
+            ( 'position' '.' ( 'x' | 'y' ) ) |
+            'angle' |
+            ( 'unit' '.' ( 'rotation' | 'coordinates' ) ) |
+            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'opacity' | 'status' ) ) |
+            ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
+            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' | 'stretch' | 'align' | 'position' ) ) |
+            ( 'canvas' '.'
+                ( 'grid' '.' ( 'color' | 'status' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
+                ( 'origin' '.' ( 'color' | 'status' | 'size' | 'style' | 'opacity' ) ) |
+                ( 'position' '.' ( 'color' | 'status' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
+                ( 'background' '.' ( 'status' | 'opacity' ) ) |
+                ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
+            ) |
+            ( 'repeat' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) ) |
+            ( 'foreach' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) )
+        )
+
+/*
+    ----------------------------------------------------------------------------
+    Define constants
+    ----------------------------------------------------------------------------
+*/
+HexDigit
+        ::= [0-9A-F]

@@ -88,6 +88,9 @@ class BSLanguageDef(LanguageDef):
         FLOW_IMPORT = ('flowImport', 'A <IMPORT> flow')
         FLOW_REPEAT = ('flowRepeat', 'A <REPEAT> flow')
         FLOW_TIMES = ('flowTimes', 'A <TIMES> flow')
+        FLOW_AND_STORE_RESULT = ('flowStoreResult', 'A <AS> flow')
+        FLOW_WITH_PARAMETERS = ('flowWithParameters', 'A <WITH PARAMETER> flow')
+        FLOW_DO = ('flowDo', 'A <DO> flow')
         FLOW_AS = ('flowAs', 'A <AS> flow')
         FLOW_IN = ('flowin', 'A <IN> flow')
         FLOW_FOREACH = ('flowForEach', 'A <FOREACH> flow')
@@ -98,6 +101,7 @@ class BSLanguageDef(LanguageDef):
         FLOW_IF = ('flowIf', 'A <IF> flow')
         FLOW_ELIF = ('flowElIf', 'A <ELSE IF> flow')
         FLOW_ELSE = ('flowElIf', 'A <ELSE> flow')
+        FLOW_THEN = ('flowThen', 'A <THEN> flow')
 
         FLOW_UNCOMPLETE = ('uncompleteFlow', 'An uncomplete flow definition')
 
@@ -143,7 +147,9 @@ class BSLanguageDef(LanguageDef):
     def __init__(self):
         """Initialise language & styles"""
         super(BSLanguageDef, self).__init__([
-            TokenizerRule(BSLanguageDef.ITokenType.STRING, r'''`[^`\\]*(?:\\.[^`\\]*)*`|'[^'\\]*(?:\\.[^'\\]*)*'|"[^"\\]*(?:\\.[^"\\]*)*"''', onInitValue=self.__initTokenString),
+            TokenizerRule(BSLanguageDef.ITokenType.STRING, r'''`[^`\\]*(?:\\.[^`\\]*)*`|'[^'\\]*(?:\\.[^'\\]*)*'|"[^"\\]*(?:\\.[^"\\]*)*"''',
+                                                           onInitValue=self.__initTokenString,
+                                                           ignoreIndent=True),
             #TokenizerRule(BSLanguageDef.ITokenType.STRING, r'"[^"\\]*(?:\\.[^"\\]*)*"'),
             #TokenizerRule(BSLanguageDef.ITokenType.STRING, r"'[^'\\]*(?:\\.[^'\\]*)*'"),
 
@@ -151,7 +157,7 @@ class BSLanguageDef(LanguageDef):
             TokenizerRule(BSLanguageDef.ITokenType.COLOR_CODE,  r'#(?:\b[a-f0-9]{6}\b|[a-f0-9]{8}\b)'),
 
             #TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r"(?s)#>>.*#<<[^\n]*$"),
-            TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r'#[^\n]*'),
+            TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r'#[^\n]*', ignoreIndent=True),
 
             TokenizerRule(BSLanguageDef.ITokenType.NEWLINE,  r"(?:^\s*\n|\n?\s*\n)+"),
 
@@ -1646,7 +1652,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, r"^\x20*\bwith\s+(?:title|message|minimum\s+value|maximum\s+value|default\s+value|decimals)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, r"\x20*\bwith\s+(?:title|message|minimum\s+value|maximum\s+value|default\s+value|decimals)\b",
                                                                     'User interface/Window/Options',
                                                                     [('with title \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
@@ -1714,7 +1720,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`     with default value 25`**\n\n'
                                                                                 'Will open a dialog box for which default value is 25')),
                                                                     ],
-                                                                    'A'),
+                                                                    'A',
+                                                                    ignoreIndent=True),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint\b",
@@ -1756,7 +1763,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_CALL, r"^\x20*\bcall\s+macro\b",
                                                                     'Flow/Execution',
-                                                                    [('call macro \x01<MACRO> [<ARG1>[ <ARGN>]]',
+                                                                    [('call macro \x01"<MACRO>\x01"\x01 [<ARG1>[ <ARGN>]]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Execution: call macro]',
                                                                                 # description
@@ -1772,7 +1779,7 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_DEFMACRO, r"^\x20*\bdefine\s+macro\b",
                                                                     'Flow/Macro',
-                                                                    [('define macro "\x01<NAME>" [<ARG1> [<ARGN>]]',
+                                                                    [('define macro "\x01<NAME>\x01"\x01 [with parameters <ARG1> [<ARGN>]]\x01 as',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Macro: define a macro]',
                                                                                 # description
@@ -1822,7 +1829,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`import macro from "my_filename.bs"`**\n\n'
                                                                                 'Will import all macro defined in file `my_filename.bs`')),
-                                                                    ('import image from \x01<TEXT> \x01 as <RESNAME>',
+                                                                    ('import image from \x01<TEXT> \x01 as \x01<RESNAME>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Import: image]',
                                                                                 # description
@@ -1841,7 +1848,7 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_REPEAT, r"^\x20*\brepeat\b",
                                                                     'Flow/Loops',
-                                                                    [('repeat \x01<COUNT> times',
+                                                                    [('repeat \x01<COUNT>\x01 times',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Loops: repeat]',
                                                                                 # description
@@ -1857,7 +1864,7 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\b",
                                                                     'Flow/Loops',
-                                                                    [('for each \x01:variable in <VALUE>',
+                                                                    [('for each \x01:variable \x01 in \x01<VALUE>\x01 do',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Loops: for each]',
                                                                                 # description
@@ -1875,18 +1882,41 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_TIMES, r"^\x20*\btimes\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_TIMES, r"\x20*\btimes\b",
                                                                     None,
                                                                     ['times'],
-                                                                    'F'),
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_AS, r"^\x20*\bas\b",
+                                                                    'F',
+                                                                    ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_AS, r"\x20*\bas\b",
                                                                     None,
                                                                     ['as'],
-                                                                    'F'),
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IN, r"^\x20*\bin\b",
+                                                                    'F',
+                                                                    ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IN, r"\x20*\bin\b",
                                                                     None,
                                                                     ['in'],
-                                                                    'F'),
+                                                                    'F',
+                                                                    ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_DO, r"\x20*\bdo\b",
+                                                                    None,
+                                                                    ['do'],
+                                                                    'F',
+                                                                    ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_THEN, r"\x20*\bthen\b",
+                                                                    None,
+                                                                    ['then'],
+                                                                    'F',
+                                                                    ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, r"\x20*\band\s+store\s+result\s+into\s+variable\b",
+                                                                    None,
+                                                                    ['and store result into variable \x01:variable'],
+                                                                    'F',
+                                                                    ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, r"\x20*\bwith\s+parameters\b",
+                                                                    None,
+                                                                    ['with parameters'],
+                                                                    'F',
+                                                                    ignoreIndent=True),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, r"^\x20*\bset\s+variable\b",
@@ -1905,7 +1935,7 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_ELIF, r"^\x20*\belse\s+if\b",
                                                                     'Flow/Conditional statements',
-                                                                    [('else if \x01<CONDITION>',
+                                                                    [('else if \x01<CONDITION>\x01 then',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Conditional statements: else if]',
                                                                                 # description
@@ -1923,7 +1953,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_IF, r"^\x20*\bif\b",
                                                                     'Flow/Conditional statements',
-                                                                    [('if \x01<CONDITION>',
+                                                                    [('if \x01<CONDITION>\x01 then',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Conditional statements: if]',
                                                                                 # description
@@ -1935,6 +1965,7 @@ class BSLanguageDef(LanguageDef):
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for)"
                                                                        r"|(?:import(?:\s+(?:macro|image))?)"
+                                                                       r"|(?:and\s+store(?:\s+(?:result(?:\s+(?:into))?))?)"
                                                                        r")\b"
                                                                        ),
 
@@ -2487,7 +2518,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'f'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgb|rgba|hsla?|hsva?)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgb|rgba|hsla?|hsva?|cmyka?)\b",
                                                                     'Functions/Color',
                                                                     [('color.rgb(\x01<R-VALUE>, <G-VALUE>, <B-VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2509,7 +2540,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <R-VALUE>, <G-VALUE>, <B-VALUE>, <O-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<R-VALUE>* for Red, *<G-VALUE>* for Green, *<B-VALUE>* for Blue, *<O-VALUE>* can be:\n'
+                                                                                'Given *<R-VALUE>* for Red, *<G-VALUE>* for Green, *<B-VALUE>* for Blue, *<O-VALUE>* for Opacity can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
                                                                                 # example
@@ -2577,7 +2608,34 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`color.hsva(120, 255, 64, 127)`**\n'
                                                                                 '**`color.hsva(120, 1.0, 0.25, 0.5)`**\n\n'
                                                                                 'Will both return a green color equivalent to rgb(0,64,0), with 50% opacity')),
-
+                                                                    ('color.cmyk(\x01<C-VALUE>, <M-VALUE>, <Y-VALUE>, <K-VALUE>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Color: from Cyan, Magenta, Yellow, Black]',
+                                                                                # description
+                                                                                'Calculate a color for given <C-VALUE>, <M-VALUE>, <Y-VALUE>, <K-VALUE>\n'
+                                                                                'Returns a color value\n\n'
+                                                                                'Given *<C-VALUE>* for Cyan, *<M-VALUE>* for Magenta, *<Y-VALUE>* for Yellow, *<K-VALUE>* for Black can be can be:\n'
+                                                                                ' - **`int`**: an integer value from 0 to 255\n'
+                                                                                ' - **`dec`**: a decimal value from 0.0 to 1.0',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.cmyk(255, 0, 255, 191)`**\n'
+                                                                                '**`color.hsv(1.0, 0.0, 1.0, 0.75)`**\n\n'
+                                                                                'Will both return a green color equivalent to rgb(0,64,0), with 100% opacity')),
+                                                                    ('color.cmyka(\x01<C-VALUE>, <M-VALUE>, <Y-VALUE>, <K-VALUE>, <O-VALUE>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Color: from Hue, Saturation, Value, Opacity]',
+                                                                                # description
+                                                                                'Calculate a color for given <C-VALUE>, <M-VALUE>, <Y-VALUE>, <K-VALUE>, <O-VALUE>\n'
+                                                                                'Returns a color value\n\n'
+                                                                                'Given *<C-VALUE>* for Cyan, *<M-VALUE>* for Magenta, *<Y-VALUE>* for Yellow, *<K-VALUE>* for Black, *<O-VALUE>* for Opacity can be can be:\n'
+                                                                                ' - **`int`**: an integer value from 0 to 255\n'
+                                                                                ' - **`dec`**: a decimal value from 0.0 to 1.0',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.cmyk(255, 0, 255, 191, 127)`**\n'
+                                                                                '**`color.hsv(1.0, 0.0, 1.0, 0.75, 0.5)`**\n\n'
+                                                                                'Will both return a green color equivalent to rgb(0,64,0), with 50% opacity')),
                                                                     ],
                                                                     'f'),
 
@@ -3622,14 +3680,14 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b"),
 
-            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|and|or|xor"),
-            TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"not"),
-            TokenizerRule(BSLanguageDef.ITokenType.DUAL_OPERATOR, r"-"),
+            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.DUAL_OPERATOR, r"-", ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.SEPARATOR, r","),
             TokenizerRule(BSLanguageDef.ITokenType.PARENTHESIS_OPEN, r"\("),
-            TokenizerRule(BSLanguageDef.ITokenType.PARENTHESIS_CLOSE, r"\)"),
+            TokenizerRule(BSLanguageDef.ITokenType.PARENTHESIS_CLOSE, r"\)", ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.BRACKET_OPEN, r"\["),
-            TokenizerRule(BSLanguageDef.ITokenType.BRACKET_CLOSE, r"\]"),
+            TokenizerRule(BSLanguageDef.ITokenType.BRACKET_CLOSE, r"\]", ignoreIndent=True),
 
 
             # all spaces except line feed
@@ -3652,8 +3710,11 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_IMPORT, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_REPEAT, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_TIMES, '#ffffff', True, False),
+            (BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, '#ffffff', True, False),
+            (BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_AS, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_IN, '#ffffff', True, False),
+            (BSLanguageDef.ITokenType.FLOW_DO, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_FOREACH, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_CALL, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_DEFMACRO, '#ffffff', True, False),
@@ -3662,6 +3723,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_IF, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_ELIF, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_ELSE, '#ffffff', True, False),
+            (BSLanguageDef.ITokenType.FLOW_THEN, '#ffffff', True, False),
 
             (BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, '#ffffff', False, True),
 
@@ -3744,8 +3806,11 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_IMPORT, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_REPEAT, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_TIMES, '#000044', True, False),
+            (BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, '#000044', True, False),
+            (BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_AS, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_IN, '#000044', True, False),
+            (BSLanguageDef.ITokenType.FLOW_DO, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_FOREACH, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_CALL, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_DEFMACRO, '#000044', True, False),
@@ -3754,6 +3819,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_IF, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_ELIF, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_ELSE, '#000044', True, False),
+            (BSLanguageDef.ITokenType.FLOW_THEN, '#000044', True, False),
 
             (BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, '#000044', False, True),
 
@@ -4734,8 +4800,13 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.FLOW_DEFMACRO, False),
                 GROne('String_Value'),
-                GRNoneOrMore(GRToken(BSLanguageDef.ITokenType.VARIABLE_USER)),
+                GROptional(GrammarRule('Flow_Define_Macro__withParameters',
+                           GRToken(BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, False),
+                           GROneOrMore(GRToken(BSLanguageDef.ITokenType.VARIABLE_USER))
+                       )
+                   ),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
                 GROne('ScriptBlock'),
                 GROptional(GRToken(BSLanguageDef.ITokenType.DEDENT, False)),
@@ -4753,6 +4824,13 @@ class BSLanguageDef(LanguageDef):
                 GRToken(BSLanguageDef.ITokenType.FLOW_CALL, 'call macro', False),
                 GROne('String_Value'),
                 GRNoneOrMore('Any_Expression'),
+                GROptional(GrammarRule('Flow_Call_Macro__storeResult',
+                                       GrammarRule.OPTION_AST,
+                                       # --
+                                       GRToken(BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, False),
+                                       GRToken(BSLanguageDef.ITokenType.VARIABLE_USER)
+                                    )
+                    )
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 
@@ -4761,9 +4839,10 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.FLOW_IF, False),
                 'Any_Expression',
+                GRToken(BSLanguageDef.ITokenType.FLOW_THEN, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
-                GROne('ScriptBlock'),
+                'ScriptBlock',
                 GRToken(BSLanguageDef.ITokenType.DEDENT, False),
                 GROptional('Flow_ElseIf',
                            'Flow_Else'),
@@ -4774,9 +4853,10 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.FLOW_ELIF, False),
                 'Any_Expression',
+                GRToken(BSLanguageDef.ITokenType.FLOW_THEN, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
-                GROne('ScriptBlock'),
+                'ScriptBlock',
                 GRToken(BSLanguageDef.ITokenType.DEDENT, False),
                 GROptional('Flow_ElseIf',
                            'Flow_Else'),
@@ -4788,7 +4868,7 @@ class BSLanguageDef(LanguageDef):
                 GRToken(BSLanguageDef.ITokenType.FLOW_ELSE, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
-                GROne('ScriptBlock'),
+                'ScriptBlock',
                 GRToken(BSLanguageDef.ITokenType.DEDENT, False),
             )
 
@@ -4808,7 +4888,7 @@ class BSLanguageDef(LanguageDef):
                 GRToken(BSLanguageDef.ITokenType.FLOW_TIMES, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
-                GROne('ScriptBlock'),
+                'ScriptBlock',
                 GRToken(BSLanguageDef.ITokenType.DEDENT, False)
             )
 
@@ -4820,6 +4900,7 @@ class BSLanguageDef(LanguageDef):
                 #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
                 GRToken(BSLanguageDef.ITokenType.FLOW_IN, False),
                 'Any_Expression',
+                GRToken(BSLanguageDef.ITokenType.FLOW_DO, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
                 GROne('ScriptBlock'),
