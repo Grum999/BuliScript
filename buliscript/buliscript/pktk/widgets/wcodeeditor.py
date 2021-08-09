@@ -280,8 +280,7 @@ class WCodeEditor(QPlainTextEdit):
 
     def __insertCompletion(self, completion):
         """Text selected from completion list, insert it at cursor's place"""
-        if result:=re.match(r'([^\x01]+)', completion):
-            completion=result.groups()[0]
+        texts=completion.split('\x01')[::2]
 
         token=self.cursorToken(False)
         if token is None:
@@ -293,11 +292,16 @@ class WCodeEditor(QPlainTextEdit):
             moveRight=token.length() - (self.__cursorCol - token.column() + 1)
 
 
-        extra = (len(completion) - len(self.__completer.completionPrefix()))
+        extra = (len(texts[0]) - len(self.__completer.completionPrefix()))
 
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, moveRight)
-        cursor.insertText(completion[-extra:])
+        cursor.insertText(texts[0][-extra:])
+
+        if len(texts)>1:
+            p=cursor.anchor()
+            cursor.insertText("".join(texts[1:]))
+            cursor.setPosition(p, QTextCursor.MoveAnchor)
         self.setTextCursor(cursor)
 
 
@@ -1036,7 +1040,6 @@ class WCodeEditor(QPlainTextEdit):
             self.overwriteModeChanged.emit(mode)
 
 
-
     def languageDefinition(self):
         """Return current language definition"""
         return self.__languageDef
@@ -1469,8 +1472,29 @@ class WCECompleterView(QStyledItemDelegate):
             rect = QRect(option.rect.left() + 2 * option.rect.height(), option.rect.top(), option.rect.width(), option.rect.height())
             painter.fillRect(rect, option.palette.color(QPalette.AlternateBase))
 
-        rect = QRect(lPosition, option.rect.top(), option.rect.width(), option.rect.height())
-        painter.drawText(rect, Qt.AlignLeft|Qt.AlignVCenter, index.data(WCECompleterModel.VALUE).replace('\x01',''))
+        texts=index.data(WCECompleterModel.VALUE).split('\x01')
+        for index, text in enumerate(texts):
+            if index%2==1:
+                # odd text ("optionnal" information) are written smaller, with darker color
+                drawingFont=QFont(font)
+                drawingFont.setBold(False)
+                drawingFont.setItalic(True)
+                drawingFont.setPointSizeF(font.pointSizeF()*0.85)
+                painter.setOpacity(0.7)
+            else:
+                drawingFont=font
+                painter.setOpacity(1)
+
+            painter.setFont(drawingFont)
+            fontMetrics=QFontMetrics(drawingFont)
+
+            rect = QRect(lPosition, option.rect.top(), option.rect.width(), option.rect.height())
+            painter.drawText(rect, Qt.AlignLeft|Qt.AlignVCenter, text)
+
+            if text[-1]==' ':
+                lPosition+=fontMetrics.boundingRect(text[0:-1]+'_').width()
+            else:
+                lPosition+=fontMetrics.boundingRect(text).width()
 
         painter.restore()
 
