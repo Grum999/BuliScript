@@ -143,7 +143,7 @@ class BSLanguageDef(LanguageDef):
     def __init__(self):
         """Initialise language & styles"""
         super(BSLanguageDef, self).__init__([
-            TokenizerRule(BSLanguageDef.ITokenType.STRING, r'''`[^`\\]*(?:\\.[^`\\]*)*`|'[^'\\]*(?:\\.[^'\\]*)*'|"[^"\\]*(?:\\.[^"\\]*)*"'''),
+            TokenizerRule(BSLanguageDef.ITokenType.STRING, r'''`[^`\\]*(?:\\.[^`\\]*)*`|'[^'\\]*(?:\\.[^'\\]*)*'|"[^"\\]*(?:\\.[^"\\]*)*"''', onInitValue=self.__initTokenString),
             #TokenizerRule(BSLanguageDef.ITokenType.STRING, r'"[^"\\]*(?:\\.[^"\\]*)*"'),
             #TokenizerRule(BSLanguageDef.ITokenType.STRING, r"'[^'\\]*(?:\\.[^'\\]*)*'"),
 
@@ -834,7 +834,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set layer visiblity OFF`**\n\n'
                                                                                 'Will define current layer as not visible')),
-                                                                     ('set layer alpha lock\x01<SWITCH>',
+                                                                     ('set layer alpha lock \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Layer property: alpha lock]',
                                                                                 # description
@@ -4987,6 +4987,14 @@ class BSLanguageDef(LanguageDef):
 
         # normally shouln't occurs... return initial value
         print('__initTokenNumber ERROR??', tokenType, value)
+        return value
+
+    def __initTokenString(self, tokenType, value):
+        """Convert value for STRING (remove string delimiters)"""
+
+        if len(value)>1:
+            return value[1:-1]
+
         return value
 
     def grammarRules(self):
