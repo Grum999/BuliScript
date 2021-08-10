@@ -4935,13 +4935,9 @@ class BSLanguageDef(LanguageDef):
             )
 
         GrammarRule('String_Value',
-                GRToken(BSLanguageDef.ITokenType.STRING),
-                GRNoneOrMore(
-                    GrammarRule('String_Value_Continue',
-                        #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
-                        GRToken(BSLanguageDef.ITokenType.STRING),
-                    )
-                )
+                GrammarRule.OPTION_AST,
+                # --
+                GROneOrMore(GRToken(BSLanguageDef.ITokenType.STRING))
             )
 
         GrammarRule('Evaluation_Expression',

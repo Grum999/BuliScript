@@ -37,6 +37,17 @@ define macro "macro test 3" with parameters :v1 :v2 as
     print "test" :v1 :v2
 
 
+    # test
+define macro "macro test 4"
+as
+# test
+# test
+# test
+  # test
+    # test
+
+    print "test"
+
 # ------------------------------------------------------------------------------
 # flow set variables
 # ------------------------------------------------------------------------------
@@ -590,46 +601,46 @@ print math.average(1,2,3)+:numInt/4 4/:numDec "test"
 # ------------------------------------------------------------------------------
 open dialog for message
 open dialog for message
-with message "test"
-with title "yop!"
+    with message "test"
+    with title "yop!"
 
 open dialog for boolean input :bool
 open dialog for boolean input :bool
-with message "test"
-with title "yop!"
+    with message "test"
+    with title "yop!"
 
 open dialog for integer input :numInt
 open dialog for integer input :numInt
-with message "test"
-with title "yop!"
+    with message "test"
+    with title "yop!"
 
 open dialog for integer input :numInt
 open dialog for integer input :numInt
-with message "test"
-with title "yop!"
-with minimum value 45
-with maximum value :vMax
-with default value math.random(45, :vMax)
+    with message "test"
+    with title "yop!"
+    with minimum value 45
+    with maximum value :vMax
+    with default value math.random(45, :vMax)
 
 open dialog for decimal input :numDec
 open dialog for decimal input :numDec
-with message "test"
-with title "yop!"
-with minimum value 45.0
-with maximum value :vMax
-with default value math.random(45.0, :vMax)
+    with message "test"
+    with title "yop!"
+    with minimum value 45.0
+    with maximum value :vMax
+    with default value math.random(45.0, :vMax)
 
 open dialog for color input :color
 open dialog for color input :color
-with message "test"
-with title "yop!"
-with default value #cc99dd
+    with message "test"
+    with title "yop!"
+    with default value #cc99dd
 
 open dialog for string input :text
 open dialog for string input :text
-with message "test"
-with title "yop!"
-with default value string.lower("TEST")
+    with message "test"
+    with title "yop!"
+    with default value string.lower("TEST")
 
 # ------------------------------------------------------------------------------
 # flow stop
@@ -644,8 +655,10 @@ call macro "macro test 2" 45/:numDec
 call macro "macro test 3" string.upper("test") PX
 
 call macro "macro test 1" and store result into variable :v1
-call macro "macro test 2" 45/:numDec and store result into variable :v1
-call macro "macro test 3" string.upper("test") PX and store result into variable :v1
+call macro "macro test 2" 45/:numDec
+     and store result into variable :v1
+call macro "macro test 3" string.upper("test") PX
+     and store result into variable :v1
 
 
 # ------------------------------------------------------------------------------
@@ -654,7 +667,8 @@ call macro "macro test 3" string.upper("test") PX and store result into variable
 if ON then
     print "test1"
 
-if :numInt >= 45 then
+if :numInt >= 45
+then
     print "test2"
 
 if boolean.isString(:text) and (:numInt >= 10 or :numInt <= 5) then
@@ -696,7 +710,12 @@ repeat :numInt times
 # ------------------------------------------------------------------------------
 # flow foreach
 # ------------------------------------------------------------------------------
-for each :letter in ["a", "b", "c"] do
+for each :letter
+    in ["a",
+        "b",
+        "c"
+       ]
+    do
     print :letter
 
 for each :letter in string.split("test", "") do
@@ -761,7 +780,10 @@ set variable :x = string.split("1;2;3", ";")
 set variable :x = list.rotate(-1)
 set variable :x = list.sort([1,8,4,3,5,7])
 set variable :x = list.unique([1,2,4,7,1,2,4,2,1])
-set variable :x = list.shuffle([1,2,3,4])
+set variable :x = list.shuffle([1,
+                                2,
+                                3,
+                                4])
 set variable :x = list.push(:v, 25)
 set variable :x = list.pop(:v)
 set variable :x = boolean.isString(:text)
