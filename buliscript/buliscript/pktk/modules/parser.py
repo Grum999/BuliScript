@@ -204,10 +204,10 @@ class Parser:
 
 
 class ASTStatus(Enum):
-    NOMATCH='++NOMATCH++'
-    MATCH='++MATCH++'
-    INVALID='++INVALID++'
-    END='++END++'
+    NOMATCH=    0
+    MATCH=      1
+    INVALID=    2
+    END=        3
 
 
 
@@ -303,7 +303,7 @@ class ASTItem:
                     #
                     #
                     # To simplify AST sub-nodes, we don't add item directly as a node,
-                    # but all nodes of item are directly added to curent AST nodes
+                    # but all nodes of item are directly added to current AST nodes
                     for subItem in item.nodes():
                         self.add(subItem)
 
@@ -349,7 +349,7 @@ class ASTItem:
         return self
 
     def grammarRule(self):
-        """Return GrammarRule for AST item, if current AST refers to a GrammeRule
+        """Return GrammarRule for AST item, if current AST refers to a GrammarRule
         (otherwise return None)
         """
         return self.__grammarRule
@@ -357,7 +357,7 @@ class ASTItem:
     def optionAst(self):
         """Return if current AST item can be added as a Node to another AST item
 
-        If AST item refers to a GrammeRule, use GrammeRule option value
+        If AST item refers to a GrammarRule, use GrammarRule option value
         Otherwise return True
         """
         if not isinstance(self.__grammarRule, GrammarRule):
@@ -368,7 +368,7 @@ class ASTItem:
     def optionOperatorPrecedence(self):
         """Return if current AST item must manage operator precedence
 
-        If AST item refers to a GrammeRule, use GrammeRule option value
+        If AST item refers to a GrammarRule, use GrammarRule option value
         Otherwise return False
         """
         if not isinstance(self.__grammarRule, GrammarRule):
@@ -404,6 +404,7 @@ class ASTItem:
                 for laIndex in range(1,3):
                     nodeLA=nodes.relativeValue(laIndex)
                     if nodeLA:
+                        right=None
                         if self.__grammarRule.grammarRules().operatorType(nodeLA)>0:
                             # there's a node in list, get priority
                             priorityLA=self.__grammarRule.grammarRules().operatorPrecedence(nodeLA)
@@ -772,9 +773,9 @@ class GrammarRule:
         self.__id=id
         self._grObjects=[]
 
-        self.__option_ast=False
-        self.__option_operator_precedence=False
         isFirstId=False
+        self.__optionAst=False
+        self.__optionOperatorPrecedence=False
 
         for index, grObject in enumerate(grObjects):
             if index==0 and isinstance(grObject, int):
@@ -782,9 +783,9 @@ class GrammarRule:
                 if grObject&GrammarRule.OPTION_FIRST==GrammarRule.OPTION_FIRST:
                     isFirstId=True
                 if grObject&GrammarRule.OPTION_AST==GrammarRule.OPTION_AST:
-                    self.__option_ast=True
+                    self.__optionAst=True
                 if grObject&GrammarRule.OPTION_OPERATOR_PRECEDENCE==GrammarRule.OPTION_OPERATOR_PRECEDENCE:
-                    self.__option_operator_precedence=True
+                    self.__optionOperatorPrecedence=True
             elif isinstance(grObject, str) or isinstance(grObject, GrammarRule):
                 self._grObjects.append(GRRule(grObject))
             elif isinstance(grObject, GRObject):
@@ -814,11 +815,12 @@ class GrammarRule:
 
         When False, sub nodes are returned in AST
         """
-        return self.__option_ast
+        return self.__optionAst
 
     def optionOperatorPrecedence(self):
         """Return if grammar rule use operator precedence in AST"""
-        return self.__option_operator_precedence
+        return self.__optionOperatorPrecedence
+
 
 
 
