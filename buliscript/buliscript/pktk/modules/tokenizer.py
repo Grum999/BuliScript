@@ -149,6 +149,7 @@ class Token(object):
         self.__linePositionEnd=self.__linePositionStart + length
         self.__next = None
         self.__previous = None
+        self.__simplifySpaces=simplifySpaces
 
         if self.type()==TokenType.NEWLINE:
             self.__indent=0
@@ -244,6 +245,10 @@ class Token(object):
     def isUnknown(self):
         """return if it's an unknown token"""
         return (self.__rule.type() == TokenType.UNKNOWN)
+
+    def simplifySpaces(self):
+        """Return if spaces are simplified or not"""
+        return self.__simplifySpaces
 
     def equal(self, value, doLower=False, caseInsensitive=None):
         """Check if given text `value` equals or not text value from token
