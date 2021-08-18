@@ -179,7 +179,7 @@ class BytesRW(io.BytesIO):
         (https://docs.python.org/3/library/codecs.html#standard-encodings)
         """
         size=self.readUShort()
-        if length>0:
+        if size>0:
             b=self.read(size)
             return b.decode(encoding)
         return ''
