@@ -36,7 +36,8 @@ from PyQt5.QtCore import (
         pyqtSignal
     )
 from PyQt5.QtWidgets import (
-        QMainWindow
+        QMainWindow,
+        QStatusBar
     )
 
 from .bslanguagedef import BSLanguageDef
@@ -44,11 +45,20 @@ from .bslanguagedef import BSLanguageDef
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.utils import loadXmlUi
 from buliscript.pktk.modules.menuutils import buildQMenuTree
+from buliscript.pktk.modules.parser import Parser
+
 from buliscript.pktk.pktk import (
         EInvalidType,
         EInvalidValue
     )
 
+
+class VLine(QFrame):
+    """A vertical line widget that can be used as a separator"""
+
+    def __init__(self):
+        super(VLine, self).__init__()
+        self.setFrameShape(self.VLine|self.Sunken)
 
 
 # -----------------------------------------------------------------------------
@@ -57,6 +67,13 @@ class BSMainWindow(QMainWindow):
 
     DARK_THEME = 'dark'
     LIGHT_THEME = 'light'
+
+    STATUSBAR_FILENAME = 0
+    STATUSBAR_ROWS = 1
+    STATUSBAR_POS = 2
+    STATUSBAR_SELECTION = 3
+    STATUSBAR_INSOVR_MODE = 4
+    STATUSBAR_LASTSECTION = 4
 
     dialogShown = pyqtSignal()
 
@@ -71,35 +88,101 @@ class BSMainWindow(QMainWindow):
         self.__uiController = uiController
         self.__eventCallBack = {}
 
-        self.__fontMono = QFont()
-        self.__fontMono.setPointSize(9)
-        self.__fontMono.setFamily('DejaVu Sans Mono')
+        self.__initStatusBar()
+        self.__initBSDocuments()
+
+
+    def __initStatusBar(self):
+        """Initialise status bar
+
+        [ Path/File name    | Column: 999 . Row: 999/999 | Selection: 999 | INSOVR ]
+        """
+        self.__statusBarWidgets=[
+                QLabel(),
+                QLabel("Rows: 0000"),
+                QLabel("0000:0000"),
+                QLabel("000:0000 - 000:0000 [00000]"),
+                QLabel("WWW"),
+            ]
+
+        fontMetrics=self.__statusBarWidgets[BSMainWindow.STATUSBAR_FILENAME].fontMetrics()
+
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_ROWS].setMinimumWidth(fontMetrics.boundingRect("Rows: 0000").width())
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_POS].setMinimumWidth(fontMetrics.boundingRect("0000:0000").width())
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_SELECTION].setMinimumWidth(fontMetrics.boundingRect("000:0000 - 000:0000 [00000]").width())
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_INSOVR_MODE].setMinimumWidth(fontMetrics.boundingRect("INS_").width())
+
+        statusBar=self.statusBar()
+        statusBar.addWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_FILENAME])
+        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_ROWS])
+        statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_POS])
+        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_SELECTION])
+        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_INSOVR_MODE])
+
+    def __initBSDocuments(self):
+        """Initialise documents manager"""
+        self.twDocuments.initialise(self, self.__uiController)
+
 
     def initMainView(self):
         """Initialise main view content"""
-        #@pyqtSlot('QString')
-        #def splitterMainView_Moved(pos, index):
-        #    pass
+        pass
+
 
     def initMenu(self):
         """Initialise actions for menu defaukt menu"""
+        def __insertLanguageAction(menuTree, autoCompletion):
+            """Create action for Language menu
+
+            Title=autoCompletion
+            Action=insert autoCompletion
+            """
+            def execute(dummy=None):
+                self.__uiController.commandLanguageInsert(autoCompletion[0])
+
+            action=QAction(autoCompletion[0].replace('\x01', ''), menuTree[-1])
+            action.setProperty('insert', autoCompletion[0])
+            if len(autoCompletion)>1 and isinstance(autoCompletion[1], str):
+                action.setToolTip(autoCompletion[1])
+
+            action.triggered.connect(execute)
+            menuTree[-1].addAction(action)
+
         # Menu SCRIPT
-        self.actionScriptNew.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptOpen.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptSave.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptSaveAs.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptSaveAll.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptClose.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptExecute.triggered.connect(self.__actionNotYetImplemented)
-        self.actionScriptQuit.triggered.connect(self.__uiController.commandQuit)
+        self.actionFileNew.triggered.connect(self.__uiController.commandFileNew)
+        self.actionFileOpen.triggered.connect(self.__uiController.commandFileOpen)
+        self.actionFileSave.triggered.connect(self.__uiController.commandFileSave)
+        self.actionFileSaveAs.triggered.connect(self.__uiController.commandFileSaveAs)
+        self.actionFileSaveAll.triggered.connect(self.__uiController.commandFileSaveAll)
+        self.actionFileClose.triggered.connect(self.__uiController.commandFileClose)
+        self.actionFileCloseAll.triggered.connect(self.__uiController.commandFileCloseAll)
+        self.actionFileQuit.triggered.connect(self.__uiController.commandQuit)
 
         # Menu EDIT
-        self.actionEditUndo.triggered.connect(self.__actionNotYetImplemented)
-        self.actionEditRedo.triggered.connect(self.__actionNotYetImplemented)
-        self.actionEditCut.triggered.connect(self.__actionNotYetImplemented)
-        self.actionEditCopy.triggered.connect(self.__actionNotYetImplemented)
-        self.actionEditPaste.triggered.connect(self.__actionNotYetImplemented)
-        self.actionEditSelectAll.triggered.connect(self.__actionNotYetImplemented)
+        self.actionEditUndo.triggered.connect(self.__uiController.commandEditUndo)
+        self.actionEditRedo.triggered.connect(self.__uiController.commandEditRedo)
+        self.actionEditCut.triggered.connect(self.__uiController.commandEditCut)
+        self.actionEditCopy.triggered.connect(self.__uiController.commandEditCopy)
+        self.actionEditPaste.triggered.connect(self.__uiController.commandEditPaste)
+        self.actionEditSelectAll.triggered.connect(self.__uiController.commandEditSelectAll)
+
+        # Menu SCRIPT
+        self.actionScriptExecute.triggered.connect(self.__uiController.commandScriptExecute)
+
+        # menu LANGUAGE
+        # dynamically built from tokenizer autoCompletion rules
+        for rule in self.__uiController.languageDef().tokenizer().rules():
+            for autoCompletion in rule.autoCompletion():
+                description=rule.description()
+                if not description is None:
+                    for menuPath in description.split('|'):
+                        menuTree=buildQMenuTree(menuPath, None, self.menuLanguage)
+                        if len(menuTree)>0:
+                            #print(re.sub('\x01.*', '', autoCompletion[0]))
+                            __insertLanguageAction(menuTree, autoCompletion)
 
         # Menu VIEW
         self.actionViewShowCanvas.triggered.connect(self.__uiController.commandViewShowCanvasVisible)
@@ -109,10 +192,10 @@ class BSMainWindow(QMainWindow):
         self.actionViewShowConsole.triggered.connect(self.__uiController.commandViewShowConsoleVisible)
 
         # Menu SETTINGS
-        self.actionSettingsPreferences.triggered.connect(self.__actionNotYetImplemented)
+        self.actionSettingsPreferences.triggered.connect(self.__uiController.commandSettingsOpen)
 
         # Menu HELP
-        self.actionHelpBuliScriptHandbook.triggered.connect(self.__actionNotYetImplemented)
+        self.actionHelpBuliScriptHandbook.triggered.connect(self.__uiController.commandHelpBs)
         self.actionHelpAboutBS.triggered.connect(self.__uiController.commandAboutBs)
 
     # endregion: initialisation methods ----------------------------------------
@@ -198,10 +281,6 @@ class BSMainWindow(QMainWindow):
 
     # region: methods ----------------------------------------------------------
 
-    def __menuScriptQuit(self):
-        """Quit BuliScript"""
-        self.__uiController.commandQuit()
-
     def getWidgets(self):
         """Return a list of ALL widgets"""
         def appendWithSubWidget(parent):
@@ -213,7 +292,33 @@ class BSMainWindow(QMainWindow):
 
         return appendWithSubWidget(self)
 
+    def documents(self):
+        """Return BSDocuments instance"""
+        return self.twDocuments
+
+    def statusBarText(self, index):
+        """Return text in status bar section designed by `index`"""
+        if not isinstance(index, int):
+            raise EInvalidStatus("Given `index` must be <int>")
+        elif index < 0 or index > BSMainWindow.STATUSBAR_LASTSECTION:
+            raise EInvalidValue(f"Given `index` must be between 0 and {BSMainWindow.STATUSBAR_LASTSECTION}")
+        return self.__statusBarWidgets[index].text()
+
+    def setStatusBarText(self, index, text):
+        """Set given `text` in status bar section designed by `index`"""
+        if not isinstance(index, int):
+            raise EInvalidStatus("Given `index` must be <int>")
+        elif index < 0 or index > BSMainWindow.STATUSBAR_LASTSECTION:
+            raise EInvalidValue(f"Given `index` must be between 0 and {BSMainWindow.STATUSBAR_LASTSECTION}")
+
+        if index==BSMainWindow.STATUSBAR_ROWS:
+            text=f"Rows: {text}"
+
+        self.__statusBarWidgets[index].setText(text)
+
+    def openedDocumentTabs(self):
+        """Return number of documents tabs"""
+        return self.twDocuments.count()
+
+
     # endregion: methods -------------------------------------------------------
-
-
-

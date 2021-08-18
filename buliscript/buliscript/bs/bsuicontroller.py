@@ -37,6 +37,8 @@ from PyQt5.QtWidgets import (
     )
 
 
+from .bshistory import BSHistory
+from .bslanguagedef import BSLanguageDef
 from .bsmainwindow import BSMainWindow
 from .bssystray import BSSysTray
 from .bssettings import (
@@ -67,10 +69,6 @@ from buliscript.pktk.modules.ekrita import (
 class BSUIController(QObject):
     """The controller provide an access to all BuliScript functions
     """
-    __EXTENDED_OPEN_OK = 1
-    __EXTENDED_OPEN_KO = -1
-    __EXTENDED_OPEN_CANCEL = 0
-
     bsWindowShown = pyqtSignal()
     bsWindowClosed = pyqtSignal()
 
@@ -86,6 +84,8 @@ class BSUIController(QObject):
         self.__bsVersion = bsVersion
         self.__bsTitle = "{0} - {1}".format(bsName, bsVersion)
 
+        self.__languageDef=BSLanguageDef()
+
         self.__settings = BSSettings('buliscript')
 
         UITheme.load()
@@ -93,20 +93,38 @@ class BSUIController(QObject):
         # #----- uncomment if local resources # UITheme.load(os.path.join(os.path.dirname(__file__), 'resources'))
 
         self.__systray=BSSysTray(self)
-        self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE.id()))
+        self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE))
 
         # store a global reference to activeWindow to be able to work with
         # activeWindow signals
         # https://krita-artists.org/t/krita-4-4-new-api/12247?u=grum999
         self.__kraActiveWindow = None
 
+        # keep in memory last directory from open/save dialog box
+        self.__lastDocumentDirectoryOpen=""
+        self.__lastDocumentDirectorySave=""
+
+        # keep document history list
+        self.__historyFiles=BSHistory()
+
+        # cache directory
+        self.__bsCachePath = os.path.join(QStandardPaths.writableLocation(QStandardPaths.CacheLocation), "buliscript")
+
+        try:
+            os.makedirs(self.__bsCachePath, exist_ok=True)
+            for subDirectory in ['documents']:
+                os.makedirs(self.cachePath(subDirectory), exist_ok=True)
+        except Exception as e:
+            Debug.print('[BSUIController.__init__] Unable to create directory {0}: {1}', self.cachePath(subDirectory), str(e))
+
         self.__initialised = False
 
-        if kritaIsStarting and self.__settings.option(BSSettingsKey.CONFIG_OPEN_ATSTARTUP.id()):
+        if kritaIsStarting and self.__settings.option(BSSettingsKey.CONFIG_OPEN_ATSTARTUP):
             self.start()
 
 
     def start(self):
+        """Start plugin interface"""
         if self.__bsStarted:
             # user interface is already started, bring to front and exit
             self.commandViewBringToFront()
@@ -154,20 +172,31 @@ class BSUIController(QObject):
 
         self.__window.initMainView()
 
-        self.commandSettingsSaveSessionOnExit(self.__settings.option(BSSettingsKey.CONFIG_SESSION_SAVE.id()))
-        self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE.id()))
-        self.commandSettingsOpenAtStartup(self.__settings.option(BSSettingsKey.CONFIG_OPEN_ATSTARTUP.id()))
+        self.commandSettingsSaveSessionOnExit(self.__settings.option(BSSettingsKey.CONFIG_SESSION_SAVE))
+        self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE))
+        self.commandSettingsOpenAtStartup(self.__settings.option(BSSettingsKey.CONFIG_OPEN_ATSTARTUP))
 
-        self.commandViewMainWindowGeometry(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY.id()))
-        self.commandViewMainWindowMaximized(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED.id()))
-        self.commandViewMainSplitterPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION.id()))
-        self.commandViewSecondarySplitterPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION.id()))
+        self.commandViewMainWindowGeometry(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY))
+        self.commandViewMainWindowMaximized(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED))
+        self.commandViewMainSplitterPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION))
+        self.commandViewSecondarySplitterPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION))
 
-        self.commandViewShowCanvasVisible(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE.id()))
-        self.commandViewShowCanvasOrigin(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN.id()))
-        self.commandViewShowCanvasGrid(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID.id()))
-        self.commandViewShowCanvasPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION.id()))
-        self.commandViewShowConsoleVisible(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE.id()))
+        self.commandViewShowCanvasVisible(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE))
+        self.commandViewShowCanvasOrigin(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN))
+        self.commandViewShowCanvasGrid(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID))
+        self.commandViewShowCanvasPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION))
+        self.commandViewShowConsoleVisible(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE))
+
+        self.__lastDocumentDirectoryOpen=self.__settings.option(BSSettingsKey.SESSION_PATH_LASTOPENED)
+        self.__lastDocumentDirectorySave=self.__settings.option(BSSettingsKey.SESSION_PATH_LASTSAVED)
+
+        # do not load from here, already loaded from BSDocuments() initialisation
+        #for fileName in self.__settings.option(BSSettingsKey.SESSION_DOCUMENTS_OPENED):
+        #    self.__window.documents().openDocument(fileName)
+
+        self.__historyFiles.setMaxItems(self.__settings.option(BSSettingsKey.CONFIG_SESSION_DOCUMENTS_RECENTS_COUNT))
+        self.__historyFiles.setItems(self.__settings.option(BSSettingsKey.SESSION_DOCUMENTS_RECENTS))
+        self.__historyFiles.removeMissingFiles()
 
         self.__window.initMenu()
 
@@ -236,7 +265,6 @@ class BSUIController(QObject):
                     widget.setIcon(buildIcon(pixmaps))
 
 
-
     def __checkKritaWindows(self):
         """Check if windows signal windowClosed() is already defined and, if not,
         define it
@@ -276,7 +304,7 @@ class BSUIController(QObject):
     # region: getter/setters ---------------------------------------------------
 
     def name(self):
-        """Return name"""
+        """Return BuliScript plugin name"""
         return self.__bsName
 
     def settings(self):
@@ -292,10 +320,25 @@ class BSUIController(QObject):
         return self.__bsStarted
 
     def version(self):
+        """Return BuliScript plugin version"""
         return self.__bsVersion
 
     def title(self):
+        """Return BuliScript plugin title"""
         return self.__bsTitle
+
+    def languageDef(self):
+        """Return BuliScript language definition"""
+        return self.__languageDef
+
+    def cachePath(self, subDirectory=None):
+        """Return BuliScript cache directory"""
+        if subDirectory is None or subDirectory=='':
+            return self.__bsCachePath
+        elif isinstance(subDirectory, str):
+            return os.path.join(self.__bsCachePath, subDirectory)
+        else:
+            raise EInvalidType('Given ` subDirectory` must be None or <str>')
 
     # endregion: getter/setters ------------------------------------------------
 
@@ -306,7 +349,7 @@ class BSUIController(QObject):
         """Save the current settings"""
         self.__settings.setOption(BSSettingsKey.CONFIG_SESSION_SAVE, self.__window.actionSettingsSaveSessionOnExit.isChecked())
 
-        if self.__settings.option(BSSettingsKey.CONFIG_SESSION_SAVE.id()):
+        if self.__settings.option(BSSettingsKey.CONFIG_SESSION_SAVE):
             # save current session properties only if allowed
             if self.__window.actionViewShowCanvas.isChecked():
                 # if not checked, hidden panel size is 0 so, do not save it (splitter position is already properly defined)
@@ -316,6 +359,18 @@ class BSUIController(QObject):
             self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, self.__window.actionViewShowCanvasOrigin.isChecked())
             self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, self.__window.actionViewShowCanvasGrid.isChecked())
             self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, self.__window.actionViewShowCanvasPosition.isChecked())
+
+            self.__settings.setOption(BSSettingsKey.SESSION_PATH_LASTOPENED, self.__lastDocumentDirectoryOpen)
+            self.__settings.setOption(BSSettingsKey.SESSION_PATH_LASTSAVED, self.__lastDocumentDirectorySave)
+
+            self.__settings.setOption(BSSettingsKey.SESSION_DOCUMENTS_RECENTS, self.__historyFiles.list())
+
+            tmpList=[]
+            for document in self.__window.documents().documents():
+                tmpList.append(f"@{document.cacheUuid()}")
+
+            self.__settings.setOption(BSSettingsKey.SESSION_DOCUMENTS_OPENED, tmpList)
+
 
             if self.__window.actionViewShowConsole.isChecked():
                 # if not checked, hidden panel size is 0 so, do not save it (splitter position is already properly defined)
@@ -333,6 +388,9 @@ class BSUIController(QObject):
     def close(self):
         """When window is about to be closed, execute some cleanup/backup/stuff before exiting BuliScript"""
         # save current settings
+        for document in self.__window.documents().documents():
+            document.saveCache()
+
         self.saveSettings()
 
         self.__bsStarted = False
@@ -346,20 +404,176 @@ class BSUIController(QObject):
         """Close Buli Script"""
         self.__window.close()
 
+    def commandFileNew(self):
+        """Create a new empty document"""
+        self.__window.documents().newDocument()
+
     def commandFileOpen(self, file=None):
         """Open file"""
-        if isinstance(file, str):
-            return False
-
+        if file is None or isinstance(file, bool):
+            # if bool=>triggered from menu
+            fileName, dummy=QFileDialog.getOpenFileName(self.__window,
+                                                        i18n("Open a Buli Script document"),
+                                                        self.__lastDocumentDirectoryOpen,
+                                                        "BuliScript Files (*.bs);;All Files (*.*)")
+            if fileName!='':
+                self.commandFileOpen(fileName)
+        elif isinstance(file, str):
             try:
-                # not yet implemented
-                pass
+                if not self.__window.documents().openDocument(file):
+                    raise EInvalidStatus("Unable to open file")
+
+                self.__lastDocumentDirectoryOpen=os.path.dirname(file)
+                self.__historyFiles.append(file)
+
             except Exception as e:
                 Debug.print('[BSUIController.commandFileOpen] unable to open file {0}: {1}', file, str(e))
                 return False
             return True
         else:
             raise EInvalidType('Given `file` is not valid')
+
+    def commandFileSave(self, index=None):
+        """Save document designed by `index` (or current document if `index` is None),
+        using document filename
+
+        If document has never been saved, will execute "save as" to request for a file name
+        """
+        if isinstance(index, bool):
+            # probably called from menu event
+            index=None
+
+        document=self.__window.documents().document(index)
+
+        if not document.modified():
+            # don(t need to save is not modified
+            return False
+
+
+        if document.fileName() is None:
+            # document never been saved (no path/file name)
+            # then switch to "save as" to aks user for a filename
+            return self.commandFileSaveAs(index)
+
+        try:
+            if not self.__window.documents().saveDocument(index):
+                raise EInvalidStatus("Unable to save file")
+
+            self.__historyFiles.append(document.fileName())
+
+        except Exception as e:
+            Debug.print('[BSUIController.commandFileSave] unable to save file {0}: {1}', file, str(e))
+            return False
+        return True
+
+    def commandFileSaveAs(self, index=None):
+        """Save current document with another name"""
+        if isinstance(index, bool):
+            # probably called from menu event
+            index=None
+
+        document=self.__window.documents().document(index)
+
+        fileName=document.fileName()
+
+        if fileName is None:
+            # if no filename, use last directory where a file has been saved
+            # as default directory for dialog box
+            fileName=self.__lastDocumentDirectorySave
+
+        if index is None:
+            index=self.__window.documents().currentIndex()
+
+        # switch to tab as document (mostly: if "save all" is executed, this help
+        # to determinate which document is saved)
+        self.__window.documents().setCurrentIndex(index)
+
+        fileName, dummy=QFileDialog.getSaveFileName(self.__window,
+                                                    i18n("Save Buli Script document"),
+                                                    fileName,
+                                                    "BuliScript Files (*.bs);;All Files (*.*)")
+        if fileName!='':
+            try:
+                if not self.__window.documents().saveDocument(index, fileName):
+                    raise EInvalidStatus("Unable to save file")
+
+                # keep in memory
+                self.__lastDocumentDirectorySave=os.path.dirname(fileName)
+                self.__historyFiles.append(fileName)
+
+            except Exception as e:
+                Debug.print('[BSUIController.commandFileSaveAs] unable to save file {0}: {1}', fileName, str(e))
+                return False
+            return True
+        return False
+
+    def commandFileSaveAll(self):
+        """Save all documents at once"""
+        for index in range(self.__window.documents().count()):
+            self.commandFileSave(index)
+
+    def commandFileClose(self, index=None, askIfNotSaved=True):
+        """Close current document
+
+        If document has been modified, ask for: save/don't save/cancel
+        """
+        if isinstance(index, bool):
+            # probably called from menu event
+            index=None
+
+        document=self.__window.documents().document(index)
+
+        if document.modified() and askIfNotSaved:
+            # message box to confirm to close document
+            if QMessageBox.question(self.__window, "Close document", "Document has been modified and not saved.\n\nClose without saving?", QMessageBox.Ok|QMessageBox.Cancel)==QMessageBox.Cancel:
+                return False
+
+        return self.__window.documents().closeDocument(index)
+
+    def commandFileCloseAll(self, askIfNotSaved=True):
+        """Close all documents
+
+        If document has been modified, ask for: save/don't save/cancel
+        """
+        print("TODO: implement commandFileCloseAll")
+
+    def commandEditUndo(self):
+        """Undo last modification on current document"""
+        print("TODO: implement commandEditUndo")
+
+    def commandEditRedo(self):
+        """Undo undoed modification on current document"""
+        print("TODO: implement commandEditRedo")
+
+    def commandEditCut(self):
+        """Cut selected text from current document to clipboard"""
+        print("TODO: implement commandEditCut")
+
+    def commandEditCopy(self):
+        """Copy selected text from current document to clipboard"""
+        print("TODO: implement commandEditCopy")
+
+    def commandEditPaste(self):
+        """Paste clipboard content to current document"""
+        print("TODO: implement commandEditPaste")
+
+    def commandEditSelectAll(self):
+        """Select all document content"""
+        print("TODO: implement commandEditSelectAll")
+
+    def commandScriptExecute(self):
+        """Execute script"""
+        #text=self.plainTextEdit.toPlainText()
+        #p=Parser(self.__uiController.languageDef().tokenizer(), self.__uiController.languageDef().grammarRules())
+        #p.setIgnoredTokens([BSLanguageDef.ITokenType.SPACE, BSLanguageDef.ITokenType.NEWLINE, BSLanguageDef.ITokenType.COMMENT])
+        ##print(text)
+        ##print(p)
+        #p.parse(text+"\n\n#<EOT>")
+        print("TODO: implement commandScriptExecute")
+
+    def commandLanguageInsert(self, text):
+        """Insert given `text` at current position in document"""
+        print("TODO: implement commandLanguageInsert", text)
 
     def commandViewBringToFront(self):
         """Bring main window to front"""
@@ -530,12 +744,17 @@ class BSUIController(QObject):
 
     def commandSettingsOpen(self):
         """Open dialog box settings"""
-        if BSSettingsDialogBox.open(f'{self.__bsName}::Settings', self):
-            self.saveSettings()
+        #if BSSettingsDialogBox.open(f'{self.__bsName}::Settings', self):
+        #    self.saveSettings()
+        print("TODO: implement commandSettingsOpen")
 
     def commandAboutBs(self):
         """Display 'About Buli Script' dialog box"""
         AboutWindow(self.__bsName, self.__bsVersion, os.path.join(os.path.dirname(__file__), 'resources', 'png', 'buli-powered-big.png'), None, ':BuliScript')
+
+    def commandHelpBs(self, text):
+        """Display BuliScript help"""
+        print("TODO: implement commandHelpBs")
 
 
     # endregion: define commands -----------------------------------------------
