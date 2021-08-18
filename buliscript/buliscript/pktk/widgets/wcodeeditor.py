@@ -51,7 +51,7 @@ from ..pktk import *
 class WCodeEditor(QPlainTextEdit):
     """Extended editor with syntax highlighting, autocompletion, line number..."""
 
-    cursorCoordinatesChanged = Signal(int, int, int, int, int) # column start, row start, column end, row end, selection length, token
+    cursorCoordinatesChanged = Signal(QPoint, QPoint, QPoint, int) # cursor position, selection start position, selection end position, selection length
     overwriteModeChanged = Signal(bool)
 
     KEY_INDENT = 'indent'
@@ -79,6 +79,13 @@ class WCodeEditor(QPlainTextEdit):
         self.__cursorCol = 0
         self.__cursorRow = 0
         self.__cursorRect = None
+
+        self.__cursorSelColStart = 0
+        self.__cursorSelRowStart = 0
+        self.__cursorSelColEnd = 0
+        self.__cursorSelRowEnd = 0
+        self.__cursorSelLen = 0
+
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
@@ -224,21 +231,25 @@ class WCodeEditor(QPlainTextEdit):
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
 
-        selLength=selectionEnd - selectionStart
+        self.__cursorSelLen=selectionEnd - selectionStart
 
-        if selLength==0:
-            self.cursorCoordinatesChanged.emit(self.__cursorCol, self.__cursorRow, self.__cursorCol, self.__cursorRow, 0)
+        if self.__cursorSelLen==0:
+            self.__cursorSelColStart=self.__cursorCol
+            self.__cursorSelRowStart=self.__cursorRow
+            self.__cursorSelColEnd=self.__cursorCol
+            self.__cursorSelRowEnd=self.__cursorRow
+            self.cursorCoordinatesChanged.emit(QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorCol, self.__cursorRow), 0)
         else:
             # determinate block numbers
             cursor.setPosition(selectionStart)
-            cColStart = cursor.columnNumber()+1
-            cRowStart = cursor.blockNumber()+1
+            self.__cursorSelColStart = cursor.columnNumber()+1
+            self.__cursorSelRowStart = cursor.blockNumber()+1
 
             cursor.setPosition(selectionEnd)
-            cColEnd = cursor.columnNumber()+1
-            cRowEnd = cursor.blockNumber()+1
+            self.__cursorSelColEnd = cursor.columnNumber()+1
+            self.__cursorSelRowEnd = cursor.blockNumber()+1
 
-            self.cursorCoordinatesChanged.emit(cColStart, cRowStart, cColEnd, cRowEnd, selLength)
+            self.cursorCoordinatesChanged.emit(QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorSelColStart, self.__cursorSelRowStart), QPoint(self.__cursorSelColEnd, self.__cursorSelRowEnd), self.__cursorSelLen)
 
 
     def __hideCompleterHint(self):
@@ -1280,15 +1291,22 @@ class WCodeEditor(QPlainTextEdit):
 
 
     def cursorPosition(self, fromZero=False):
-        """Return current cursor position
+        """Return current cursor position information
 
-        Returned row/col start from 1 (instead of 0)
+        Returned row/col start from 1, except if given `fromZero` parameter is True (from 0 in this case)
+
+        Return a tuple:
+            QPoint() current position
+            QPoint() selection start
+            QPoint() selection end
+            int      selection length
+
         """
-        cursor = self.textCursor()
+        #cursor = self.textCursor()
         if fromZero:
-            return QPoint(self.__cursorCol, self.__cursorRow)
+            return (QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorSelColStart-1, self.__cursorSelRowStart-1), QPoint(self.__cursorSelColEnd-1, self.__cursorSelRowEnd-1), self.__cursorSelLen)
         else:
-            return QPoint(self.__cursorCol + 1, self.__cursorRow + 1)
+            return (QPoint(self.__cursorCol+1, self.__cursorRow+1), QPoint(self.__cursorSelColStart, self.__cursorSelRowStart), QPoint(self.__cursorSelColEnd, self.__cursorSelRowEnd), self.__cursorSelLen)
 
 
     def cursorToken(self, starting=True):
