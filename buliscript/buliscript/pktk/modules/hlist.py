@@ -110,6 +110,21 @@ class HList(QObject):
         if notifyChange:
             self.changed.emit()
 
+    def remove(self, value, notifyChange=True):
+        """remove a value from history"""
+        position = None
+        try:
+            position = self.__list.index(value)
+        except:
+            # value not found
+            position = None
+
+        if not position is None:
+            self.__list.pop(position)
+
+        if notifyChange:
+            self.changed.emit()
+
     def pop(self, notifyChange=True):
         """Pop last value added"""
         returned = None
@@ -140,4 +155,3 @@ class HList(QObject):
     def list(self):
         """return items in History"""
         return self.__list
-
