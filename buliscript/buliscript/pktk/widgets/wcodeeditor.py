@@ -53,6 +53,7 @@ class WCodeEditor(QPlainTextEdit):
 
     cursorCoordinatesChanged = Signal(QPoint, QPoint, QPoint, int) # cursor position, selection start position, selection end position, selection length
     overwriteModeChanged = Signal(bool)
+    readOnlyModeChanged = Signal(bool)
 
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
@@ -602,6 +603,14 @@ class WCodeEditor(QPlainTextEdit):
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
 
+
+    def setReadOnly(self, value):
+        """Override method to implement signal readOnlyModeChanged"""
+        ro=self.isReadOnly()
+        super(WCodeEditor, self).setReadOnly(value)
+
+        if value!=ro:
+            self.readOnlyModeChanged.emit(value)
 
     def insertFromMimeData(self, source):
         """Data from clipboad are being pasted
