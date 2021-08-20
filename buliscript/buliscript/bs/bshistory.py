@@ -39,8 +39,9 @@ class BSHistory(HList):
         modified=False
         tmpList=[]
         for path in self.list():
-            if os.path.isfile(path):
+            if isinstance(path, str) and os.path.isfile(path):
                 tmpList.append(path)
             else:
                 modified=True
-        self.setItems(tmpList)
+        if modified:
+            self.setItems(tmpList)

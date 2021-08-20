@@ -108,7 +108,7 @@
       <string>Re-open last opened documents</string>
      </property>
      <property name="title">
-      <string>&amp;Recent scripts</string>
+      <string>&amp;Recent</string>
      </property>
      <property name="icon">
       <iconset theme="document-open-recent">

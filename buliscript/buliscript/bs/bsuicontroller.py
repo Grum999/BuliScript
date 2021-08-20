@@ -86,14 +86,14 @@ class BSUIController(QObject):
 
         self.__languageDef=BSLanguageDef()
 
-        self.__settings = BSSettings('buliscript')
+        BSSettings.load()
 
         UITheme.load()
         # BC theme must be loaded before systray is initialized
         # #----- uncomment if local resources # UITheme.load(os.path.join(os.path.dirname(__file__), 'resources'))
 
         self.__systray=BSSysTray(self)
-        self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE))
+        self.commandSettingsSysTrayMode(BSSettings.get(BSSettingsKey.CONFIG_SYSTRAY_MODE))
 
         # store a global reference to activeWindow to be able to work with
         # activeWindow signals
@@ -119,7 +119,7 @@ class BSUIController(QObject):
 
         self.__initialised = False
 
-        if kritaIsStarting and self.__settings.option(BSSettingsKey.CONFIG_OPEN_ATSTARTUP):
+        if kritaIsStarting and BSSettings.get(BSSettingsKey.CONFIG_OPEN_ATSTARTUP):
             self.start()
 
 
@@ -172,30 +172,33 @@ class BSUIController(QObject):
 
         self.__window.initMainView()
 
-        self.commandSettingsSaveSessionOnExit(self.__settings.option(BSSettingsKey.CONFIG_SESSION_SAVE))
-        self.commandSettingsSysTrayMode(self.__settings.option(BSSettingsKey.CONFIG_SYSTRAY_MODE))
-        self.commandSettingsOpenAtStartup(self.__settings.option(BSSettingsKey.CONFIG_OPEN_ATSTARTUP))
+        # reload
+        BSSettings.load()
 
-        self.commandViewMainWindowGeometry(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY))
-        self.commandViewMainWindowMaximized(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED))
-        self.commandViewMainSplitterPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION))
-        self.commandViewSecondarySplitterPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION))
+        self.commandSettingsSaveSessionOnExit(BSSettings.get(BSSettingsKey.CONFIG_SESSION_SAVE))
+        self.commandSettingsSysTrayMode(BSSettings.get(BSSettingsKey.CONFIG_SYSTRAY_MODE))
+        self.commandSettingsOpenAtStartup(BSSettings.get(BSSettingsKey.CONFIG_OPEN_ATSTARTUP))
 
-        self.commandViewShowCanvasVisible(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE))
-        self.commandViewShowCanvasOrigin(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN))
-        self.commandViewShowCanvasGrid(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID))
-        self.commandViewShowCanvasPosition(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION))
-        self.commandViewShowConsoleVisible(self.__settings.option(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE))
+        self.commandViewMainWindowGeometry(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY))
+        self.commandViewMainWindowMaximized(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED))
+        self.commandViewMainSplitterPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION))
+        self.commandViewSecondarySplitterPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION))
 
-        self.__lastDocumentDirectoryOpen=self.__settings.option(BSSettingsKey.SESSION_PATH_LASTOPENED)
-        self.__lastDocumentDirectorySave=self.__settings.option(BSSettingsKey.SESSION_PATH_LASTSAVED)
+        self.commandViewShowCanvasVisible(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE))
+        self.commandViewShowCanvasOrigin(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN))
+        self.commandViewShowCanvasGrid(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID))
+        self.commandViewShowCanvasPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION))
+        self.commandViewShowConsoleVisible(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE))
+
+        self.__lastDocumentDirectoryOpen=BSSettings.get(BSSettingsKey.SESSION_PATH_LASTOPENED)
+        self.__lastDocumentDirectorySave=BSSettings.get(BSSettingsKey.SESSION_PATH_LASTSAVED)
 
         # do not load from here, already loaded from BSDocuments() initialisation
-        #for fileName in self.__settings.option(BSSettingsKey.SESSION_DOCUMENTS_OPENED):
-        #    self.__window.documents().openDocument(fileName)
+        # for fileName in BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_OPENED):
+        #     self.__window.documents().openDocument(fileName)
 
-        self.__historyFiles.setMaxItems(self.__settings.option(BSSettingsKey.CONFIG_SESSION_DOCUMENTS_RECENTS_COUNT))
-        self.__historyFiles.setItems(self.__settings.option(BSSettingsKey.SESSION_DOCUMENTS_RECENTS))
+        self.__historyFiles.setMaxItems(BSSettings.get(BSSettingsKey.CONFIG_SESSION_DOCUMENTS_RECENTS_COUNT))
+        self.__historyFiles.setItems(BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_RECENTS))
         self.__historyFiles.removeMissingFiles()
 
         self.__window.initMenu()
@@ -298,6 +301,30 @@ class BSUIController(QObject):
             self.commandQuit()
 
 
+    def buildmenuFileRecent(self, menu):
+        """Menu for 'file recent' is about to be displayed
+
+        Build menu content
+        """
+        @pyqtSlot('QString')
+        def menuFileRecent_Clicked(action):
+            # open document
+            self.commandFileOpen(self.sender().property('fileName'))
+
+        menu.clear()
+
+        if self.__historyFiles.length()==0:
+            action = QAction(i18n("(no recent scripts)"), self)
+            action.setEnabled(False)
+            menu.addAction(action)
+        else:
+            for fileName in reversed(self.__historyFiles.list()):
+                action = QAction(fileName.replace('&', '&&'), self)
+                action.setProperty('fileName', fileName)
+                action.triggered.connect(menuFileRecent_Clicked)
+                menu.addAction(action)
+
+
     # endregion: initialisation methods ----------------------------------------
 
 
@@ -306,10 +333,6 @@ class BSUIController(QObject):
     def name(self):
         """Return BuliScript plugin name"""
         return self.__bsName
-
-    def settings(self):
-        """return setting manager"""
-        return self.__settings
 
     def theme(self):
         """Return theme object"""
@@ -343,47 +366,49 @@ class BSUIController(QObject):
     # endregion: getter/setters ------------------------------------------------
 
 
+
+
     # region: define commands --------------------------------------------------
 
     def saveSettings(self):
         """Save the current settings"""
-        self.__settings.setOption(BSSettingsKey.CONFIG_SESSION_SAVE, self.__window.actionSettingsSaveSessionOnExit.isChecked())
+        BSSettings.set(BSSettingsKey.CONFIG_SESSION_SAVE, self.__window.actionSettingsSaveSessionOnExit.isChecked())
 
-        if self.__settings.option(BSSettingsKey.CONFIG_SESSION_SAVE):
+        if BSSettings.get(BSSettingsKey.CONFIG_SESSION_SAVE):
             # save current session properties only if allowed
             if self.__window.actionViewShowCanvas.isChecked():
                 # if not checked, hidden panel size is 0 so, do not save it (splitter position is already properly defined)
-                self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION, self.__window.splMain.sizes())
+                BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION, self.__window.splMain.sizes())
 
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE, self.__window.actionViewShowCanvas.isChecked())
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, self.__window.actionViewShowCanvasOrigin.isChecked())
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, self.__window.actionViewShowCanvasGrid.isChecked())
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, self.__window.actionViewShowCanvasPosition.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE, self.__window.actionViewShowCanvas.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, self.__window.actionViewShowCanvasOrigin.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, self.__window.actionViewShowCanvasGrid.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, self.__window.actionViewShowCanvasPosition.isChecked())
 
-            self.__settings.setOption(BSSettingsKey.SESSION_PATH_LASTOPENED, self.__lastDocumentDirectoryOpen)
-            self.__settings.setOption(BSSettingsKey.SESSION_PATH_LASTSAVED, self.__lastDocumentDirectorySave)
+            BSSettings.set(BSSettingsKey.SESSION_PATH_LASTOPENED, self.__lastDocumentDirectoryOpen)
+            BSSettings.set(BSSettingsKey.SESSION_PATH_LASTSAVED, self.__lastDocumentDirectorySave)
 
-            self.__settings.setOption(BSSettingsKey.SESSION_DOCUMENTS_RECENTS, self.__historyFiles.list())
+            BSSettings.set(BSSettingsKey.SESSION_DOCUMENTS_RECENTS, self.__historyFiles.list())
 
             tmpList=[]
             for document in self.__window.documents().documents():
                 tmpList.append(f"@{document.cacheUuid()}")
 
-            self.__settings.setOption(BSSettingsKey.SESSION_DOCUMENTS_OPENED, tmpList)
+            BSSettings.set(BSSettingsKey.SESSION_DOCUMENTS_OPENED, tmpList)
 
 
             if self.__window.actionViewShowConsole.isChecked():
                 # if not checked, hidden panel size is 0 so, do not save it (splitter position is already properly defined)
-                self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
+                BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
 
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE, self.__window.actionViewShowConsole.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE, self.__window.actionViewShowConsole.isChecked())
 
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED, self.__window.isMaximized())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED, self.__window.isMaximized())
             if not self.__window.isMaximized():
                 # when maximized geometry is full screen geomtry, then do it only if no in maximized
-                self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY, [self.__window.geometry().x(), self.__window.geometry().y(), self.__window.geometry().width(), self.__window.geometry().height()])
+                BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY, [self.__window.geometry().x(), self.__window.geometry().y(), self.__window.geometry().width(), self.__window.geometry().height()])
 
-        return self.__settings.saveConfig()
+        return BSSettings.save()
 
     def close(self):
         """When window is about to be closed, execute some cleanup/backup/stuff before exiting BuliScript"""
@@ -426,7 +451,8 @@ class BSUIController(QObject):
                     raise EInvalidStatus("Unable to open file")
 
                 self.__lastDocumentDirectoryOpen=os.path.dirname(file)
-                self.__historyFiles.append(file)
+
+                self.__historyFiles.remove(file)
 
             except Exception as e:
                 Debug.print('[BSUIController.commandFileOpen] unable to open file {0}: {1}', file, str(e))
@@ -461,8 +487,6 @@ class BSUIController(QObject):
             if not self.__window.documents().saveDocument(index):
                 raise EInvalidStatus("Unable to save file")
 
-            self.__historyFiles.append(document.fileName())
-
         except Exception as e:
             Debug.print('[BSUIController.commandFileSave] unable to save file {0}: {1}', file, str(e))
             return False
@@ -477,8 +501,10 @@ class BSUIController(QObject):
         document=self.__window.documents().document(index)
 
         if newFileName is None:
-            fileName=document.fileName()
+            oldFileName=document.fileName()
+            fileName=oldFileName
         else:
+            oldFileName=None
             fileName=newFileName
 
         if fileName is None:
@@ -493,6 +519,8 @@ class BSUIController(QObject):
         # to determinate which document is saved)
         self.__window.documents().setCurrentIndex(index)
 
+
+
         if newFileName is None:
             fileName, dummy=QFileDialog.getSaveFileName(self.__window,
                                                         i18n("Save Buli Script document"),
@@ -503,10 +531,13 @@ class BSUIController(QObject):
                 if not self.__window.documents().saveDocument(index, fileName):
                     raise EInvalidStatus("Unable to save file")
 
+                if not oldFileName is None and oldFileName!=fileName:
+                    # as saved with on another location, consider old location
+                    # is closed and add it to history
+                    self.__historyFiles.append(oldFileName)
+
                 # keep in memory
                 self.__lastDocumentDirectorySave=os.path.dirname(fileName)
-                self.__historyFiles.append(fileName)
-
             except Exception as e:
                 Debug.print('[BSUIController.commandFileSaveAs] unable to save file {0}: {1}', fileName, str(e))
                 return False
@@ -533,6 +564,11 @@ class BSUIController(QObject):
             # message box to confirm to close document
             if QMessageBox.question(self.__window, "Close document", "Document has been modified without being saved.\n\nClose without saving?", QMessageBox.Yes|QMessageBox.No)==QMessageBox.No:
                 return False
+
+        if not document.fileName() is None:
+            # save in history when closed as, when opened/save, documents are in
+            # cache and automatically opened on next startup
+            self.__historyFiles.append(document.fileName())
 
         return self.__window.documents().closeDocument(index)
 
@@ -588,6 +624,10 @@ class BSUIController(QObject):
                     defaultChoice=QMessageBox.Yes
 
             if closeDocument:
+                # save in history when closed as, when opened/save, documents are in
+                # cache and automatically opened on next startup
+                if not document.fileName() is None:
+                    self.__historyFiles.append(document.fileName())
                 self.__window.documents().closeDocument(index)
 
 
@@ -673,7 +713,7 @@ class BSUIController(QObject):
 
         if maximized:
             # store current geometry now because after window is maximized, it's lost
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY, [self.__window.geometry().x(), self.__window.geometry().y(), self.__window.geometry().width(), self.__window.geometry().height()])
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY, [self.__window.geometry().x(), self.__window.geometry().y(), self.__window.geometry().width(), self.__window.geometry().height()])
             self.__window.showMaximized()
         else:
             self.__window.showNormal()
@@ -720,7 +760,7 @@ class BSUIController(QObject):
 
         if not visible:
             # when hidden, canvas panel width is set to 0, then save current size now
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION, self.__window.splMain.sizes())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION, self.__window.splMain.sizes())
 
         self.__window.wRightArea.setVisible(visible)
 
@@ -734,7 +774,7 @@ class BSUIController(QObject):
             raise EInvalidValue('Given `visible` must be a <bool>')
 
         # updated in saveSettings()
-        #self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, visible)
+        #BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, visible)
         Debug.print('TODO: update canvas (origin)')
 
     def commandViewShowCanvasGrid(self, visible=None):
@@ -747,7 +787,7 @@ class BSUIController(QObject):
             raise EInvalidValue('Given `visible` must be a <bool>')
 
         # updated in saveSettings()
-        #self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, visible)
+        #BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, visible)
         Debug.print('TODO: update canvas (grid)')
 
     def commandViewShowCanvasPosition(self, visible=None):
@@ -760,7 +800,7 @@ class BSUIController(QObject):
             raise EInvalidValue('Given `visible` must be a <bool>')
 
         # updated in saveSettings()
-        #self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, visible)
+        #BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, visible)
         Debug.print('TODO: update canvas (position)')
 
     def commandViewShowConsoleVisible(self, visible=None):
@@ -774,7 +814,7 @@ class BSUIController(QObject):
 
         if not visible:
             # when hidden, canvas panel width is set to 0, then save current size now
-            self.__settings.setOption(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
 
         self.__window.wConsoleArea.setVisible(visible)
 
@@ -789,12 +829,12 @@ class BSUIController(QObject):
 
     def commandSettingsSysTrayMode(self, value=BSSysTray.SYSTRAY_MODE_WHENACTIVE):
         """Set mode for systray notifier"""
-        self.__settings.setOption(BSSettingsKey.CONFIG_SYSTRAY_MODE, value)
+        BSSettings.set(BSSettingsKey.CONFIG_SYSTRAY_MODE, value)
         self.__systray.setVisibleMode(value)
 
     def commandSettingsOpenAtStartup(self, value=False):
         """Set option to start BS at Krita's startup"""
-        self.__settings.setOption(BSSettingsKey.CONFIG_OPEN_ATSTARTUP, value)
+        BSSettings.set(BSSettingsKey.CONFIG_OPEN_ATSTARTUP, value)
 
     def commandSettingsOpen(self):
         """Open dialog box settings"""

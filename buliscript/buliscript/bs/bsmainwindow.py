@@ -177,6 +177,8 @@ class BSMainWindow(QMainWindow):
         self.actionFileCloseAll.triggered.connect(self.__uiController.commandFileCloseAll)
         self.actionFileQuit.triggered.connect(self.__uiController.commandQuit)
 
+        self.menuFileRecent.aboutToShow.connect(self.__menuFileRecentShow)
+
         # Menu EDIT
         self.actionEditUndo.triggered.connect(self.__uiController.commandEditUndo)
         self.actionEditRedo.triggered.connect(self.__uiController.commandEditRedo)
@@ -218,6 +220,14 @@ class BSMainWindow(QMainWindow):
 
 
     # region: define actions method --------------------------------------------
+
+    def __menuFileRecentShow(self):
+        """Menu for 'file recent' is about to be displayed
+
+        Build menu content
+        """
+        self.__uiController.buildmenuFileRecent(self.menuFileRecent)
+
 
     def __actionNotYetImplemented(self, v=None):
         """"Method called when an action not yet implemented is triggered"""

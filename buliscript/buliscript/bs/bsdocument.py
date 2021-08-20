@@ -108,7 +108,7 @@ class BSDocument(QWidget):
         self.__uiController=uiController
         self.__documentFileName=None
         self.__documentCacheUuid=str(uuid.uuid4())
-        self.applySettings(self.__uiController.settings())
+        self.applySettings()
 
 
     def __repr__(self):
@@ -270,28 +270,25 @@ class BSDocument(QWidget):
             self.__currentAlert=None
             self.__updateAlerts()
 
-    def applySettings(self, settings):
+    def applySettings(self):
         """Apply BuliScript settings on editor"""
-        if not isinstance(settings, BSSettings):
-            raise EInvalidType('Given `settings` must be <BSSettings>')
-
         font = QFont()
-        font.setFamily(settings.option(BSSettingsKey.CONFIG_EDITOR_FONT_NAME))
-        font.setPointSize(settings.option(BSSettingsKey.CONFIG_EDITOR_FONT_SIZE))
+        font.setFamily(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_FONT_NAME))
+        font.setPointSize(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_FONT_SIZE))
         font.setFixedPitch(True)
         self.__codeEditor.setFont(font)
 
         # TODO: implement color theme...
 
-        self.__codeEditor.setIndentWidth(settings.option(BSSettingsKey.CONFIG_EDITOR_INDENT_WIDTH))
-        self.__codeEditor.setOptionShowIndentLevel(settings.option(BSSettingsKey.CONFIG_EDITOR_INDENT_VISIBLE))
+        self.__codeEditor.setIndentWidth(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_INDENT_WIDTH))
+        self.__codeEditor.setOptionShowIndentLevel(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_INDENT_VISIBLE))
 
-        self.__codeEditor.setOptionShowSpaces(settings.option(BSSettingsKey.CONFIG_EDITOR_SPACES_VISIBLE))
+        self.__codeEditor.setOptionShowSpaces(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_SPACES_VISIBLE))
 
-        self.__codeEditor.setOptionShowRightLimit(settings.option(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_VISIBLE))
-        self.__codeEditor.setOptionRightLimitPosition(settings.option(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_WIDTH))
+        self.__codeEditor.setOptionShowRightLimit(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_VISIBLE))
+        self.__codeEditor.setOptionRightLimitPosition(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_WIDTH))
 
-        self.__codeEditor.setOptionAutoCompletion(settings.option(BSSettingsKey.CONFIG_EDITOR_AUTOCOMPLETION_ACTIVE))
+        self.__codeEditor.setOptionAutoCompletion(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_AUTOCOMPLETION_ACTIVE))
 
     def modified(self):
         """Return if document is modified or not"""
@@ -699,7 +696,7 @@ class BSDocuments(QTabWidget):
         self.__mainWindow=mainWindow
         self.__uiController=uiController
 
-        openedDocumentsFileName=self.__uiController.settings().option(BSSettingsKey.SESSION_DOCUMENTS_OPENED)
+        openedDocumentsFileName=BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_OPENED)
         for fileName in openedDocumentsFileName:
             self.openDocument(fileName)
             document=self.document()
@@ -717,9 +714,8 @@ class BSDocuments(QTabWidget):
         if not isinstance(settings, BSSettings):
             raise EInvalidType('Given `settings` must be <BSSettings>')
 
-        settings=self.__uiController.settings()
         for document in self.__documents:
-            document.applySettings(settings)
+            document.applySettings()
 
     def documents(self):
         """Return a list of BSDocument
@@ -858,14 +854,6 @@ class BSDocuments(QTabWidget):
             self.__updateTabBarModified(index)
             self.setTabText(index, self.__documentTabName(document))
         return returned
-
-    def saveAllDocuments(self):
-        """Save all documents"""
-        print('saveAllDocuments')
-
-    def closeAllDocuments(self):
-        """Close all documents"""
-        print('closeAllDocuments')
 
 
 
