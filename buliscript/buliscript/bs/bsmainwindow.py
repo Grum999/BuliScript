@@ -69,11 +69,12 @@ class BSMainWindow(QMainWindow):
     LIGHT_THEME = 'light'
 
     STATUSBAR_FILENAME = 0
-    STATUSBAR_ROWS = 1
-    STATUSBAR_POS = 2
-    STATUSBAR_SELECTION = 3
-    STATUSBAR_INSOVR_MODE = 4
-    STATUSBAR_LASTSECTION = 4
+    STATUSBAR_RO = 1
+    STATUSBAR_ROWS = 2
+    STATUSBAR_POS = 3
+    STATUSBAR_SELECTION = 4
+    STATUSBAR_INSOVR_MODE = 5
+    STATUSBAR_LASTSECTION = 6
 
     dialogShown = pyqtSignal()
 
@@ -98,22 +99,36 @@ class BSMainWindow(QMainWindow):
         [ Path/File name    | Column: 999 . Row: 999/999 | Selection: 999 | INSOVR ]
         """
         self.__statusBarWidgets=[
-                QLabel(),
-                QLabel("Rows: 0000"),
-                QLabel("0000:0000"),
-                QLabel("000:0000 - 000:0000 [00000]"),
-                QLabel("WWW"),
+                QLabel(),                                   # File name
+                QLabel(),                                   # file is in read-only mode
+                QLabel("Rows: 0000"),                       # total number of rows
+                QLabel("0000:0000"),                        # Current column/row
+                QLabel("000:0000 - 000:0000 [00000]"),      # Selection start (col/row) - Selection end (col/row) [selection length]
+                QLabel("WWW"),                              # INSert/OVeRwrite
             ]
+
 
         fontMetrics=self.__statusBarWidgets[BSMainWindow.STATUSBAR_FILENAME].fontMetrics()
 
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_RO].setMinimumWidth(fontMetrics.boundingRect("RO").width())
         self.__statusBarWidgets[BSMainWindow.STATUSBAR_ROWS].setMinimumWidth(fontMetrics.boundingRect("Rows: 0000").width())
         self.__statusBarWidgets[BSMainWindow.STATUSBAR_POS].setMinimumWidth(fontMetrics.boundingRect("0000:0000").width())
         self.__statusBarWidgets[BSMainWindow.STATUSBAR_SELECTION].setMinimumWidth(fontMetrics.boundingRect("000:0000 - 000:0000 [00000]").width())
         self.__statusBarWidgets[BSMainWindow.STATUSBAR_INSOVR_MODE].setMinimumWidth(fontMetrics.boundingRect("INS_").width())
 
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_FILENAME].setToolTip(i18n('Document file name'))
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_RO].setToolTip(i18n('Document in Read-Only mode'))
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_ROWS].setToolTip(i18n('Total number of rows'))
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_POS].setToolTip(i18n('Current position (column:row)'))
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_SELECTION].setToolTip(i18n('Current selection: Selection start (column:row) - Selection end (column:row) [selection length]'))
+        self.__statusBarWidgets[BSMainWindow.STATUSBAR_INSOVR_MODE].setToolTip(i18n('INS: insert mode\nOVR: overwrite mode'))
+
+
+
         statusBar=self.statusBar()
         statusBar.addWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_FILENAME])
+        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_RO])
         statusBar.addPermanentWidget(VLine())
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_ROWS])
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_POS])
@@ -315,6 +330,11 @@ class BSMainWindow(QMainWindow):
             text=f"Rows: {text}"
 
         self.__statusBarWidgets[index].setText(text)
+
+        if len(text)==0:
+            self.__statusBarWidgets[index].setToolTipDuration(1)
+        else:
+            self.__statusBarWidgets[index].setToolTipDuration(-1)
 
     def openedDocumentTabs(self):
         """Return number of documents tabs"""

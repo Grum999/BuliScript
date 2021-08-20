@@ -466,7 +466,7 @@ class BSUIController(QObject):
             return False
         return True
 
-    def commandFileSaveAs(self, index=None):
+    def commandFileSaveAs(self, index=None, newFileName=None):
         """Save current document with another name"""
         if isinstance(index, bool):
             # probably called from menu event
@@ -474,7 +474,10 @@ class BSUIController(QObject):
 
         document=self.__window.documents().document(index)
 
-        fileName=document.fileName()
+        if newFileName is None:
+            fileName=document.fileName()
+        else:
+            fileName=newFileName
 
         if fileName is None:
             # if no filename, use last directory where a file has been saved
@@ -488,10 +491,11 @@ class BSUIController(QObject):
         # to determinate which document is saved)
         self.__window.documents().setCurrentIndex(index)
 
-        fileName, dummy=QFileDialog.getSaveFileName(self.__window,
-                                                    i18n("Save Buli Script document"),
-                                                    fileName,
-                                                    "BuliScript Files (*.bs);;All Files (*.*)")
+        if newFileName is None:
+            fileName, dummy=QFileDialog.getSaveFileName(self.__window,
+                                                        i18n("Save Buli Script document"),
+                                                        fileName,
+                                                        "BuliScript Files (*.bs);;All Files (*.*)")
         if fileName!='':
             try:
                 if not self.__window.documents().saveDocument(index, fileName):
@@ -525,10 +529,32 @@ class BSUIController(QObject):
 
         if document.modified() and askIfNotSaved:
             # message box to confirm to close document
-            if QMessageBox.question(self.__window, "Close document", "Document has been modified and not saved.\n\nClose without saving?", QMessageBox.Ok|QMessageBox.Cancel)==QMessageBox.Cancel:
+            if QMessageBox.question(self.__window, "Close document", "Document has been modified and not saved.\n\nClose without saving?", QMessageBox.Yes|QMessageBox.No)==QMessageBox.No:
                 return False
 
         return self.__window.documents().closeDocument(index)
+
+    def commandFileReload(self, index=None, askIfNotSaved=True):
+        """Reload current document
+
+        If document has been modified, ask confirmation for reload
+        """
+        if isinstance(index, bool):
+            # probably called from menu event
+            index=None
+
+        document=self.__window.documents().document(index)
+
+        if document.fileName() is None:
+            # no file name, can't be reloaded
+            return False
+
+        if document.modified() and askIfNotSaved:
+            # message box to confirm to close document
+            if QMessageBox.question(self.__window, "Reload document", "Document has been modified and not saved.\n\nReload document?", QMessageBox.Yes|QMessageBox.No)==QMessageBox.No:
+                return False
+
+        return self.__window.documents().reloadDocument(index)
 
     def commandFileCloseAll(self, askIfNotSaved=True):
         """Close all documents
