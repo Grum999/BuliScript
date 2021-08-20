@@ -96,14 +96,17 @@
      <x>0</x>
      <y>0</y>
      <width>892</width>
-     <height>30</height>
+     <height>31</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>F&amp;ile</string>
     </property>
     <widget class="QMenu" name="menuFileRecent">
+     <property name="statusTip">
+      <string>Re-open last opened documents</string>
+     </property>
      <property name="title">
       <string>&amp;Recent scripts</string>
      </property>
@@ -116,6 +119,8 @@
     <addaction name="actionFileNew"/>
     <addaction name="actionFileOpen"/>
     <addaction name="menuFileRecent"/>
+    <addaction name="separator"/>
+    <addaction name="actionFileReload"/>
     <addaction name="separator"/>
     <addaction name="actionFileSave"/>
     <addaction name="actionFileSaveAs"/>
@@ -194,6 +199,9 @@
    <property name="text">
     <string>&amp;BuliScript handbook...</string>
    </property>
+   <property name="statusTip">
+    <string>Help about BuliScript (language, editor, ...)</string>
+   </property>
    <property name="shortcut">
     <string>F1</string>
    </property>
@@ -205,6 +213,9 @@
    </property>
    <property name="text">
     <string>&amp;About Buli Script...</string>
+   </property>
+   <property name="statusTip">
+    <string>Who is Buli? Why? How?</string>
    </property>
    <property name="shortcut">
     <string>Shift+F1</string>
@@ -218,6 +229,9 @@
    <property name="text">
     <string>&amp;New...</string>
    </property>
+   <property name="statusTip">
+    <string>Create a new document</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
    </property>
@@ -229,6 +243,9 @@
    </property>
    <property name="text">
     <string>&amp;Open...</string>
+   </property>
+   <property name="statusTip">
+    <string>Open a document</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -242,6 +259,9 @@
    <property name="text">
     <string>&amp;Save</string>
    </property>
+   <property name="statusTip">
+    <string>Save current document</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
    </property>
@@ -253,6 +273,9 @@
    </property>
    <property name="text">
     <string>Sa&amp;ve as...</string>
+   </property>
+   <property name="statusTip">
+    <string>Save current document to another location</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
@@ -266,6 +289,9 @@
    <property name="text">
     <string>Save a&amp;ll</string>
    </property>
+   <property name="statusTip">
+    <string>Save all documents</string>
+   </property>
   </action>
   <action name="actionScriptExecute">
    <property name="icon">
@@ -274,6 +300,9 @@
    </property>
    <property name="text">
     <string>&amp;Execute</string>
+   </property>
+   <property name="statusTip">
+    <string>Execute current script</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
@@ -287,6 +316,9 @@
    <property name="text">
     <string>&amp;Quit</string>
    </property>
+   <property name="statusTip">
+    <string>Quit BuliScript</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
    </property>
@@ -298,6 +330,9 @@
    </property>
    <property name="text">
     <string>&amp;Close</string>
+   </property>
+   <property name="statusTip">
+    <string>Close current document</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+W</string>
@@ -316,6 +351,9 @@
    <property name="text">
     <string>&amp;Cut</string>
    </property>
+   <property name="statusTip">
+    <string>Cut selection to clipboard</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
    </property>
@@ -327,6 +365,9 @@
    </property>
    <property name="text">
     <string>C&amp;opy</string>
+   </property>
+   <property name="statusTip">
+    <string>Copy selection from clipboard</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -340,6 +381,9 @@
    <property name="text">
     <string>&amp;Paste</string>
    </property>
+   <property name="statusTip">
+    <string>Paste clipboard content</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
    </property>
@@ -351,6 +395,9 @@
    </property>
    <property name="text">
     <string>&amp;Select all</string>
+   </property>
+   <property name="statusTip">
+    <string>Select all content</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+A</string>
@@ -364,6 +411,9 @@
    <property name="text">
     <string>&amp;Undo</string>
    </property>
+   <property name="statusTip">
+    <string>Undo last action</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Z</string>
    </property>
@@ -376,6 +426,9 @@
    <property name="text">
     <string>&amp;Redo</string>
    </property>
+   <property name="statusTip">
+    <string>Redo previous action</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Z</string>
    </property>
@@ -387,6 +440,9 @@
    </property>
    <property name="text">
     <string>&amp;Preferences...</string>
+   </property>
+   <property name="statusTip">
+    <string>Define BuliScript preferences settings</string>
    </property>
   </action>
   <action name="actionViewShowCanvasGrid">
@@ -454,6 +510,9 @@
    <property name="text">
     <string>&amp;Save session on exit</string>
    </property>
+   <property name="statusTip">
+    <string/>
+   </property>
   </action>
   <action name="actionFileCloseAll">
    <property name="icon">
@@ -462,6 +521,20 @@
    </property>
    <property name="text">
     <string>Clos&amp;e all</string>
+   </property>
+   <property name="statusTip">
+    <string>Close all documents</string>
+   </property>
+  </action>
+  <action name="actionFileReload">
+   <property name="icon">
+    <iconset theme="view-refresh"/>
+   </property>
+   <property name="text">
+    <string>Reload</string>
+   </property>
+   <property name="statusTip">
+    <string>Reload current document</string>
    </property>
   </action>
  </widget>

@@ -169,6 +169,7 @@ class BSMainWindow(QMainWindow):
         # Menu SCRIPT
         self.actionFileNew.triggered.connect(self.__uiController.commandFileNew)
         self.actionFileOpen.triggered.connect(self.__uiController.commandFileOpen)
+        self.actionFileReload.triggered.connect(self.__uiController.commandFileReload)
         self.actionFileSave.triggered.connect(self.__uiController.commandFileSave)
         self.actionFileSaveAs.triggered.connect(self.__uiController.commandFileSaveAs)
         self.actionFileSaveAll.triggered.connect(self.__uiController.commandFileSaveAll)

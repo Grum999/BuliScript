@@ -529,7 +529,7 @@ class BSUIController(QObject):
 
         if document.modified() and askIfNotSaved:
             # message box to confirm to close document
-            if QMessageBox.question(self.__window, "Close document", "Document has been modified and not saved.\n\nClose without saving?", QMessageBox.Yes|QMessageBox.No)==QMessageBox.No:
+            if QMessageBox.question(self.__window, "Close document", "Document has been modified without being saved.\n\nClose without saving?", QMessageBox.Yes|QMessageBox.No)==QMessageBox.No:
                 return False
 
         return self.__window.documents().closeDocument(index)
@@ -561,7 +561,33 @@ class BSUIController(QObject):
 
         If document has been modified, ask for: save/don't save/cancel
         """
-        print("TODO: implement commandFileCloseAll")
+        defaultChoice=None
+        for index in reversed(range(self.__window.documents().count())):
+            document=self.__window.documents().document(index)
+
+            closeDocument=True
+            if document.modified():
+                if defaultChoice is None:
+                    self.__window.documents().setCurrentIndex(index)
+
+                    choice=QMessageBox.question(self.__window, "Close document", "Document has been modified without being saved.\n\nClose without saving?", QMessageBox.Yes|QMessageBox.YesToAll|QMessageBox.No|QMessageBox.NoToAll|QMessageBox.Cancel)
+                else:
+                    choice=defaultChoice
+
+
+                if choice==QMessageBox.Cancel:
+                    # cancel action
+                    return
+                elif choice==QMessageBox.No:
+                    closeDocument=False
+                elif choice==QMessageBox.NoToAll:
+                    defaultChoice=QMessageBox.No
+                elif choice==QMessageBox.YesToAll:
+                    defaultChoice=QMessageBox.Yes
+
+            if closeDocument:
+                self.__window.documents().closeDocument(index)
+
 
     def commandEditUndo(self):
         """Undo last modification on current document"""
