@@ -412,12 +412,14 @@ class BSUIController(QObject):
         """Open file"""
         if file is None or isinstance(file, bool):
             # if bool=>triggered from menu
-            fileName, dummy=QFileDialog.getOpenFileName(self.__window,
-                                                        i18n("Open a Buli Script document"),
-                                                        self.__lastDocumentDirectoryOpen,
-                                                        "BuliScript Files (*.bs);;All Files (*.*)")
-            if fileName!='':
-                self.commandFileOpen(fileName)
+            fileNames, dummy=QFileDialog.getOpenFileNames(self.__window,
+                                                          i18n("Open a Buli Script document"),
+                                                          self.__lastDocumentDirectoryOpen,
+                                                          "BuliScript Files (*.bs);;All Files (*.*)")
+
+            if len(fileNames)>0:
+                for fileName in fileNames:
+                    self.commandFileOpen(fileName)
         elif isinstance(file, str):
             try:
                 if not self.__window.documents().openDocument(file):
