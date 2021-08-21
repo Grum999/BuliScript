@@ -181,11 +181,13 @@
      <string>S&amp;cript</string>
     </property>
     <addaction name="actionScriptExecute"/>
+    <addaction name="actionScriptBreakPause"/>
+    <addaction name="actionScriptStop"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
-   <addaction name="menuScript"/>
    <addaction name="menuLanguage"/>
+   <addaction name="menuScript"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
@@ -535,6 +537,22 @@
    </property>
    <property name="statusTip">
     <string>Reload current document</string>
+   </property>
+  </action>
+  <action name="actionScriptBreakPause">
+   <property name="icon">
+    <iconset theme="media-playback-pause"/>
+   </property>
+   <property name="text">
+    <string>Break/Pause</string>
+   </property>
+  </action>
+  <action name="actionScriptStop">
+   <property name="icon">
+    <iconset theme="media-playback-stop"/>
+   </property>
+   <property name="text">
+    <string>Stop</string>
    </property>
   </action>
  </widget>

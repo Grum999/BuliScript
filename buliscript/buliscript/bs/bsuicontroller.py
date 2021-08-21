@@ -107,15 +107,21 @@ class BSUIController(QObject):
         # keep document history list
         self.__historyFiles=BSHistory()
 
+        # clipboard
+        self.__clipboard = QGuiApplication.clipboard()
+        self.__clipboard.changed.connect(self.__updateMenuEditPaste)
+
         # cache directory
         self.__bsCachePath = os.path.join(QStandardPaths.writableLocation(QStandardPaths.CacheLocation), "buliscript")
-
         try:
             os.makedirs(self.__bsCachePath, exist_ok=True)
             for subDirectory in ['documents']:
                 os.makedirs(self.cachePath(subDirectory), exist_ok=True)
         except Exception as e:
             Debug.print('[BSUIController.__init__] Unable to create directory {0}: {1}', self.cachePath(subDirectory), str(e))
+
+        # current active document
+        self.__currentDocument=None
 
         self.__initialised = False
 
@@ -142,6 +148,8 @@ class BSUIController(QObject):
         self.__initialised = False
         self.__window = BSMainWindow(self)
         self.__window.dialogShown.connect(self.__initSettings)
+
+        self.__window.documents().documentChanged.connect(self.__documentChanged)
 
         self.__window.setWindowTitle(self.__bsTitle)
         self.__window.show()
@@ -208,6 +216,9 @@ class BSUIController(QObject):
         self.__bsStarting = False
         self.bsWindowShown.emit()
 
+        self.__currentDocument=self.__window.documents().document()
+        self.updateMenu()
+
 
     def __themeChanged(self):
         """Theme has been changed, reload resources"""
@@ -268,6 +279,11 @@ class BSUIController(QObject):
                     widget.setIcon(buildIcon(pixmaps))
 
 
+    def __documentChanged(self, document):
+        """Current active document has been changed"""
+        self.__currentDocument=document
+        self.updateMenu()
+
     def __checkKritaWindows(self):
         """Check if windows signal windowClosed() is already defined and, if not,
         define it
@@ -299,6 +315,72 @@ class BSUIController(QObject):
 
         if len( Krita.instance().windows()) == 0:
             self.commandQuit()
+
+
+    def __updateMenuEditPaste(self):
+        """Update menu Edit > Paste according to clipboard content"""
+        if self.__currentDocument:
+            scriptIsRunning=False
+            mimeData = self.__clipboard.mimeData()
+            self.__window.actionEditPaste.setEnabled(mimeData.hasText() and len(mimeData.text())>0 and not (scriptIsRunning or self.__currentDocument.readOnly()))
+
+
+    def updateMenu(self):
+        """Update menu for current active document"""
+        if not self.__currentDocument:
+            # no active document? does nothing
+            return
+
+        scriptIsRunning=False
+        cursor=self.__currentDocument.codeEditor().cursorPosition()
+
+        # Menu FILE
+        # ----------------------------------------------------------------------
+        self.__window.actionFileNew.setEnabled(not scriptIsRunning)
+        self.__window.actionFileOpen.setEnabled(not scriptIsRunning)
+
+        self.__window.actionFileReload.setEnabled(not (scriptIsRunning or self.__currentDocument.fileName() is None) and os.path.isfile(self.__currentDocument.fileName()))
+        self.__window.actionFileSave.setEnabled(self.__currentDocument.modified() and not(scriptIsRunning or self.__currentDocument.readOnly()))
+
+        self.__window.actionFileSaveAs.setEnabled(not scriptIsRunning)
+        self.__window.actionFileSaveAll.setEnabled(not scriptIsRunning)
+        self.__window.actionFileClose.setEnabled(not scriptIsRunning)
+        self.__window.actionFileCloseAll.setEnabled(not scriptIsRunning)
+
+        # Menu EDIT
+        # ----------------------------------------------------------------------
+        self.__window.actionEditUndo.setEnabled(self.__currentDocument.codeEditor().document().isUndoAvailable() and not (scriptIsRunning or self.__currentDocument.readOnly()))
+        self.__window.actionEditRedo.setEnabled(self.__currentDocument.codeEditor().document().isRedoAvailable() and not (scriptIsRunning or self.__currentDocument.readOnly()))
+        self.__window.actionEditCut.setEnabled(cursor[3]>0 and not (scriptIsRunning or self.__currentDocument.readOnly()))
+        self.__window.actionEditCopy.setEnabled(cursor[3]>0 and not (scriptIsRunning or self.__currentDocument.readOnly()))
+        self.__updateMenuEditPaste()
+
+        # menu LANGUAGE
+        # ----------------------------------------------------------------------
+        for index, item in enumerate(self.__window.menuLanguage.children()):
+            if index==0:
+                # first children is a QAction thatdefine QMenu?
+                continue
+            if isinstance(item, QMenu) or isinstance(item, QAction):
+                item.setEnabled(not (self.__currentDocument.readOnly() or scriptIsRunning))
+
+        # Menu SCRIPT
+        # ----------------------------------------------------------------------
+        self.__window.actionScriptExecute.setEnabled(not scriptIsRunning)
+        self.__window.actionScriptBreakPause.setEnabled(scriptIsRunning)
+        self.__window.actionScriptStop.setEnabled(scriptIsRunning)
+
+        # Menu VIEW
+        # ----------------------------------------------------------------------
+        self.__window.actionViewShowCanvas.setEnabled(not scriptIsRunning)
+        self.__window.actionViewShowCanvasOrigin.setEnabled(not scriptIsRunning)
+        self.__window.actionViewShowCanvasGrid.setEnabled(not scriptIsRunning)
+        self.__window.actionViewShowCanvasPosition.setEnabled(not scriptIsRunning)
+
+        # Menu SETTINGS
+        # ----------------------------------------------------------------------
+        self.__window.actionSettingsPreferences.setEnabled(not scriptIsRunning)
+
 
 
     def buildmenuFileRecent(self, menu):
@@ -487,6 +569,7 @@ class BSUIController(QObject):
             if not self.__window.documents().saveDocument(index):
                 raise EInvalidStatus("Unable to save file")
 
+            self.updateMenu()
         except Exception as e:
             Debug.print('[BSUIController.commandFileSave] unable to save file {0}: {1}', file, str(e))
             return False
@@ -538,6 +621,8 @@ class BSUIController(QObject):
 
                 # keep in memory
                 self.__lastDocumentDirectorySave=os.path.dirname(fileName)
+
+                self.updateMenu()
             except Exception as e:
                 Debug.print('[BSUIController.commandFileSaveAs] unable to save file {0}: {1}', fileName, str(e))
                 return False
@@ -664,6 +749,14 @@ class BSUIController(QObject):
         ##print(p)
         #p.parse(text+"\n\n#<EOT>")
         print("TODO: implement commandScriptExecute")
+
+    def commandScriptBreakPause(self):
+        """Made Break/Pause in script execution"""
+        print("TODO: implement commandScriptBreakPause")
+
+    def commandScriptStop(self):
+        """Stop script execution"""
+        print("TODO: implement commandScriptStop")
 
     def commandLanguageInsert(self, text):
         """Insert given `text` at current position in document"""

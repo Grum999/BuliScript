@@ -35,7 +35,7 @@ import hashlib
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
-        pyqtSignal,
+        pyqtSignal as Signal,
         QFileSystemWatcher
     )
 
@@ -582,6 +582,7 @@ class BSDocuments(QTabWidget):
     - saved/unsaved
     - ...
     """
+    documentChanged=Signal(BSDocument)
 
     def __init__(self, parent=None):
         super(BSDocuments, self).__init__(parent)
@@ -669,6 +670,7 @@ class BSDocuments(QTabWidget):
         document.codeEditor().overwriteModeChanged.connect(self.__updateStatusBarOverwrite)
         document.codeEditor().cursorCoordinatesChanged.connect(self.__updateStatusBarCursor)
         document.codeEditor().modificationChanged.connect(self.__updateTabBarModified)
+        document.codeEditor().modificationChanged.connect(self.__uiController.updateMenu)
 
         # switch to new opened/created document
         self.setCurrentIndex(newTabIndex)
@@ -683,6 +685,7 @@ class BSDocuments(QTabWidget):
         self.__updateStatusBarOverwrite()
         self.__updateStatusBarCursor()
         self.__currentDocument.setFocus(Qt.OtherFocusReason)
+        self.documentChanged.emit(self.__currentDocument)
 
     def __tabRequestClose(self, index):
         """Trying to close a document"""

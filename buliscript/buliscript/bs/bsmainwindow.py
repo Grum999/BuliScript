@@ -167,6 +167,7 @@ class BSMainWindow(QMainWindow):
             menuTree[-1].addAction(action)
 
         # Menu SCRIPT
+        # ----------------------------------------------------------------------
         self.actionFileNew.triggered.connect(self.__uiController.commandFileNew)
         self.actionFileOpen.triggered.connect(self.__uiController.commandFileOpen)
         self.actionFileReload.triggered.connect(self.__uiController.commandFileReload)
@@ -180,6 +181,7 @@ class BSMainWindow(QMainWindow):
         self.menuFileRecent.aboutToShow.connect(self.__menuFileRecentShow)
 
         # Menu EDIT
+        # ----------------------------------------------------------------------
         self.actionEditUndo.triggered.connect(self.__uiController.commandEditUndo)
         self.actionEditRedo.triggered.connect(self.__uiController.commandEditRedo)
         self.actionEditCut.triggered.connect(self.__uiController.commandEditCut)
@@ -187,10 +189,8 @@ class BSMainWindow(QMainWindow):
         self.actionEditPaste.triggered.connect(self.__uiController.commandEditPaste)
         self.actionEditSelectAll.triggered.connect(self.__uiController.commandEditSelectAll)
 
-        # Menu SCRIPT
-        self.actionScriptExecute.triggered.connect(self.__uiController.commandScriptExecute)
-
         # menu LANGUAGE
+        # ----------------------------------------------------------------------
         # dynamically built from tokenizer autoCompletion rules
         for rule in self.__uiController.languageDef().tokenizer().rules():
             for autoCompletion in rule.autoCompletion():
@@ -202,7 +202,14 @@ class BSMainWindow(QMainWindow):
                             #print(re.sub('\x01.*', '', autoCompletion[0]))
                             __insertLanguageAction(menuTree, autoCompletion)
 
+        # Menu SCRIPT
+        # ----------------------------------------------------------------------
+        self.actionScriptExecute.triggered.connect(self.__uiController.commandScriptExecute)
+        self.actionScriptBreakPause.triggered.connect(self.__uiController.commandScriptBreakPause)
+        self.actionScriptStop.triggered.connect(self.__uiController.commandScriptStop)
+
         # Menu VIEW
+        # ----------------------------------------------------------------------
         self.actionViewShowCanvas.triggered.connect(self.__uiController.commandViewShowCanvasVisible)
         self.actionViewShowCanvasOrigin.triggered.connect(self.__uiController.commandViewShowCanvasOrigin)
         self.actionViewShowCanvasGrid.triggered.connect(self.__uiController.commandViewShowCanvasGrid)
@@ -210,9 +217,11 @@ class BSMainWindow(QMainWindow):
         self.actionViewShowConsole.triggered.connect(self.__uiController.commandViewShowConsoleVisible)
 
         # Menu SETTINGS
+        # ----------------------------------------------------------------------
         self.actionSettingsPreferences.triggered.connect(self.__uiController.commandSettingsOpen)
 
         # Menu HELP
+        # ----------------------------------------------------------------------
         self.actionHelpBuliScriptHandbook.triggered.connect(self.__uiController.commandHelpBs)
         self.actionHelpAboutBS.triggered.connect(self.__uiController.commandAboutBs)
 
