@@ -432,16 +432,33 @@ class TokenizerRule(object):
         returned=[]
 
         if isinstance(title, str) and title.strip()!='':
-            returned.append(f'<b>{title}</b><br>')
+            returned.append(f'<b><!-- title -->{parsedText(title)}<!-- title --></b><hr>')
 
         if isinstance(description, str) and description.strip()!='':
-            returned.append(parsedText(description))
+            returned.append(f'<!-- description -->{parsedText(description)}<!-- description -->')
 
         if isinstance(example, str) and example.strip()!='':
             returned.append('<hr><i>Example</i><br><br>')
-            returned.append(parsedText(example))
+            returned.append(f'<!-- example -->{parsedText(example)}<!-- example -->')
 
         return ''.join(returned)
+
+    @staticmethod
+    def descriptionExtractSection(description, section="title"):
+        """Extract section from a TokenizerRule description
+
+        Possible `section` value are:
+        - "title"       (default)
+        - "description"
+        - "example"
+        """
+        regEx=fr'<!--\s+{section}\s+-->(.*)<!--\s+{section}\s+-->'
+
+        if result:=re.search(fr'<!--\s+{section}\s+-->(.*)<!--\s+{section}\s+-->', description):
+            return result.groups()[0]
+        else:
+            return ""
+
 
     def __init__(self, type, regex, description=None, autoCompletion=None, autoCompletionChar=None, caseInsensitive=True, ignoreIndent=False, onInitValue=None):
         """Initialise a tokenizer rule
