@@ -44,8 +44,10 @@ from .bslanguagedef import BSLanguageDef
 
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.utils import loadXmlUi
+from buliscript.pktk.modules.strutils import stripHtml
 from buliscript.pktk.modules.menuutils import buildQMenuTree
 from buliscript.pktk.modules.parser import Parser
+from buliscript.pktk.modules.tokenizer import TokenizerRule
 
 from buliscript.pktk.pktk import (
         EInvalidType,
@@ -161,7 +163,10 @@ class BSMainWindow(QMainWindow):
             action=QAction(autoCompletion[0].replace('\x01', ''), menuTree[-1])
             action.setProperty('insert', autoCompletion[0])
             if len(autoCompletion)>1 and isinstance(autoCompletion[1], str):
-                action.setToolTip(autoCompletion[1])
+                tip=TokenizerRule.descriptionExtractSection(autoCompletion[1], 'title')
+                if tip=='':
+                    tip=autoCompletion[1]
+                action.setStatusTip(stripHtml(tip))
 
             action.triggered.connect(execute)
             menuTree[-1].addAction(action)
