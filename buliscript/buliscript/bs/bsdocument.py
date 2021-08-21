@@ -619,6 +619,7 @@ class BSDocuments(QTabWidget):
             self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_SELECTION, '')
         else:
             self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_SELECTION, f'{position[1].x()}:{position[1].y()} - {position[2].x()}:{position[2].y()} [{position[3]}]')
+            self.__uiController.updateMenu()
 
     def __updateStatusBarFileName(self):
         """Update status bar STATUSBAR_FILENAME"""
@@ -670,9 +671,11 @@ class BSDocuments(QTabWidget):
         document.codeEditor().overwriteModeChanged.connect(self.__updateStatusBarOverwrite)
         document.codeEditor().cursorCoordinatesChanged.connect(self.__updateStatusBarCursor)
         document.codeEditor().modificationChanged.connect(self.__updateTabBarModified)
-        document.codeEditor().modificationChanged.connect(self.__uiController.updateMenu)
+        document.codeEditor().textChanged.connect(self.__uiController.updateMenu)
         document.codeEditor().redoAvailable.connect(self.__uiController.updateMenu)
         document.codeEditor().undoAvailable.connect(self.__uiController.updateMenu)
+        document.codeEditor().selectionChanged.connect(self.__uiController.updateMenu)
+        document.codeEditor().copyAvailable.connect(self.__uiController.updateMenu)
 
         # switch to new opened/created document
         self.setCurrentIndex(newTabIndex)

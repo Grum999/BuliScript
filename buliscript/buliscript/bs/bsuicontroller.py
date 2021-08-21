@@ -317,8 +317,7 @@ class BSUIController(QObject):
         """Update menu Edit > Paste according to clipboard content"""
         if self.__currentDocument:
             scriptIsRunning=False
-            mimeData = self.__clipboard.mimeData()
-            self.__window.actionEditPaste.setEnabled(mimeData.hasText() and len(mimeData.text())>0 and not (scriptIsRunning or self.__currentDocument.readOnly()))
+            self.__window.actionEditPaste.setEnabled(self.__currentDocument.codeEditor().canPaste() and not (scriptIsRunning or self.__currentDocument.readOnly()))
 
     def updateMenu(self):
         """Update menu for current active document"""
@@ -715,7 +714,6 @@ class BSUIController(QObject):
         if self.__currentDocument:
             self.__currentDocument.codeEditor().document().undo()
 
-
     def commandEditRedo(self):
         """Undo undoed modification on current document"""
         if self.__currentDocument:
@@ -723,19 +721,24 @@ class BSUIController(QObject):
 
     def commandEditCut(self):
         """Cut selected text from current document to clipboard"""
-        print("TODO: implement commandEditCut")
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().cut()
 
     def commandEditCopy(self):
         """Copy selected text from current document to clipboard"""
-        print("TODO: implement commandEditCopy")
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().copy()
 
     def commandEditPaste(self):
         """Paste clipboard content to current document"""
-        print("TODO: implement commandEditPaste")
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().paste()
 
     def commandEditSelectAll(self):
         """Select all document content"""
-        print("TODO: implement commandEditSelectAll")
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().selectAll()
+
 
     def commandScriptExecute(self):
         """Execute script"""
@@ -755,9 +758,12 @@ class BSUIController(QObject):
         """Stop script execution"""
         print("TODO: implement commandScriptStop")
 
+
     def commandLanguageInsert(self, text):
         """Insert given `text` at current position in document"""
-        print("TODO: implement commandLanguageInsert", text)
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().insertCompletionText(text)
+
 
     def commandViewBringToFront(self):
         """Bring main window to front"""
@@ -908,6 +914,7 @@ class BSUIController(QObject):
 
         self.__window.wConsoleArea.setVisible(visible)
 
+
     def commandSettingsSaveSessionOnExit(self, saveSession=None):
         """Define if current session properties have to be save or not"""
         if saveSession is None:
@@ -931,6 +938,7 @@ class BSUIController(QObject):
         #if BSSettingsDialogBox.open(f'{self.__bsName}::Settings', self):
         #    self.saveSettings()
         print("TODO: implement commandSettingsOpen")
+
 
     def commandAboutBs(self):
         """Display 'About Buli Script' dialog box"""
