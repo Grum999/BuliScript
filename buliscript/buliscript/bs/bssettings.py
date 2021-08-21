@@ -88,6 +88,7 @@ class BSSettingsKey(SettingsKey):
 
     SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE =                'session.mainwindow.view.console.visible'
 
+    SESSION_DOCUMENTS_ACTIVE =                               'session.documents.active'
     SESSION_DOCUMENTS_OPENED =                               'session.documents.opened'
     SESSION_DOCUMENTS_RECENTS =                              'session.documents.recents'
 
@@ -144,6 +145,7 @@ class BSSettings(Settings):
 
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE,         True,                     SettingsFmt(bool)),
 
+            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE,                        0,                        SettingsFmt(int)),
             SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_OPENED,                        [],                       SettingsFmt(list)),
             SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_RECENTS,                       [],                       SettingsFmt(list)),
 

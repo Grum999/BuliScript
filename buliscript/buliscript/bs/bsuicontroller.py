@@ -477,6 +477,7 @@ class BSUIController(QObject):
                 tmpList.append(f"@{document.cacheUuid()}")
 
             BSSettings.set(BSSettingsKey.SESSION_DOCUMENTS_OPENED, tmpList)
+            BSSettings.set(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE, self.__window.documents().currentIndex())
 
 
             if self.__window.actionViewShowConsole.isChecked():

@@ -711,6 +711,9 @@ class BSDocuments(QTabWidget):
             # if no document opened (from previous session) then automatically create a new one
             # (always have a document)
             self.newDocument()
+        else:
+            self.setCurrentIndex(BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE))
+
 
     def updateSettings(self):
         """Settings has been modified, update documents according to settings"""
