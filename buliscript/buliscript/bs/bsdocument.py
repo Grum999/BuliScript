@@ -671,6 +671,8 @@ class BSDocuments(QTabWidget):
         document.codeEditor().cursorCoordinatesChanged.connect(self.__updateStatusBarCursor)
         document.codeEditor().modificationChanged.connect(self.__updateTabBarModified)
         document.codeEditor().modificationChanged.connect(self.__uiController.updateMenu)
+        document.codeEditor().redoAvailable.connect(self.__uiController.updateMenu)
+        document.codeEditor().undoAvailable.connect(self.__uiController.updateMenu)
 
         # switch to new opened/created document
         self.setCurrentIndex(newTabIndex)

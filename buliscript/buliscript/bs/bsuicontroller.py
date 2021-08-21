@@ -219,7 +219,6 @@ class BSUIController(QObject):
         self.__currentDocument=self.__window.documents().document()
         self.updateMenu()
 
-
     def __themeChanged(self):
         """Theme has been changed, reload resources"""
         def buildPixmapList(widget):
@@ -278,7 +277,6 @@ class BSUIController(QObject):
                 if len(pixmaps) > 0:
                     widget.setIcon(buildIcon(pixmaps))
 
-
     def __documentChanged(self, document):
         """Current active document has been changed"""
         self.__currentDocument=document
@@ -303,7 +301,6 @@ class BSUIController(QObject):
                 window.windowClosed.connect(self.__windowClosed)
                 window.qwindow().setProperty('__bsWindowClosed', True)
 
-
     def __windowClosed(self):
         """A krita window has been closed"""
         # check how many windows are still opened
@@ -316,14 +313,12 @@ class BSUIController(QObject):
         if len( Krita.instance().windows()) == 0:
             self.commandQuit()
 
-
     def __updateMenuEditPaste(self):
         """Update menu Edit > Paste according to clipboard content"""
         if self.__currentDocument:
             scriptIsRunning=False
             mimeData = self.__clipboard.mimeData()
             self.__window.actionEditPaste.setEnabled(mimeData.hasText() and len(mimeData.text())>0 and not (scriptIsRunning or self.__currentDocument.readOnly()))
-
 
     def updateMenu(self):
         """Update menu for current active document"""
@@ -380,8 +375,6 @@ class BSUIController(QObject):
         # Menu SETTINGS
         # ----------------------------------------------------------------------
         self.__window.actionSettingsPreferences.setEnabled(not scriptIsRunning)
-
-
 
     def buildmenuFileRecent(self, menu):
         """Menu for 'file recent' is about to be displayed
@@ -719,11 +712,14 @@ class BSUIController(QObject):
 
     def commandEditUndo(self):
         """Undo last modification on current document"""
-        print("TODO: implement commandEditUndo")
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().document().undo()
+
 
     def commandEditRedo(self):
         """Undo undoed modification on current document"""
-        print("TODO: implement commandEditRedo")
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().document().redo()
 
     def commandEditCut(self):
         """Cut selected text from current document to clipboard"""
