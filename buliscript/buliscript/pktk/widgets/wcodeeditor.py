@@ -176,6 +176,7 @@ class WCodeEditor(QPlainTextEdit):
         self.updateRequest.connect(self.__updateLineNumberArea)
         self.cursorPositionChanged.connect(self.__highlightCurrentLine)
         self.textChanged.connect(self.__updateCurrentPositionAndToken)
+        self.selectionChanged.connect(self.__updateCurrentPositionAndToken)
         self.customContextMenuRequested.connect(self.__contextMenu)
 
         # ---- initialise completion list model
@@ -611,6 +612,7 @@ class WCodeEditor(QPlainTextEdit):
 
         if value!=ro:
             self.readOnlyModeChanged.emit(value)
+
 
     def insertFromMimeData(self, source):
         """Data from clipboad are being pasted
@@ -1329,6 +1331,11 @@ class WCodeEditor(QPlainTextEdit):
                 return self.__cursorToken.previous()
 
         return self.__cursorToken
+
+
+    def insertCompletionText(self, text):
+        """If given text use 'completion' format, insert it at cursor's place"""
+        self.__insertCompletion(text)
 
 
 class WCELineNumberArea(QWidget):
