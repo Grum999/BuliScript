@@ -292,7 +292,7 @@ class WCodeEditor(QPlainTextEdit):
 
 
     def __insertCompletion(self, completion):
-        """Text selected from completion list, insert it at cursor's place"""
+        """Text selected from auto completion list, insert it at cursor's place"""
         texts=completion.split('\x01')[::2]
 
         token=self.cursorToken(False)
@@ -1333,9 +1333,18 @@ class WCodeEditor(QPlainTextEdit):
         return self.__cursorToken
 
 
-    def insertCompletionText(self, text):
-        """If given text use 'completion' format, insert it at cursor's place"""
-        self.__insertCompletion(text)
+    def insertLanguageText(self, text):
+        """If given text use 'completion' format (ie: use of \x01 character to mark informational values and cursor position), insert it at cursor's place"""
+        texts=text.split('\x01')[::2]
+
+        cursor = self.textCursor()
+        cursor.insertText(texts[0])
+
+        if len(texts)>1:
+            p=cursor.anchor()
+            cursor.insertText("".join(texts[1:]))
+            cursor.setPosition(p, QTextCursor.MoveAnchor)
+        self.setTextCursor(cursor)
 
 
 class WCELineNumberArea(QWidget):
