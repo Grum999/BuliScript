@@ -651,10 +651,10 @@ Reserved_Variable
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' | 'stretch' | 'align' | 'position' ) ) |
             ( 'canvas' '.'
-                ( 'grid' '.' ( 'color' | 'status' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
-                ( 'origin' '.' ( 'color' | 'status' | 'size' | 'style' | 'opacity' ) ) |
-                ( 'position' '.' ( 'color' | 'status' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
-                ( 'background' '.' ( 'status' | 'opacity' ) ) |
+                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
+                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' ) ) |
+                ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
+                ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
             ) |
             ( 'repeat' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) ) |
