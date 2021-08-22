@@ -54,7 +54,7 @@
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
-          <widget class="QTabWidget" name="twDocuments">
+          <widget class="BSDocuments" name="twDocuments">
            <property name="tabPosition">
             <enum>QTabWidget::North</enum>
            </property>
@@ -62,13 +62,16 @@
             <enum>QTabWidget::Rounded</enum>
            </property>
            <property name="currentIndex">
-            <number>0</number>
+            <number>-1</number>
+           </property>
+           <property name="elideMode">
+            <enum>Qt::ElideNone</enum>
            </property>
            <property name="usesScrollButtons">
             <bool>true</bool>
            </property>
            <property name="documentMode">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
            <property name="tabsClosable">
             <bool>true</bool>
@@ -76,21 +79,6 @@
            <property name="movable">
             <bool>true</bool>
            </property>
-           <widget class="QWidget" name="tab">
-            <attribute name="title">
-             <string>Tab 1</string>
-            </attribute>
-            <layout class="QHBoxLayout" name="horizontalLayout">
-             <item>
-              <widget class="WCodeEditor" name="plainTextEdit"/>
-             </item>
-            </layout>
-           </widget>
-           <widget class="QWidget" name="tab_2">
-            <attribute name="title">
-             <string>Tab 2</string>
-            </attribute>
-           </widget>
           </widget>
           <widget class="QWidget" name="wConsoleArea" native="true"/>
          </widget>
@@ -111,33 +99,37 @@
      <height>31</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuScript">
+   <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>S&amp;cript</string>
+     <string>F&amp;ile</string>
     </property>
-    <widget class="QMenu" name="menuScriptRecent">
+    <widget class="QMenu" name="menuFileRecent">
+     <property name="statusTip">
+      <string>Re-open last opened documents</string>
+     </property>
      <property name="title">
-      <string>&amp;Recent scripts</string>
+      <string>&amp;Recent</string>
      </property>
      <property name="icon">
       <iconset theme="document-open-recent">
        <normaloff>.</normaloff>.</iconset>
      </property>
-     <addaction name="actionScriptRecent_None"/>
+     <addaction name="actionFileRecent_None"/>
     </widget>
-    <addaction name="actionScriptNew"/>
-    <addaction name="actionScriptOpen"/>
-    <addaction name="menuScriptRecent"/>
+    <addaction name="actionFileNew"/>
+    <addaction name="actionFileOpen"/>
+    <addaction name="menuFileRecent"/>
     <addaction name="separator"/>
-    <addaction name="actionScriptSave"/>
-    <addaction name="actionScriptSaveAs"/>
-    <addaction name="actionScriptSaveAll"/>
+    <addaction name="actionFileReload"/>
     <addaction name="separator"/>
-    <addaction name="actionScriptClose"/>
+    <addaction name="actionFileSave"/>
+    <addaction name="actionFileSaveAs"/>
+    <addaction name="actionFileSaveAll"/>
     <addaction name="separator"/>
-    <addaction name="actionScriptExecute"/>
+    <addaction name="actionFileClose"/>
+    <addaction name="actionFileCloseAll"/>
     <addaction name="separator"/>
-    <addaction name="actionScriptQuit"/>
+    <addaction name="actionFileQuit"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -184,9 +176,18 @@
     <addaction name="separator"/>
     <addaction name="actionViewShowConsole"/>
    </widget>
-   <addaction name="menuScript"/>
+   <widget class="QMenu" name="menuScript">
+    <property name="title">
+     <string>S&amp;cript</string>
+    </property>
+    <addaction name="actionScriptExecute"/>
+    <addaction name="actionScriptBreakPause"/>
+    <addaction name="actionScriptStop"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuLanguage"/>
+   <addaction name="menuScript"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
@@ -200,6 +201,12 @@
    <property name="text">
     <string>&amp;BuliScript handbook...</string>
    </property>
+   <property name="statusTip">
+    <string>Help about BuliScript (language, editor, ...)</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
   </action>
   <action name="actionHelpAboutBS">
    <property name="icon">
@@ -209,8 +216,14 @@
    <property name="text">
     <string>&amp;About Buli Script...</string>
    </property>
+   <property name="statusTip">
+    <string>Who is Buli? Why? How?</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+F1</string>
+   </property>
   </action>
-  <action name="actionScriptNew">
+  <action name="actionFileNew">
    <property name="icon">
     <iconset theme="document-new">
      <normaloff>.</normaloff>.</iconset>
@@ -218,8 +231,14 @@
    <property name="text">
     <string>&amp;New...</string>
    </property>
+   <property name="statusTip">
+    <string>Create a new document</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
-  <action name="actionScriptOpen">
+  <action name="actionFileOpen">
    <property name="icon">
     <iconset theme="document-open">
      <normaloff>.</normaloff>.</iconset>
@@ -227,8 +246,14 @@
    <property name="text">
     <string>&amp;Open...</string>
    </property>
+   <property name="statusTip">
+    <string>Open a document</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
-  <action name="actionScriptSave">
+  <action name="actionFileSave">
    <property name="icon">
     <iconset theme="document-save">
      <normaloff>.</normaloff>.</iconset>
@@ -236,8 +261,14 @@
    <property name="text">
     <string>&amp;Save</string>
    </property>
+   <property name="statusTip">
+    <string>Save current document</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
   </action>
-  <action name="actionScriptSaveAs">
+  <action name="actionFileSaveAs">
    <property name="icon">
     <iconset theme="document-save-as">
      <normaloff>.</normaloff>.</iconset>
@@ -245,14 +276,23 @@
    <property name="text">
     <string>Sa&amp;ve as...</string>
    </property>
+   <property name="statusTip">
+    <string>Save current document to another location</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
   </action>
-  <action name="actionScriptSaveAll">
+  <action name="actionFileSaveAll">
    <property name="icon">
     <iconset theme="document-save-all">
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Save a&amp;ll</string>
+   </property>
+   <property name="statusTip">
+    <string>Save all documents</string>
    </property>
   </action>
   <action name="actionScriptExecute">
@@ -263,8 +303,14 @@
    <property name="text">
     <string>&amp;Execute</string>
    </property>
+   <property name="statusTip">
+    <string>Execute current script</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
   </action>
-  <action name="actionScriptQuit">
+  <action name="actionFileQuit">
    <property name="icon">
     <iconset theme="application-exit">
      <normaloff>.</normaloff>.</iconset>
@@ -272,8 +318,14 @@
    <property name="text">
     <string>&amp;Quit</string>
    </property>
+   <property name="statusTip">
+    <string>Quit BuliScript</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
   </action>
-  <action name="actionScriptClose">
+  <action name="actionFileClose">
    <property name="icon">
     <iconset theme="document-close">
      <normaloff>.</normaloff>.</iconset>
@@ -281,8 +333,14 @@
    <property name="text">
     <string>&amp;Close</string>
    </property>
+   <property name="statusTip">
+    <string>Close current document</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
   </action>
-  <action name="actionScriptRecent_None">
+  <action name="actionFileRecent_None">
    <property name="text">
     <string>(&amp;no recent scripts)</string>
    </property>
@@ -295,6 +353,12 @@
    <property name="text">
     <string>&amp;Cut</string>
    </property>
+   <property name="statusTip">
+    <string>Cut selection to clipboard</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
   </action>
   <action name="actionEditCopy">
    <property name="icon">
@@ -303,6 +367,12 @@
    </property>
    <property name="text">
     <string>C&amp;opy</string>
+   </property>
+   <property name="statusTip">
+    <string>Copy selection from clipboard</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
    </property>
   </action>
   <action name="actionEditPaste">
@@ -313,6 +383,12 @@
    <property name="text">
     <string>&amp;Paste</string>
    </property>
+   <property name="statusTip">
+    <string>Paste clipboard content</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
   </action>
   <action name="actionEditSelectAll">
    <property name="icon">
@@ -321,6 +397,12 @@
    </property>
    <property name="text">
     <string>&amp;Select all</string>
+   </property>
+   <property name="statusTip">
+    <string>Select all content</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
    </property>
   </action>
   <action name="actionEditUndo">
@@ -331,6 +413,12 @@
    <property name="text">
     <string>&amp;Undo</string>
    </property>
+   <property name="statusTip">
+    <string>Undo last action</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
   </action>
   <action name="actionEditRedo">
    <property name="icon">
@@ -340,6 +428,12 @@
    <property name="text">
     <string>&amp;Redo</string>
    </property>
+   <property name="statusTip">
+    <string>Redo previous action</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
+   </property>
   </action>
   <action name="actionSettingsPreferences">
    <property name="icon">
@@ -348,6 +442,9 @@
    </property>
    <property name="text">
     <string>&amp;Preferences...</string>
+   </property>
+   <property name="statusTip">
+    <string>Define BuliScript preferences settings</string>
    </property>
   </action>
   <action name="actionViewShowCanvasGrid">
@@ -415,13 +512,56 @@
    <property name="text">
     <string>&amp;Save session on exit</string>
    </property>
+   <property name="statusTip">
+    <string/>
+   </property>
+  </action>
+  <action name="actionFileCloseAll">
+   <property name="icon">
+    <iconset theme="document-close">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
+   <property name="text">
+    <string>Clos&amp;e all</string>
+   </property>
+   <property name="statusTip">
+    <string>Close all documents</string>
+   </property>
+  </action>
+  <action name="actionFileReload">
+   <property name="icon">
+    <iconset theme="view-refresh"/>
+   </property>
+   <property name="text">
+    <string>Reload</string>
+   </property>
+   <property name="statusTip">
+    <string>Reload current document</string>
+   </property>
+  </action>
+  <action name="actionScriptBreakPause">
+   <property name="icon">
+    <iconset theme="media-playback-pause"/>
+   </property>
+   <property name="text">
+    <string>Break/Pause</string>
+   </property>
+  </action>
+  <action name="actionScriptStop">
+   <property name="icon">
+    <iconset theme="media-playback-stop"/>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
   </action>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>WCodeEditor</class>
-   <extends>QPlainTextEdit</extends>
-   <header>buliscript.pktk.widgets.wcodeeditor</header>
+   <class>BSDocuments</class>
+   <extends>QTabWidget</extends>
+   <header>buliscript.bs.bsdocument</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

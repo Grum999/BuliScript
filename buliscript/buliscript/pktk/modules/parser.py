@@ -26,19 +26,16 @@ from enum import Enum
 from PyQt5.Qt import *
 from PyQt5.QtCore import qDebug
 
-from buliscript.pktk.modules.elist import EList
-from buliscript.pktk.modules.tokenizer import (
+from .elist import EList
+from .tokenizer import (
         Token,
         Tokenizer,
         TokenizerRule,
         TokenType
     )
 
-from buliscript.pktk.pktk import (
-        EInvalidType,
-        EInvalidValue,
-        EInvalidStatus
-    )
+from ..pktk import *
+
 
 
 class EParsingGrammarMatch(Exception):

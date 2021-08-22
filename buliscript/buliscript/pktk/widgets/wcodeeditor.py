@@ -51,8 +51,9 @@ from ..pktk import *
 class WCodeEditor(QPlainTextEdit):
     """Extended editor with syntax highlighting, autocompletion, line number..."""
 
-    cursorCoordinatesChanged = Signal(int, int, int, int, int) # column start, row start, column end, row end, selection length, token
+    cursorCoordinatesChanged = Signal(QPoint, QPoint, QPoint, int) # cursor position, selection start position, selection end position, selection length
     overwriteModeChanged = Signal(bool)
+    readOnlyModeChanged = Signal(bool)
 
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
@@ -79,6 +80,13 @@ class WCodeEditor(QPlainTextEdit):
         self.__cursorCol = 0
         self.__cursorRow = 0
         self.__cursorRect = None
+
+        self.__cursorSelColStart = 0
+        self.__cursorSelRowStart = 0
+        self.__cursorSelColEnd = 0
+        self.__cursorSelRowEnd = 0
+        self.__cursorSelLen = 0
+
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
@@ -168,6 +176,7 @@ class WCodeEditor(QPlainTextEdit):
         self.updateRequest.connect(self.__updateLineNumberArea)
         self.cursorPositionChanged.connect(self.__highlightCurrentLine)
         self.textChanged.connect(self.__updateCurrentPositionAndToken)
+        self.selectionChanged.connect(self.__updateCurrentPositionAndToken)
         self.customContextMenuRequested.connect(self.__contextMenu)
 
         # ---- initialise completion list model
@@ -224,21 +233,25 @@ class WCodeEditor(QPlainTextEdit):
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
 
-        selLength=selectionEnd - selectionStart
+        self.__cursorSelLen=selectionEnd - selectionStart
 
-        if selLength==0:
-            self.cursorCoordinatesChanged.emit(self.__cursorCol, self.__cursorRow, self.__cursorCol, self.__cursorRow, 0)
+        if self.__cursorSelLen==0:
+            self.__cursorSelColStart=self.__cursorCol
+            self.__cursorSelRowStart=self.__cursorRow
+            self.__cursorSelColEnd=self.__cursorCol
+            self.__cursorSelRowEnd=self.__cursorRow
+            self.cursorCoordinatesChanged.emit(QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorCol, self.__cursorRow), 0)
         else:
             # determinate block numbers
             cursor.setPosition(selectionStart)
-            cColStart = cursor.columnNumber()+1
-            cRowStart = cursor.blockNumber()+1
+            self.__cursorSelColStart = cursor.columnNumber()+1
+            self.__cursorSelRowStart = cursor.blockNumber()+1
 
             cursor.setPosition(selectionEnd)
-            cColEnd = cursor.columnNumber()+1
-            cRowEnd = cursor.blockNumber()+1
+            self.__cursorSelColEnd = cursor.columnNumber()+1
+            self.__cursorSelRowEnd = cursor.blockNumber()+1
 
-            self.cursorCoordinatesChanged.emit(cColStart, cRowStart, cColEnd, cRowEnd, selLength)
+            self.cursorCoordinatesChanged.emit(QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorSelColStart, self.__cursorSelRowStart), QPoint(self.__cursorSelColEnd, self.__cursorSelRowEnd), self.__cursorSelLen)
 
 
     def __hideCompleterHint(self):
@@ -279,7 +292,7 @@ class WCodeEditor(QPlainTextEdit):
 
 
     def __insertCompletion(self, completion):
-        """Text selected from completion list, insert it at cursor's place"""
+        """Text selected from auto completion list, insert it at cursor's place"""
         texts=completion.split('\x01')[::2]
 
         token=self.cursorToken(False)
@@ -590,6 +603,15 @@ class WCodeEditor(QPlainTextEdit):
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
+
+
+    def setReadOnly(self, value):
+        """Override method to implement signal readOnlyModeChanged"""
+        ro=self.isReadOnly()
+        super(WCodeEditor, self).setReadOnly(value)
+
+        if value!=ro:
+            self.readOnlyModeChanged.emit(value)
 
 
     def insertFromMimeData(self, source):
@@ -1280,15 +1302,22 @@ class WCodeEditor(QPlainTextEdit):
 
 
     def cursorPosition(self, fromZero=False):
-        """Return current cursor position
+        """Return current cursor position information
 
-        Returned row/col start from 1 (instead of 0)
+        Returned row/col start from 1, except if given `fromZero` parameter is True (from 0 in this case)
+
+        Return a tuple:
+            QPoint() current position
+            QPoint() selection start
+            QPoint() selection end
+            int      selection length
+
         """
-        cursor = self.textCursor()
+        #cursor = self.textCursor()
         if fromZero:
-            return QPoint(self.__cursorCol, self.__cursorRow)
+            return (QPoint(self.__cursorCol, self.__cursorRow), QPoint(self.__cursorSelColStart-1, self.__cursorSelRowStart-1), QPoint(self.__cursorSelColEnd-1, self.__cursorSelRowEnd-1), self.__cursorSelLen)
         else:
-            return QPoint(self.__cursorCol + 1, self.__cursorRow + 1)
+            return (QPoint(self.__cursorCol+1, self.__cursorRow+1), QPoint(self.__cursorSelColStart, self.__cursorSelRowStart), QPoint(self.__cursorSelColEnd, self.__cursorSelRowEnd), self.__cursorSelLen)
 
 
     def cursorToken(self, starting=True):
@@ -1302,6 +1331,20 @@ class WCodeEditor(QPlainTextEdit):
                 return self.__cursorToken.previous()
 
         return self.__cursorToken
+
+
+    def insertLanguageText(self, text):
+        """If given text use 'completion' format (ie: use of \x01 character to mark informational values and cursor position), insert it at cursor's place"""
+        texts=text.split('\x01')[::2]
+
+        cursor = self.textCursor()
+        cursor.insertText(texts[0])
+
+        if len(texts)>1:
+            p=cursor.anchor()
+            cursor.insertText("".join(texts[1:]))
+            cursor.setPosition(p, QTextCursor.MoveAnchor)
+        self.setTextCursor(cursor)
 
 
 class WCELineNumberArea(QWidget):
