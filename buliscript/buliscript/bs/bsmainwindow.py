@@ -30,6 +30,7 @@ import os
 import re
 import sys
 import time
+import html
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
@@ -44,7 +45,10 @@ from .bslanguagedef import BSLanguageDef
 
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.utils import loadXmlUi
-from buliscript.pktk.modules.strutils import stripHtml
+from buliscript.pktk.modules.strutils import (
+        stripHtml,
+        stripTags
+    )
 from buliscript.pktk.modules.menuutils import buildQMenuTree
 from buliscript.pktk.modules.parser import Parser
 from buliscript.pktk.modules.tokenizer import TokenizerRule
@@ -55,12 +59,64 @@ from buliscript.pktk.pktk import (
     )
 
 
-class VLine(QFrame):
+class WVLine(QFrame):
     """A vertical line widget that can be used as a separator"""
 
     def __init__(self):
-        super(VLine, self).__init__()
+        super(WVLine, self).__init__()
         self.setFrameShape(self.VLine|self.Sunken)
+
+
+
+class WMenuForCommand(QWidgetAction):
+    """Encapsulate a QLabel as a menu item, used to display completion command properly formatted in menu"""
+    def __init__(self, label, parent=None):
+        super(WMenuForCommand, self).__init__(parent)
+        self.__label = QLabel(self.__reformattedText(label))
+        self.__label.setStyleSheet("QLabel:hover { background: palette(highlight); color: palette(highlighted-text);}")
+        self.__label.setContentsMargins(4,4,4,4)
+        self.__label.mousePressEvent=self.__pressEvent
+
+        self.__layout = QVBoxLayout()
+        self.__layout.setSpacing(0)
+        self.__layout.setContentsMargins(0,0,0,0)
+        self.__layout.addWidget(self.__label)
+
+        self.__widget = QWidget()
+        self.__widget.setContentsMargins(0,0,0,0)
+        self.__widget.setMouseTracking(True)
+        self.__widget.setLayout(self.__layout)
+
+        self.__hover=False
+
+        self.setDefaultWidget(self.__widget)
+
+    def __reformattedText(self, text):
+        """Reformat givne text, assuming it's a completion text command"""
+        returned=[]
+        texts=text.split('\x01')
+        for index, textItem in enumerate(texts):
+            if index%2==1:
+                # odd text ("optionnal" information) are written smaller, with darker color
+                returned.append(f"<i>{textItem}</i>")
+            else:
+                # normal font
+                returned.append(textItem)
+
+        return ''.join(returned)
+
+    def __pressEvent(self, event):
+        """When label clicked, trigger event for QWidgetAction and close parent menu"""
+        self.trigger()
+        menu=None
+        parentWidget=self.parentWidget()
+        while(isinstance(parentWidget, QMenu)):
+            menu=parentWidget
+            parentWidget=menu.parentWidget()
+
+        if menu:
+            menu.close()
+
 
 
 # -----------------------------------------------------------------------------
@@ -129,14 +185,14 @@ class BSMainWindow(QMainWindow):
 
         statusBar=self.statusBar()
         statusBar.addWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_FILENAME])
-        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(WVLine())
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_RO])
-        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(WVLine())
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_ROWS])
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_POS])
-        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(WVLine())
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_SELECTION])
-        statusBar.addPermanentWidget(VLine())
+        statusBar.addPermanentWidget(WVLine())
         statusBar.addPermanentWidget(self.__statusBarWidgets[BSMainWindow.STATUSBAR_INSOVR_MODE])
 
     def __initBSDocuments(self):
@@ -158,9 +214,9 @@ class BSMainWindow(QMainWindow):
             Action=insert autoCompletion
             """
             def execute(dummy=None):
-                self.__uiController.commandLanguageInsert(autoCompletion[0])
+                self.__uiController.commandLanguageInsert(self.sender().property('insert'))
 
-            action=QAction(autoCompletion[0].replace('\x01', ''), menuTree[-1])
+            action=WMenuForCommand(html.escape(autoCompletion[0]), menuTree[-1])
             action.setProperty('insert', autoCompletion[0])
             if len(autoCompletion)>1 and isinstance(autoCompletion[1], str):
                 tip=TokenizerRule.descriptionExtractSection(autoCompletion[1], 'title')

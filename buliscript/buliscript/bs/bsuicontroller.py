@@ -762,7 +762,7 @@ class BSUIController(QObject):
     def commandLanguageInsert(self, text):
         """Insert given `text` at current position in document"""
         if self.__currentDocument:
-            self.__currentDocument.codeEditor().insertCompletionText(text)
+            self.__currentDocument.codeEditor().insertLanguageText(text)
 
 
     def commandViewBringToFront(self):

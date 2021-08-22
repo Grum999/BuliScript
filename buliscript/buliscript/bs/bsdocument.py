@@ -1108,4 +1108,6 @@ class BSDocumentsTabBar(QTabBar):
             self.__drawTab(painter, index, tabOption)
             painter.restore()
 
-Debug.setEnabled(True)
+
+
+#Debug.setEnabled(True)
