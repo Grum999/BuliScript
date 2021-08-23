@@ -32,6 +32,7 @@ import sys
 import time
 import uuid
 import hashlib
+import html
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
@@ -50,6 +51,7 @@ from .bssettings import (
         BSSettingsKey
     )
 
+from buliscript.pktk.modules.tokenizer import TokenizerRule
 from buliscript.pktk.modules.utils import Debug
 from buliscript.pktk.modules.bytesrw import BytesRW
 from buliscript.pktk.widgets.wcodeeditor import WCodeEditor
@@ -598,9 +600,23 @@ class BSDocuments(QTabWidget):
         self.__uiController=None
 
         self.__currentDocument=None
+        self.__currentCursorToken=None
+
+        self.__optionAutoCompletionHelp=True
 
         self.currentChanged.connect(self.__tabChanged)
         self.tabCloseRequested.connect(self.__tabRequestClose)
+
+
+    def __updateLanguageQuickHelp(self):
+        """Update docker Language Quick Help according to current highlighted token"""
+        cursorToken=self.__currentDocument.codeEditor().cursorToken()
+        if cursorToken:
+            # a token is found
+            if self.__currentCursorToken!=cursorToken.text():
+                self.__uiController.commandDockLangageQuickHelpSet(cursorToken.text())
+                self.__currentCursorToken=cursorToken
+
 
     def __updateStatusBarOverwrite(self, dummy=None):
         """Update status bar STATUSBAR_INSOVR_MODE"""
@@ -616,8 +632,11 @@ class BSDocuments(QTabWidget):
         self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_POS, f'{position[0].x()}:{position[0].y()}')
 
         if position[3]==0:
+            # no selection
             self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_SELECTION, '')
+            self.__updateLanguageQuickHelp()
         else:
+            # selection...
             self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_SELECTION, f'{position[1].x()}:{position[1].y()} - {position[2].x()}:{position[2].y()} [{position[3]}]')
             self.__uiController.updateMenu()
 
@@ -676,6 +695,9 @@ class BSDocuments(QTabWidget):
         document.codeEditor().undoAvailable.connect(self.__uiController.updateMenu)
         document.codeEditor().selectionChanged.connect(self.__uiController.updateMenu)
         document.codeEditor().copyAvailable.connect(self.__uiController.updateMenu)
+        document.codeEditor().autoCompletionChanged.connect(self.__uiController.commandDockLangageQuickHelpSet)
+
+        document.codeEditor().setOptionAutoCompletionHelp(self.__optionAutoCompletionHelp)
 
         # switch to new opened/created document
         self.setCurrentIndex(newTabIndex)
@@ -866,7 +888,12 @@ class BSDocuments(QTabWidget):
             self.setTabText(index, self.__documentTabName(document))
         return returned
 
-
+    def setCompletionHelpEnabled(self, value):
+        """Change option setOptionAutoCompletionHelp() on all code editor"""
+        if isinstance(value, bool) and self.__optionAutoCompletionHelp!=value:
+            self.__optionAutoCompletionHelp=value
+            for document in self.__documents:
+                document.codeEditor().setOptionAutoCompletionHelp(self.__optionAutoCompletionHelp)
 
 class BSDocumentsTabBar(QTabBar):
     """Implement a tabbar that let possibility in code editor to made distinction

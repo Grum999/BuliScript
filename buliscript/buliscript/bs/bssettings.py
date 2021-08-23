@@ -88,6 +88,8 @@ class BSSettingsKey(SettingsKey):
 
     SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE =                'session.mainwindow.view.console.visible'
 
+    SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT =                 'session.mainwindow.view.dockers.layout'
+
     SESSION_DOCUMENTS_ACTIVE =                               'session.documents.active'
     SESSION_DOCUMENTS_OPENED =                               'session.documents.opened'
     SESSION_DOCUMENTS_RECENTS =                              'session.documents.recents'
@@ -114,44 +116,50 @@ class BSSettings(Settings):
             # values are tuples:
             # [0]       = default value
             # [1..n]    = values types & accepted values
-            SettingsRule(BSSettingsKey.CONFIG_SYSTRAY_MODE,                             2,                        SettingsFmt(int, [0,1,2,3])),
-            SettingsRule(BSSettingsKey.CONFIG_OPEN_ATSTARTUP,                           False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.CONFIG_SYSTRAY_MODE,                                 2,                        SettingsFmt(int, [0,1,2,3])),
+            SettingsRule(BSSettingsKey.CONFIG_OPEN_ATSTARTUP,                               False,                    SettingsFmt(bool)),
 
-            SettingsRule(BSSettingsKey.CONFIG_SESSION_SAVE,                             True,                     SettingsFmt(bool)),
-            SettingsRule(BSSettingsKey.CONFIG_SESSION_DOCUMENTS_RECENTS_COUNT,          25,                       SettingsFmt(int, (1, 100))),
+            SettingsRule(BSSettingsKey.CONFIG_SESSION_SAVE,                                 True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.CONFIG_SESSION_DOCUMENTS_RECENTS_COUNT,              25,                       SettingsFmt(int, (1, 100))),
 
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_FONT_NAME,                         "DejaVu Sans Mono",       SettingsFmt(str)),
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_FONT_SIZE,                         9,                        SettingsFmt(int, (5, 96))),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_FONT_NAME,                             "DejaVu Sans Mono",       SettingsFmt(str)),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_FONT_SIZE,                             9,                        SettingsFmt(int, (5, 96))),
 
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_INDENT_WIDTH,                      4,                        SettingsFmt(int, (1,8))),
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_INDENT_VISIBLE,                    True,                     SettingsFmt(bool)),
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_SPACES_VISIBLE,                    True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_INDENT_WIDTH,                          4,                        SettingsFmt(int, (1,8))),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_INDENT_VISIBLE,                        True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_SPACES_VISIBLE,                        True,                     SettingsFmt(bool)),
 
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_WIDTH,                  120,                      SettingsFmt(int, (40, 240))),
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_VISIBLE,                True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_WIDTH,                      120,                      SettingsFmt(int, (40, 240))),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_RIGHTLIMIT_VISIBLE,                    True,                     SettingsFmt(bool)),
 
-            SettingsRule(BSSettingsKey.CONFIG_EDITOR_AUTOCOMPLETION_ACTIVE,             True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.CONFIG_EDITOR_AUTOCOMPLETION_ACTIVE,                 True,                     SettingsFmt(bool)),
 
 
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION,       [1000, 1000],             SettingsFmt(int), SettingsFmt(int)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION,  [700, 300],               SettingsFmt(int), SettingsFmt(int)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY,              [-1,-1,-1,-1],            SettingsFmt(int), SettingsFmt(int), SettingsFmt(int), SettingsFmt(int)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED,             False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION,           [1000, 1000],             SettingsFmt(int), SettingsFmt(int)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION,      [700, 300],               SettingsFmt(int), SettingsFmt(int)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY,                  [-1,-1,-1,-1],            SettingsFmt(int), SettingsFmt(int), SettingsFmt(int), SettingsFmt(int)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED,                 False,                    SettingsFmt(bool)),
 
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE,          True,                     SettingsFmt(bool)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN,           True,                     SettingsFmt(bool)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID,             False,                    SettingsFmt(bool)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION,         True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE,              True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN,               True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID,                 False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION,             True,                     SettingsFmt(bool)),
 
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE,         True,                     SettingsFmt(bool)),
+            # dockers layout use QMainWindow.saveState()/QMainWindow.restoreState()
+            # Don't really like this solution as methods return binary data through a byte array rather than a human readable structure
+            # but there's not really other choice to be able to save/restore dockers state (available methods doesn't allows to save/restore
+            # all layout properties...)
+            # byte array is base64 encoded in configuration file
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT,              '',                       SettingsFmt(str)),
 
-            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE,                        0,                        SettingsFmt(int)),
-            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_OPENED,                        [],                       SettingsFmt(list)),
-            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_RECENTS,                       [],                       SettingsFmt(list)),
+            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE,             True,                     SettingsFmt(bool)),
 
-            SettingsRule(BSSettingsKey.SESSION_PATH_LASTOPENED,                         "",                       SettingsFmt(str)),
-            SettingsRule(BSSettingsKey.SESSION_PATH_LASTSAVED,                          "",                       SettingsFmt(str))
+            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE,                            0,                        SettingsFmt(int)),
+            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_OPENED,                            [],                       SettingsFmt(list)),
+            SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_RECENTS,                           [],                       SettingsFmt(list)),
 
+            SettingsRule(BSSettingsKey.SESSION_PATH_LASTOPENED,                             "",                       SettingsFmt(str)),
+            SettingsRule(BSSettingsKey.SESSION_PATH_LASTSAVED,                              "",                       SettingsFmt(str))
         ]
 
         super(BSSettings, self).__init__(pluginId, rules)

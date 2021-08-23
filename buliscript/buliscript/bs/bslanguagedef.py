@@ -2852,11 +2852,25 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_NONE, r"\bNONE\b",
                                                                     'Constants/Layer/Color label|Constants/Pen/Style|Constants/Canvas/Grid/Style|Constants/Canvas/Origin/Style',
-                                                                    ['NONE'],'c'),
+                                                                    [('NONE',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Constant [None value]',
+                                                                                # description
+                                                                                'Define an undefined value'))],
+                                                                    'c'),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_ONOFF, r"\b(?:ON|OFF)\b",
                                                                     'Constants/Switch',
-                                                                    ['ON','OFF'],
+                                                                    [('ON',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Constant [Boolean/Switch value]',
+                                                                                # description
+                                                                                'Define a True/Active state')),
+                                                                    ('OFF',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Constant [Boolean/Switch value]',
+                                                                                # description
+                                                                                'Define a False/Inactive state'))],
                                                                     'c'),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_M, r"\b(?:PX|PCT|MM|INCH)\b",
                                                                     'Constants/Units/Measure',

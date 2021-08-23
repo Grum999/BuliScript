@@ -34,7 +34,7 @@ import html
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
-        pyqtSignal
+        pyqtSignal as Signal
     )
 from PyQt5.QtWidgets import (
         QMainWindow,
@@ -70,12 +70,15 @@ class WVLine(QFrame):
 
 class WMenuForCommand(QWidgetAction):
     """Encapsulate a QLabel as a menu item, used to display completion command properly formatted in menu"""
+    onEnter=Signal()
+
     def __init__(self, label, parent=None):
         super(WMenuForCommand, self).__init__(parent)
         self.__label = QLabel(self.__reformattedText(label))
         self.__label.setStyleSheet("QLabel:hover { background: palette(highlight); color: palette(highlighted-text);}")
         self.__label.setContentsMargins(4,4,4,4)
         self.__label.mousePressEvent=self.__pressEvent
+        self.__label.enterEvent=self.__enterEvent
 
         self.__layout = QVBoxLayout()
         self.__layout.setSpacing(0)
@@ -92,7 +95,7 @@ class WMenuForCommand(QWidgetAction):
         self.setDefaultWidget(self.__widget)
 
     def __reformattedText(self, text):
-        """Reformat givne text, assuming it's a completion text command"""
+        """Reformat given text, assuming it's a completion text command"""
         returned=[]
         texts=text.split('\x01')
         for index, textItem in enumerate(texts):
@@ -116,6 +119,10 @@ class WMenuForCommand(QWidgetAction):
 
         if menu:
             menu.close()
+
+    def __enterEvent(self, event):
+        """When mouse goes over label, trigger signal onEnter"""
+        self.onEnter.emit()
 
 
 
@@ -146,6 +153,10 @@ class BSMainWindow(QMainWindow):
 
         self.__uiController = uiController
         self.__eventCallBack = {}
+
+        self.setDockOptions(QMainWindow.AllowTabbedDocks|QMainWindow.AllowNestedDocks)
+        self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
+        self.setDocumentMode(False)
 
         self.__initStatusBar()
         self.__initBSDocuments()
@@ -213,8 +224,11 @@ class BSMainWindow(QMainWindow):
             Title=autoCompletion
             Action=insert autoCompletion
             """
-            def execute(dummy=None):
+            def onExecute(dummy=None):
                 self.__uiController.commandLanguageInsert(self.sender().property('insert'))
+
+            def onEnter(dummy=None):
+                self.__uiController.commandDockLangageQuickHelpSet(self.sender().property('insert').split('\x01')[0])
 
             action=WMenuForCommand(html.escape(autoCompletion[0]), menuTree[-1])
             action.setProperty('insert', autoCompletion[0])
@@ -224,7 +238,8 @@ class BSMainWindow(QMainWindow):
                     tip=autoCompletion[1]
                 action.setStatusTip(stripHtml(tip))
 
-            action.triggered.connect(execute)
+            action.triggered.connect(onExecute)
+            action.onEnter.connect(onEnter)
             menuTree[-1].addAction(action)
 
         # Menu SCRIPT
@@ -271,10 +286,14 @@ class BSMainWindow(QMainWindow):
 
         # Menu VIEW
         # ----------------------------------------------------------------------
-        self.actionViewShowCanvas.triggered.connect(self.__uiController.commandViewShowCanvasVisible)
-        self.actionViewShowCanvasOrigin.triggered.connect(self.__uiController.commandViewShowCanvasOrigin)
-        self.actionViewShowCanvasGrid.triggered.connect(self.__uiController.commandViewShowCanvasGrid)
-        self.actionViewShowCanvasPosition.triggered.connect(self.__uiController.commandViewShowCanvasPosition)
+        self.actionViewCanvasShowCanvas.triggered.connect(self.__uiController.commandViewShowCanvasVisible)
+        self.actionViewCanvasShowCanvasOrigin.triggered.connect(self.__uiController.commandViewShowCanvasOrigin)
+        self.actionViewCanvasShowCanvasGrid.triggered.connect(self.__uiController.commandViewShowCanvasGrid)
+        self.actionViewCanvasShowCanvasPosition.triggered.connect(self.__uiController.commandViewShowCanvasPosition)
+
+        # menu View > Language > ...
+        # is built from uiController
+
         self.actionViewShowConsole.triggered.connect(self.__uiController.commandViewShowConsoleVisible)
 
         # Menu SETTINGS
