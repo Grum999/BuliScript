@@ -24,6 +24,7 @@ from pathlib import Path
 
 import sys
 import re
+import base64
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
@@ -37,6 +38,10 @@ from PyQt5.QtWidgets import (
     )
 
 
+from .bsdwlanguage import (
+        BSDockWidgetLangageQuickHelp,
+        BSDockWidgetLangageReference
+    )
 from .bshistory import BSHistory
 from .bslanguagedef import BSLanguageDef
 from .bsmainwindow import BSMainWindow
@@ -46,6 +51,7 @@ from .bssettings import (
         BSSettingsKey
     )
 
+from buliscript.pktk.modules.tokenizer import TokenizerRule
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.utils import (
         checkKritaVersion,
@@ -125,6 +131,12 @@ class BSUIController(QObject):
 
         self.__initialised = False
 
+        self.__dwLangageReference=None
+        self.__dwLangageQuickHelp=None
+
+        self.__dwLangageQuickHelpAction=None
+        self.__dwLangageReferenceAction=None
+
         if kritaIsStarting and BSSettings.get(BSSettingsKey.CONFIG_OPEN_ATSTARTUP):
             self.start()
 
@@ -150,6 +162,24 @@ class BSUIController(QObject):
         self.__window.dialogShown.connect(self.__initSettings)
 
         self.__window.documents().documentChanged.connect(self.__documentChanged)
+
+        # initialise docker widgets
+        self.__dwLangageReference=BSDockWidgetLangageReference(self.__window, self.__languageDef)
+        self.__dwLangageReference.setObjectName('__dwLangageReference')
+        self.__dwLangageReference.languageReferenceSelected.connect(self.commandDockLangageQuickHelpSet)
+        self.__dwLangageReference.languageReferenceDblClicked.connect(self.commandLanguageInsert)
+        self.__dwLangageReferenceAction=self.__dwLangageReference.toggleViewAction()
+        self.__dwLangageReferenceAction.setText(i18n("Reference"))
+        self.__window.menuViewLanguage.addAction(self.__dwLangageReferenceAction)
+        self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwLangageReference)
+
+        self.__dwLangageQuickHelp=BSDockWidgetLangageQuickHelp(self.__window)
+        self.__dwLangageQuickHelp.setObjectName('__dwLangageQuickHelp')
+        self.__dwLangageQuickHelp.visibilityChanged.connect(lambda visible: self.__window.documents().setCompletionHelpEnabled(not visible))
+        self.__dwLangageQuickHelpAction=self.__dwLangageQuickHelp.toggleViewAction()
+        self.__dwLangageQuickHelpAction.setText(i18n("Quick Help"))
+        self.__window.menuViewLanguage.addAction(self.__dwLangageQuickHelpAction)
+        self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwLangageQuickHelp)
 
         self.__window.setWindowTitle(self.__bsTitle)
         self.__window.show()
@@ -197,6 +227,17 @@ class BSUIController(QObject):
         self.commandViewShowCanvasGrid(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID))
         self.commandViewShowCanvasPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION))
         self.commandViewShowConsoleVisible(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE))
+
+        qtlayoutNfoB64=BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT)
+        if qtlayoutNfoB64!='':
+            qtLayoutNfo=base64.b64decode(qtlayoutNfoB64.encode())
+            self.__window.restoreState(qtLayoutNfo)
+
+            # to init completer
+            self.__window.documents().setCompletionHelpEnabled(False)
+        else:
+            self.commandViewDockLangageQuickHelpVisible(False)
+            self.commandViewDockLangageReferenceVisible(False)
 
         self.__lastDocumentDirectoryOpen=BSSettings.get(BSSettingsKey.SESSION_PATH_LASTOPENED)
         self.__lastDocumentDirectorySave=BSSettings.get(BSSettingsKey.SESSION_PATH_LASTSAVED)
@@ -366,10 +407,10 @@ class BSUIController(QObject):
 
         # Menu VIEW
         # ----------------------------------------------------------------------
-        self.__window.actionViewShowCanvas.setEnabled(not scriptIsRunning)
-        self.__window.actionViewShowCanvasOrigin.setEnabled(not scriptIsRunning)
-        self.__window.actionViewShowCanvasGrid.setEnabled(not scriptIsRunning)
-        self.__window.actionViewShowCanvasPosition.setEnabled(not scriptIsRunning)
+        self.__window.actionViewCanvasShowCanvas.setEnabled(not scriptIsRunning)
+        self.__window.actionViewCanvasShowCanvasOrigin.setEnabled(not scriptIsRunning)
+        self.__window.actionViewCanvasShowCanvasGrid.setEnabled(not scriptIsRunning)
+        self.__window.actionViewCanvasShowCanvasPosition.setEnabled(not scriptIsRunning)
 
         # Menu SETTINGS
         # ----------------------------------------------------------------------
@@ -450,14 +491,14 @@ class BSUIController(QObject):
 
         if BSSettings.get(BSSettingsKey.CONFIG_SESSION_SAVE):
             # save current session properties only if allowed
-            if self.__window.actionViewShowCanvas.isChecked():
+            if self.__window.actionViewCanvasShowCanvas.isChecked():
                 # if not checked, hidden panel size is 0 so, do not save it (splitter position is already properly defined)
                 BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION, self.__window.splMain.sizes())
 
-            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE, self.__window.actionViewShowCanvas.isChecked())
-            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, self.__window.actionViewShowCanvasOrigin.isChecked())
-            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, self.__window.actionViewShowCanvasGrid.isChecked())
-            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, self.__window.actionViewShowCanvasPosition.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE, self.__window.actionViewCanvasShowCanvas.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN, self.__window.actionViewCanvasShowCanvasOrigin.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID, self.__window.actionViewCanvasShowCanvasGrid.isChecked())
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, self.__window.actionViewCanvasShowCanvasPosition.isChecked())
 
             BSSettings.set(BSSettingsKey.SESSION_PATH_LASTOPENED, self.__lastDocumentDirectoryOpen)
             BSSettings.set(BSSettingsKey.SESSION_PATH_LASTSAVED, self.__lastDocumentDirectorySave)
@@ -478,6 +519,9 @@ class BSUIController(QObject):
 
             BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE, self.__window.actionViewShowConsole.isChecked())
 
+            qtlayoutNfoB64=self.__window.saveState()
+            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT, base64.b64encode(qtlayoutNfoB64).decode())
+
             BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED, self.__window.isMaximized())
             if not self.__window.isMaximized():
                 # when maximized geometry is full screen geomtry, then do it only if no in maximized
@@ -492,6 +536,14 @@ class BSUIController(QObject):
             document.saveCache()
 
         self.saveSettings()
+
+        # need to close dockers, because if they're floating, close BuliScript
+        # don't close floating dockers
+        self.__dwLangageReference.close()
+        self.__dwLangageQuickHelp.close()
+
+        self.__dwLangageReference=None
+        self.__dwLangageQuickHelp=None
 
         self.__bsStarted = False
         self.bsWindowClosed.emit()
@@ -759,10 +811,15 @@ class BSUIController(QObject):
         print("TODO: implement commandScriptStop")
 
 
-    def commandLanguageInsert(self, text):
-        """Insert given `text` at current position in document"""
+    def commandLanguageInsert(self, text, setFocus=True):
+        """Insert given `text` at current position in document
+
+        If `setFocus` is True, current document got focus
+        """
         if self.__currentDocument:
             self.__currentDocument.codeEditor().insertLanguageText(text)
+            if setFocus:
+                self.__currentDocument.codeEditor().setFocus()
 
 
     def commandViewBringToFront(self):
@@ -848,9 +905,9 @@ class BSUIController(QObject):
     def commandViewShowCanvasVisible(self, visible=None):
         """Display/Hide canvas"""
         if visible is None:
-            visible = self.__window.actionViewShowCanvas.isChecked()
+            visible = self.__window.actionViewCanvasShowCanvas.isChecked()
         elif isinstance(visible, bool):
-            self.__window.actionViewShowCanvas.setChecked(visible)
+            self.__window.actionViewCanvasShowCanvas.setChecked(visible)
         else:
             raise EInvalidValue('Given `visible` must be a <bool>')
 
@@ -863,9 +920,9 @@ class BSUIController(QObject):
     def commandViewShowCanvasOrigin(self, visible=None):
         """Display/Hide canvas origin"""
         if visible is None:
-            visible = self.__window.actionViewShowCanvasOrigin.isChecked()
+            visible = self.__window.actionViewCanvasShowCanvasOrigin.isChecked()
         elif isinstance(visible, bool):
-            self.__window.actionViewShowCanvasOrigin.setChecked(visible)
+            self.__window.actionViewCanvasShowCanvasOrigin.setChecked(visible)
         else:
             raise EInvalidValue('Given `visible` must be a <bool>')
 
@@ -876,9 +933,9 @@ class BSUIController(QObject):
     def commandViewShowCanvasGrid(self, visible=None):
         """Display/Hide canvas grid"""
         if visible is None:
-            visible = self.__window.actionViewShowCanvasGrid.isChecked()
+            visible = self.__window.actionViewCanvasShowCanvasGrid.isChecked()
         elif isinstance(visible, bool):
-            self.__window.actionViewShowCanvasGrid.setChecked(visible)
+            self.__window.actionViewCanvasShowCanvasGrid.setChecked(visible)
         else:
             raise EInvalidValue('Given `visible` must be a <bool>')
 
@@ -889,9 +946,9 @@ class BSUIController(QObject):
     def commandViewShowCanvasPosition(self, visible=None):
         """Display/Hide canvas position"""
         if visible is None:
-            visible = self.__window.actionViewShowCanvasPosition.isChecked()
+            visible = self.__window.actionViewCanvasShowCanvasPosition.isChecked()
         elif isinstance(visible, bool):
-            self.__window.actionViewShowCanvasPosition.setChecked(visible)
+            self.__window.actionViewCanvasShowCanvasPosition.setChecked(visible)
         else:
             raise EInvalidValue('Given `visible` must be a <bool>')
 
@@ -913,6 +970,55 @@ class BSUIController(QObject):
             BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
 
         self.__window.wConsoleArea.setVisible(visible)
+
+
+    def commandViewDockLangageQuickHelpVisible(self, visible=None):
+        """Display/Hide Language Quick Help docker"""
+        if visible is None:
+            visible = self.__dwLangageQuickHelpAction.isChecked()
+        elif not isinstance(visible, bool):
+            raise EInvalidValue('Given `visible` must be a <bool>')
+
+        if self.__dwLangageQuickHelp:
+            if visible:
+                self.__dwLangageQuickHelp.show()
+            else:
+                self.__dwLangageQuickHelp.hide()
+            self.__window.documents().setCompletionHelpEnabled(not visible)
+
+    def commandViewDockLangageReferenceVisible(self, visible=None):
+        """Display/Hide Language Quick Help docker"""
+        if visible is None:
+            visible = self.__dwLangageReferenceAction.isChecked()
+        elif not isinstance(visible, bool):
+            raise EInvalidValue('Given `visible` must be a <bool>')
+
+        if self.__dwLangageReference:
+            if visible:
+                self.__dwLangageReference.show()
+            else:
+                self.__dwLangageReference.hide()
+
+
+
+    def commandDockLangageQuickHelpSet(self, keyword):
+        """Define language quick help docker content from given `keyword`
+
+        Given `keyword` is a language instruction (like "print", "set variable", ...)
+        """
+        if self.__dwLangageQuickHelp:
+            if '\x01' in keyword:
+                keyword=keyword.split('\x01')[0]
+
+            descriptionProposal=self.__languageDef.getTextProposal(keyword, True)
+
+            if len(descriptionProposal)>0:
+                # from description, retrieve title, description, example
+                title=TokenizerRule.descriptionExtractSection(descriptionProposal[0][2], 'title')
+                description=TokenizerRule.descriptionExtractSection(descriptionProposal[0][2], 'description')
+                example=TokenizerRule.descriptionExtractSection(descriptionProposal[0][2], 'example')
+
+                self.__dwLangageQuickHelp.set(title, descriptionProposal[0][1], description, example)
 
 
     def commandSettingsSaveSessionOnExit(self, saveSession=None):

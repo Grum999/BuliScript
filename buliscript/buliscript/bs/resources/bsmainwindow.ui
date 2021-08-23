@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>892</width>
-    <height>603</height>
+    <width>1581</width>
+    <height>1047</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -95,7 +95,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>892</width>
+     <width>1581</width>
      <height>31</height>
     </rect>
    </property>
@@ -169,11 +169,23 @@
     <property name="title">
      <string>&amp;View</string>
     </property>
-    <addaction name="actionViewShowCanvas"/>
-    <addaction name="actionViewShowCanvasOrigin"/>
-    <addaction name="actionViewShowCanvasGrid"/>
-    <addaction name="actionViewShowCanvasPosition"/>
-    <addaction name="separator"/>
+    <widget class="QMenu" name="menuViewCanvas">
+     <property name="title">
+      <string>Canvas</string>
+     </property>
+     <addaction name="actionViewCanvasShowCanvas"/>
+     <addaction name="separator"/>
+     <addaction name="actionViewCanvasShowCanvasOrigin"/>
+     <addaction name="actionViewCanvasShowCanvasGrid"/>
+     <addaction name="actionViewCanvasShowCanvasPosition"/>
+    </widget>
+    <widget class="QMenu" name="menuViewLanguage">
+     <property name="title">
+      <string>Language</string>
+     </property>
+    </widget>
+    <addaction name="menuViewCanvas"/>
+    <addaction name="menuViewLanguage"/>
     <addaction name="actionViewShowConsole"/>
    </widget>
    <widget class="QMenu" name="menuScript">
@@ -447,7 +459,7 @@
     <string>Define BuliScript preferences settings</string>
    </property>
   </action>
-  <action name="actionViewShowCanvasGrid">
+  <action name="actionViewCanvasShowCanvasGrid">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -455,10 +467,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show canvas &amp;grid</string>
+    <string>Canvas &amp;grid</string>
    </property>
   </action>
-  <action name="actionViewShowCanvasOrigin">
+  <action name="actionViewCanvasShowCanvasOrigin">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -466,10 +478,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show &amp;canvas origin</string>
+    <string>Canvas origin</string>
    </property>
   </action>
-  <action name="actionViewShowCanvasPosition">
+  <action name="actionViewCanvasShowCanvasPosition">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -477,10 +489,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show canvas &amp;position</string>
+    <string>Canvas &amp;position</string>
    </property>
   </action>
-  <action name="actionViewShowCanvas">
+  <action name="actionViewCanvasShowCanvas">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -488,7 +500,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Show canvas</string>
+    <string>Canvas</string>
    </property>
   </action>
   <action name="actionViewShowConsole">
@@ -499,7 +511,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>S&amp;how console</string>
+    <string>Console</string>
    </property>
   </action>
   <action name="actionSettingsSaveSessionOnExit">
@@ -530,10 +542,11 @@
   </action>
   <action name="actionFileReload">
    <property name="icon">
-    <iconset theme="view-refresh"/>
+    <iconset theme="view-refresh">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Reload</string>
+    <string>Reloa&amp;d</string>
    </property>
    <property name="statusTip">
     <string>Reload current document</string>
@@ -541,18 +554,49 @@
   </action>
   <action name="actionScriptBreakPause">
    <property name="icon">
-    <iconset theme="media-playback-pause"/>
+    <iconset theme="media-playback-pause">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Break/Pause</string>
+    <string>&amp;Break/Pause</string>
    </property>
   </action>
   <action name="actionScriptStop">
    <property name="icon">
-    <iconset theme="media-playback-stop"/>
+    <iconset theme="media-playback-stop">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Stop</string>
+    <string>&amp;Stop</string>
+   </property>
+  </action>
+  <action name="actiontest">
+   <property name="text">
+    <string>test</string>
+   </property>
+  </action>
+  <action name="actionViewShowLanguageQuickHelp">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Quick Help</string>
+   </property>
+   <property name="statusTip">
+    <string>A docker to display quick help about language</string>
+   </property>
+  </action>
+  <action name="actionrrr">
+   <property name="text">
+    <string>rrr</string>
+   </property>
+  </action>
+  <action name="actionViewShowLanguageReference">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Reference</string>
    </property>
   </action>
  </widget>

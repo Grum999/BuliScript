@@ -52,8 +52,9 @@ class WCodeEditor(QPlainTextEdit):
     """Extended editor with syntax highlighting, autocompletion, line number..."""
 
     cursorCoordinatesChanged = Signal(QPoint, QPoint, QPoint, int) # cursor position, selection start position, selection end position, selection length
-    overwriteModeChanged = Signal(bool)
-    readOnlyModeChanged = Signal(bool)
+    overwriteModeChanged = Signal(bool)     # INS / OVR mode changed
+    readOnlyModeChanged = Signal(bool)      # read-only mode changed
+    autoCompletionChanged = Signal(str)     # auto completion item has changed
 
     KEY_INDENT = 'indent'
     KEY_DEDENT = 'dedent'
@@ -127,6 +128,9 @@ class WCodeEditor(QPlainTextEdit):
         # autocompletion is automatic (True) or manual (False)
         self.__optionAutoCompletion = True
 
+        # display auto completion help (True) or not (False)
+        self.__optionAutoCompletionHelp = True
+
         # autocompletion popup max number of items
         self.__optionAutoCompletionMaxItems = 25
 
@@ -196,6 +200,7 @@ class WCodeEditor(QPlainTextEdit):
         self.__completer.setMaxVisibleItems(self.__optionAutoCompletionMaxItems)
         self.__completer.activated.connect(self.__insertCompletion)
         self.__completer.highlighted[QModelIndex].connect(self.__displayCompleterHint)
+        self.__completer.highlighted[str].connect(lambda value: self.autoCompletionChanged.emit(value))
 
         # ---- initialise customized item rendering for completer
         self.__completer.popup().setFont(font)
@@ -282,7 +287,7 @@ class WCodeEditor(QPlainTextEdit):
         if tooltipHelp is None or tooltipHelp == '':
             self.__hideCompleterHint()
             return
-        else:
+        elif self.__optionAutoCompletionHelp:
             position=QPoint(self.__cursorRect.left() + self.__cursorRect.width(), self.__cursorRect.top() + self.__completer.popup().visualRect(index).top() )
             # it's not possible to move a tooltip
             # need to set a different value to force tooltip being refreshed to new position
@@ -1259,6 +1264,19 @@ class WCodeEditor(QPlainTextEdit):
         if isinstance(value, bool) and value != self.__optionAutoCompletion:
             self.__optionAutoCompletion=value
             self.update()
+
+
+    def optionAutoCompletionHelp(self):
+        """Return if help is displayed with auto completion or not"""
+        return self.__optionAutoCompletionHelp
+
+
+    def setOptionAutoCompletionHelp(self, value):
+        """Set if help is displayed with auto completion or not"""
+        if isinstance(value, bool) and value != self.__optionAutoCompletionHelp:
+            self.__optionAutoCompletionHelp=value
+            if not self.__optionAutoCompletionHelp:
+                self.__hideCompleterHint()
 
 
     def optionAutoCompletionMaxItems(self):
