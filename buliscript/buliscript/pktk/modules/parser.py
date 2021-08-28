@@ -38,12 +38,6 @@ from ..pktk import *
 
 
 
-class EParsingGrammarMatch(Exception):
-    """Parsed tokens doesn't match grammar"""
-    pass
-
-
-
 class Parser:
     """Generic language parser"""
 
@@ -101,7 +95,7 @@ class Parser:
                     break
                 elif checked.status()!=ASTStatus.MATCH:
                     self.__ast.setStatus(ASTStatus.INVALID)
-                    print("checkGrammarRule: KO", grammarObject, self.__tokens.value())
+                    self.__errors.append(ParserError(i18n("Invalid syntax"), self.__tokens.value(), grammarObject, checked))
                     return
 
                 #if checked.countNodes()>0:
@@ -112,12 +106,13 @@ class Parser:
             if self.__tokens.value() is None:
                 # All tokens have been parsed!
                 self.__ast.setStatus(ASTStatus.MATCH)
-                print("checkGrammarRule: OK")
             else:
                 # All tokens have not been parsed, that's not a normal case
                 self.__ast.setStatus(ASTStatus.INVALID)
-                print("checkGrammarRule: KO (some tokens not parsed)", self.__tokens.value())
+                self.__errors.append(ParserError(i18n("Some tokens have not been parsed"), self.__tokens.value()))
 
+        # result errors list
+        self.__errors=[]
 
         # intialise empty AST
         self.__ast=ASTItem(ASTSpecialItemType.ROOT)
@@ -125,16 +120,14 @@ class Parser:
         # rewind tokens list to first position
         token=self.__tokens.first()
         while not token is None:
-            print(token)
+            #Debug.print(token)
             token=self.__tokens.next()
 
         self.__tokens.first()
 
-
         # start to check grammar rules for tokens
         checkGrammarRule(self.__grammarRules.idFirst())
-
-        print(self.__ast)
+        #Debug.print(self.__ast)
 
 
     def grammarRules(self):
@@ -198,6 +191,39 @@ class Parser:
 
         return self.__ast
 
+
+    def errors(self):
+        """Return error found by parser"""
+        return self.__errors
+
+
+class ParserError:
+    """Define an error"""
+
+    def __init__(self, errorMsg, token, grammarRule=None, ast=None):
+        self.__errorMsg=errorMsg
+        self.__errorToken=token
+        self.__errorGrammarRule=grammarRule
+        self.__errorAst=ast
+
+    def __repr__(self):
+        return f"<ParserError(Message='{self.__errorMsg}',\nToken={self.__errorToken},\nGrammarRule={self.__errorGrammarRule},\nAST={self.__errorAst})>"
+
+    def errorMessage(self):
+        """Return error message"""
+        return self.__errorMsg
+
+    def errorToken(self):
+        """Return token on which error occured"""
+        return self.__errorToken
+
+    def errorGrammarRule(self):
+        """Return grammar rule on which error occured"""
+        return self.__errorGrammarRule
+
+    def errorAst(self):
+        """Return ast item on which error occured"""
+        return self.__errorAst
 
 
 class ASTStatus(Enum):
@@ -320,6 +346,16 @@ class ASTItem:
     def nodes(self):
         """Return nodes list"""
         return self.__nodes
+
+    def node(self, index, default=None):
+        """Return node for given `index`
+
+        If `index` is invalid, return `default` value
+        """
+        try:
+            return self.__nodes[index]
+        except Exception as e:
+            return default
 
     def tokens(self):
         """Return tokens list"""
