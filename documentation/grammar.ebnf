@@ -567,9 +567,9 @@ Function
                 ( 'rotate' '(' Evaluation_List_Expression (',' Evaluation_Number_Expression)? ')' ) |
                 ( 'sort' '(' Evaluation_List_Expression (',' Evaluation_Boolean_Expression)? ')' ) |
                 ( 'unique' '(' Evaluation_List_Expression ')' ) |
+                ( 'revert' '(' Evaluation_List_Expression ')' ) |
                 ( 'shuffle' '(' Evaluation_List_Expression ')' ) |
-                ( 'pop' '(' Evaluation_List_Expression (',' Evaluation_Number_Expression)? ')' ) |
-                ( 'push' '(' Evaluation_List_Expression ',' Any_Expression ')' )
+                ( 'index' '(' Evaluation_List_Expression ',' Evaluation_Number_Expression (',' Any_Expression)? ')' )
             )
             |
             'math' '.' (
@@ -577,6 +577,7 @@ Function
                 ( 'abs' '(' Evaluation_Number_Expression ')' ) |
                 ( 'sign' '(' Evaluation_Number_Expression ')' ) |
                 ( 'even' '(' Evaluation_Number_Expression ')' ) |
+                ( 'odd' '(' Evaluation_Number_Expression ')' ) |
                 ( 'exp' '(' Evaluation_Number_Expression ')' ) |
                 ( 'square_root' '(' Evaluation_Number_Expression ')' ) |
                 ( 'power' '(' Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |

@@ -154,7 +154,8 @@ class BSLanguageDef(LanguageDef):
             #TokenizerRule(BSLanguageDef.ITokenType.STRING, r"'[^'\\]*(?:\\.[^'\\]*)*'"),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.COLOR_CODE,  r'#(?:\b[a-f0-9]{6}\b|[a-f0-9]{8}\b)'),
+            TokenizerRule(BSLanguageDef.ITokenType.COLOR_CODE,  r'#(?:\b[a-f0-9]{6}\b|[a-f0-9]{8}\b)',
+                                                                onInitValue=self.__initTokenColor),
 
             #TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r"(?s)#>>.*#<<[^\n]*$"),
             TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r'#[^\n]*', ignoreIndent=True),
@@ -205,27 +206,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define pen color]',
                                                                                 # description
                                                                                 'Set stroke color used for pen\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#RRGGBB[AA]`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instructions:\n'
                                                                                 '**`set pen color #ffff00`**\n'
-                                                                                '**`set pen color 255 255 0`**\n'
-                                                                                '**`set pen color 1.0 1.0 0.0`**\n\n'
+                                                                                '**`set pen color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define pen color as yellow, 100% opacity\n\n'
                                                                                 'Following instructions:\n'
                                                                                 '**`set pen color #ffff0080`**\n'
-                                                                                '**`set pen color 255 255 0 128`**\n'
-                                                                                '**`set pen color 1.0 1.0 0.0 0.5`**\n\n'
+                                                                                '**`set pen color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define pen color as yellow, 50% opacity')),
-                                                                     ('set pen size \x01<VALUE> [<UNIT>]',
+                                                                     ('set pen size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define pen size]',
                                                                                 # description
                                                                                 'Set stroke width for pen\n\n'
-                                                                                'Given *<VALUE>* is a positive number expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -263,10 +259,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<CAP>* can be:\n'
                                                                                 ' - **`SQUARE`**\n'
                                                                                 ' - **`FLAT`**\n'
-                                                                                ' - **`ROUND`**',
+                                                                                ' - **`ROUNDCAP`**',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set pen cap ROUND`**\n\n'
+                                                                                '**`set pen cap ROUNDCAP`**\n\n'
                                                                                 'Will define a rounded pen cap')),
                                                                      ('set pen join \x01<JOIN>',
                                                                             TokenizerRule.formatDescription(
@@ -276,17 +272,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<JOIN>* can be:\n'
                                                                                 ' - **`BEVEL`**\n'
                                                                                 ' - **`MITTER`**\n'
-                                                                                ' - **`ROUND`**',
+                                                                                ' - **`ROUNDJOIN`**',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set pen join ROUND`**\n\n'
+                                                                                '**`set pen join ROUNDJOIN`**\n\n'
                                                                                 'Will define a rounded pen join')),
-                                                                     ('set pen opacity \x01<VALUE>',
+                                                                     ('set pen opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define pen opacity]',
+                                                                                'Action [Define pen color opacity]',
                                                                                 # description
-                                                                                'Set pen opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Set pen color opacity without changing color property\n\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set pen color`** action',
@@ -1999,8 +1995,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.random(-10.0, 10.0)`**\n\n'
                                                                                 'Will return a decimal random value between -10.0 and 10.0')),
                                                                     ],
-                                                                    'f'),
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:abs|even|sign)\b",
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:abs|even|odd|sign)\b",
                                                                     'Functions/Math/Numbers',
                                                                     [('math.abs(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2031,9 +2028,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will return value **`1.0`**')),
                                                                     ('math.even(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Function [Return if given number is an *even* or *odd* number]',
+                                                                                'Function [Return if given number is an *even* number]',
                                                                                 # description
-                                                                                'Return if given <VALUE> is an even number (ON) or an odd number (OFF)\n'
+                                                                                'Return ON if given <VALUE> is an even number otherwise return OFF\n'
                                                                                 'Returns a boolean',
                                                                                 # example
                                                                                 'Following instruction:\n'
@@ -2042,8 +2039,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`math.even(5)`**\n\n'
                                                                                 'Will return a`OFF`')),
+                                                                    ('math.odd(\x01<VALUE>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return if given number is an *odd* number]',
+                                                                                # description
+                                                                                'Return ON if given <VALUE> is an odd number otherwise return OFF\n'
+                                                                                'Returns a boolean',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`math.odd(4)`**\n\n'
+                                                                                'Will return `OFF`\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`math.even(4)`**\n\n'
+                                                                                'Will return a`ON`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:exp|logn?|power|square_root)\b",
                                                                     'Functions/Math/Power and Logarithmic',
                                                                     [('math.exp(\x01<VALUE>\x01)',
@@ -2085,7 +2096,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate natural logarithm for given <VALUE>\n'
                                                                                 'Returns a decimal value\n'
-                                                                                'Given *<VALUE>* is a numbers')),
+                                                                                'Given *<VALUE>* is a number')),
                                                                     ('math.log(\x01<VALUE>[, <BASE>]\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *logarithm* for a given number]',
@@ -2093,24 +2104,27 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Calculate logarithm for given <VALUE> using given <BASE>\n'
                                                                                 'Returns a decimal value\n'
                                                                                 'Given *<VALUE>* is a number\n'
-                                                                                'Given *<BASE>* is a number; if not provided default value is 10 (bae 10 logarithm)')),
+                                                                                'Given *<BASE>* is a number; if not provided default value is 10 (base 10 logarithm)')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:convert)\b",
                                                                     'Functions/Math/Convert',
-                                                                    [('math.convert(\x01<VALUE>, <F-UNIT>, <T-UNIT>\x01)',
+                                                                    [('math.convert(\x01<VALUE>, <F-UNIT>, <T-UNIT>[, <PCT-REF>]\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Convert a value from a unit to another one]',
                                                                                 # description
                                                                                 'Convert  given <VALUE> from unit <F-UNIT> to unit <T-UNIT>\n'
+                                                                                'If a conversion unit is given in PCT, by default conversion is made from layer width; use <PCT-REF> to provide WIDTH or HEIGHT reference to use for conversion.\n'
                                                                                 'Returns a decimal value\n',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`math.convert(18, MM, PX)`**\n\n'
                                                                                 'Will convert value of 18 millimeters in pixels')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:minimum|maximum|average|sum|product)\b",
                                                                     'Functions/Math/List',
                                                                     [('math.minimum(\x01<VALUE1>[, <VALUEN>]\x01)',
@@ -2169,7 +2183,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.product([10, 5], [25, -4])`**\n\n'
                                                                                 'Will return product value `-5000`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:ceil|floor|round)\b",
                                                                     'Functions/Math/Rounding',
                                                                     [('math.ceil(\x01<VALUE>\x01)',
@@ -2196,7 +2211,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.floor(1.11)`**\n'
                                                                                 '**`math.floor(1.99)`**\n\n'
                                                                                 'Will both return value **`1`**')),
-                                                                    ('math.round(\x01<VALUE>, <DECIMALS>\x01)',
+                                                                    ('math.round(\x01<VALUE>[, <DECIMALS>]\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *round* value for a given number]',
                                                                                 # description
@@ -2211,7 +2226,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.round(1.494, 2)`**\n\n'
                                                                                 'Will return value **`1.49`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:a?cos|a?sin|a?tan)\b",
                                                                     'Functions/Math/Trigonometric',
                                                                     [('math.cos(\x01<VALUE> [, <UNIT>]\x01)',
@@ -2330,7 +2346,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will calculate value of arc tangent of 0.78 radians whatever is default rotation unit')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:a?cosh|a?sinh|a?tanh)\b",
                                                                     'Functions/Math/Hyperbolic',
                                                                     [('math.cosh(\x01<VALUE> [, <UNIT>]\x01)',
@@ -2449,7 +2466,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will calculate value of inverse hyperbolic tangent of 0.78 radians whatever is default rotation unit')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             # TODO: |format|parseInt|parseFloat|parseColor
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bstring\.(?:length)\b",
@@ -2465,7 +2483,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`string.length("Hello!")`**\n\n'
                                                                                 'Will return value **`6`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\bstring\.(?:upper|lower|substring)\b",
                                                                     'Functions/String',
@@ -2520,9 +2539,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will return value **`LLO!`**')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgb|rgba|hsla?|hsva?|cmyka?)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgba?|hsla?|hsva?|cmyka?)\b",
                                                                     'Functions/Color',
                                                                     [('color.rgb(\x01<R-VALUE>, <G-VALUE>, <B-VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2558,7 +2578,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <L-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<L-VALUE>* for Lightness can be can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2573,7 +2593,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <L-VALUE>, <O-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<L-VALUE>* for Lightness, *<O-VALUE>* for Opacity can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2588,7 +2608,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <V-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<V-VALUE>* for Value can be can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2603,7 +2623,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <V-VALUE>, <O-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<V-VALUE>* for Value, *<O-VALUE>* for Opacity can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2641,7 +2661,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`color.hsv(1.0, 0.0, 1.0, 0.75, 0.5)`**\n\n'
                                                                                 'Will both return a green color equivalent to rgb(0,64,0), with 50% opacity')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\blist\.(?:length)\b",
@@ -2657,7 +2678,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`list.length([2,4,6])`**\n\n'
                                                                                 'Will return value **`3`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\blist\.(?:join)\b",
                                                                     'Functions/List',
@@ -2674,7 +2696,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`list.join(["a", "b", "c"], ";")n\n'
                                                                                 'Will return value **`a;b;c`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
 
@@ -2695,10 +2718,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`string.splir("aa;bb;cc", ";")`**\n\n'
                                                                                 'Will both return a list `["aa", "bb", "cc"]`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_LIST, r"\blist\.(?:rotate|sort|unique|shuffle)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_LIST, r"\blist\.(?:rotate|sort|unique|shuffle|revert)\b",
                                                                     'Functions/List',
                                                                     [('list.rotate(\x01<LIST>[, <VALUE>]\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2756,45 +2780,47 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`list.shuffle([1,2,3,4])`**\n\n'
                                                                                 'Will return *(for example)* list `[4,1,3,2]`')),
+                                                                    ('list.revert(\x01<LIST>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return a list for which items order have been *reverted*]',
+                                                                                # description
+                                                                                'Revert items order from given <LIST>\n'
+                                                                                'Returns a list value\n\n'
+                                                                                'Given *<LIST>* is a list',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`list.revert([1,2,3,4])`**\n\n'
+                                                                                'Will return list `[4,3,2,1]`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_VARIANT, r"\blist\.(?:push|pop)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_VARIANT, r"\blist\.(?:index)\b",
                                                                     'Functions/List',
-                                                                    [('list.push(\x01<LIST>, <VARIABLE>\x01)',
+                                                                    [('list.index(\x01<LIST>, <INDEX>[, <DEFAULT>]\x01)',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Function [*Push* a given value into a list]',
+                                                                                'Function [Return value for given index from a given list]',
                                                                                 # description
-                                                                                'Push given <VALUE> to last item from given <LIST> into <VALUE>\n'
-                                                                                'Update given <LIST> and returns pushed value\n\n'
-                                                                                'Given *<LIST>* is a list\n\n'
-                                                                                'Given *<VALUE>* can be of any type')),
-
-                                                                    ('list.pop(\x01<LIST>[, <INDEX>]\x01)',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Function [*Pop* a value from a given list]',
-                                                                                # description
-                                                                                'Pop item designed by <INDEX> from given <LIST>\n'
-                                                                                'Update given <LIST> and returns popped value\n\n'
+                                                                                'Return item designed by <INDEX> from given <LIST>\n\n'
                                                                                 'Given *<LIST>* is a list\n\n'
                                                                                 'Given *<INDEX>*, if provided, is an integer:\n'
-                                                                                ' - A positive value will pop value from start\n'
-                                                                                ' - A negative value will pop value from end\n'
-                                                                                ' - A zero value will pop nothing\n'
-                                                                                ' - Default index, if not provided, is `-1`\n',
+                                                                                ' - A positive value will return value from start (first index in list=1)\n'
+                                                                                ' - A negative value will return value from end\n'
+                                                                                ' - Any invalid index value will return <DEFAULT>\n\n'
+                                                                                'Given optional *<DEFAULT>* can be of any type, and is returned if an invalid index been given; if not provided, value is `0`',
                                                                                 # example
                                                                                 'Assumining variable `:myList` is a list `[1,2,3,4,5]`\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`list.pop(:myList)`**\n'
-                                                                                'Will update `:myList` to `[1,2,3,4]` and return `5`\n\n'
+                                                                                '**`list.index(:myList, 1)`**\n'
+                                                                                'Will return `1`\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`list.pop(:myList, 1)`**\n'
-                                                                                'Will update `:myList` to `[2,3,4,5]` and return `1`\n\n'
-                                                                                'Following instruction:\n'
-                                                                                '**`list.pop(:myList, 2)`**\n'
-                                                                                'Will update `:myList` to `[1,3,4,5]` and return `2`')),
+                                                                                '**`list.index(:myList, -2)`**\n'
+                                                                                'Will return `4`\n\n'
+                                                                                '**`list.index(:myList, 25, 0)`**\n'
+                                                                                'Will return `0`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_BOOLEAN, r"\bboolean\.(?:isString|isNumber|isInteger|isDecimal|isBoolean|isColor|isList)\b",
                                                                     'Functions/Boolean',
@@ -2841,7 +2867,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Check if given <VALUE> is a list\n'
                                                                                 'Returns a boolean value')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_UNCOMPLETE, r"^\x20*\b"
@@ -2857,7 +2884,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Constant [None value]',
                                                                                 # description
                                                                                 'Define an undefined value'))],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_ONOFF, r"\b(?:ON|OFF)\b",
                                                                     'Constants/Switch',
@@ -2871,7 +2899,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Constant [Boolean/Switch value]',
                                                                                 # description
                                                                                 'Define a False/Inactive state'))],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenBoolean
+                                                                    ),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_M, r"\b(?:PX|PCT|MM|INCH)\b",
                                                                     'Constants/Units/Measure',
                                                                     [('PX',
@@ -2895,7 +2925,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Unit in inches')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_M_RPCT, r"\b(?:RPCT)\b",
                                                                     'Constants/Units/Measure',
                                                                     [('RPCT',
@@ -2905,7 +2936,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Unit in relative percentage\n'
                                                                                 'Relative percentage can only be used for some actions')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_R, r"\b(?:RADIAN|DEGREE)\b",
                                                                     'Constants/Units/Angle',
                                                                     [('RADIAN',
@@ -2919,7 +2951,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Unit in degrees')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENSTYLE, r"\b(?:SOLID|DASHDOT|DASH|DOT)\b",
                                                                     'Constants/Pen/Style|Constants/Canvas/Grid/Style|Constants/Canvas/Origin/Style',
@@ -2944,7 +2977,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Dash-Dot stroke')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENCAP, r"\b(?:SQUARE|FLAT|ROUNDCAP)\b",
                                                                     'Constants/Pen/Cap',
                                                                     [('SQUARE',
@@ -2963,7 +2997,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Round pen stroke cap')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENJOIN, r"\b(?:BEVEL|MITTER|ROUNDJOIN)\b",
                                                                     'Constants/Pen/Join',
                                                                     [('BEVEL',
@@ -2982,7 +3017,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Round pen stroke join')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_FILLRULE, r"\b(?:EVEN|WINDING)\b",
                                                                     'Constants/Fill',
                                                                     [('EVEN',
@@ -2996,7 +3032,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Fill rule winding')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, r"\b(?:LEFT|CENTER|RIGHT)\b",
                                                                     'Constants/Text/Alignment/Horizontal',
                                                                     [('LEFT',
@@ -3015,7 +3052,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Right horizontal text alignment')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, r"\b(?:TOP|MIDDLE|BOTTOM)\b",
                                                                     'Constants/Text/Alignment/Vertical',
                                                                     [('TOP',
@@ -3034,7 +3072,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Bottom vertical text alignment')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, r"\b(?:NORMAL|SOURCE_OVER|DESTINATION_OVER|DESTINATION_CLEAR|SOURCE_IN|SOURCE_OUT|DESTINATION_IN|DESTINATION_OUT|SOURCE_ATOP|DESTINATION_ATOP|EXCLUSIVE_OR|PLUS|MULTIPLY|SCREEN|OVERLAY|DARKEN|LIGHTEN|COLORDODGE|COLORBURN|HARD_LIGHT|SOFT_LIGHT|DIFFERENCE|EXCLUSION)\b",
                                                                     'Constants/Draw/Blending modes/Pixels',
                                                                     [('NORMAL',
@@ -3168,7 +3207,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Similar to CompositionMode_Difference, but with a lower contrast\n'
                                                                                 'Painting with white inverts the destination color, whereas painting with black leaves the destination color unchanged')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, r"\b(?:BITWISE_S_OR_D|BITWISE_S_AND_D|BITWISE_S_XOR_D|BITWISE_S_NOR_D|BITWISE_S_NAND_D|BITWISE_NS_XOR_D|BITWISE_S_NOT|BITWISE_NS_AND_D|BITWISE_S_AND_ND|BITWISE_NS_OR_D|BITWISE_CLEAR|BITWISE_SET|BITWISE_NOT_D|BITWISE_S_OR_ND)\b",
                                                                     'Constants/Draw/Blending modes/Bits level',
                                                                     [('BITWISE_S_OR_D',
@@ -3242,7 +3282,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Does a bitwise operation where the Source is OR operation with the inverted Destination pixels')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, r"\b(?:ADD|SUBSTRACT|REPLACE)\b",
                                                                     'Constants/Selection/Mode',
@@ -3262,10 +3303,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Replace current selection')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, r"\b(?:BLUE|GREEN|YELLOW|ORANGE|BROWN|RED|PURPLE|GREY)\b",
-                                                                    'Constants/Layer/Color label',['BLUE','GREEN','YELLOW','ORANGE','BROWN','RED','PURPLE','GREY'],'c'),
+                                                                    'Constants/Layer/Color label',['BLUE','GREEN','YELLOW','ORANGE','BROWN','RED','PURPLE','GREY'],
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bposition\.(?:x|y)\b",
@@ -3283,7 +3327,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current position ordinate, from origin, in current canvas unit\n'
                                                                                 'Returned as decimal value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bangle\b",
                                                                     'Variables/Rotation',
@@ -3294,7 +3339,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current rotation, in current rotation unit\n'
                                                                                 'Returned as decimal value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bunit\.(?:rotation|coordinates)\b",
                                                                     'Variables/Units',
                                                                     [(':unit.rotation',
@@ -3310,7 +3356,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current canvas unit\n'
                                                                                 'Returned as string value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             # todo: add |brush
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|opacity|status)\b",
                                                                     'Variables/Pen',
@@ -3344,12 +3391,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current pen join\n'
                                                                                 'Returned as string value')),
-                                                                     (':pen.opacity',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current pen opacity]',
-                                                                                # description
-                                                                                'Current pen opacity\n'
-                                                                                'Returned as decimal value from 0.0 to 1.0')),
                                                                      (':pen.status',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current pen status]',
@@ -3357,7 +3398,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current pen status\n'
                                                                                 'Returned as string value (UP=OFF, DOWN=ON)')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             # todo: add |brush
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bfill\.(?:color|rule|status)\b",
                                                                     'Variables/Fill',
@@ -3380,7 +3422,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current fill status\n'
                                                                                 'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letter_spacing|stretch|color|align|position)\b",
                                                                     'Variables/Text',
                                                                     [(':text.color',
@@ -3444,7 +3487,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current vertical alignment\n'
                                                                                 'Returned as string value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|size\.major|size\.minor|style|opacity)\b",
                                                                     'Variables/Canvas/Grid',
@@ -3484,7 +3528,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas grid opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:status|color|size|style|opacity)\b",
                                                                     'Variables/Canvas/Origin',
                                                                     [(':canvas.origin.color',
@@ -3517,7 +3562,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas origin opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:status|color|size|style|opacity)\b",
                                                                     'Variables/Canvas/Position',
                                                                     [(':canvas.position.color',
@@ -3556,7 +3602,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas position fulfill status (is empty or fulfilled)\n'
                                                                                  'Returned as boolean value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:status|opacity)\b",
                                                                     'Variables/Canvas/Background',
                                                                     [(':canvas.background.status',
@@ -3572,7 +3619,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas background opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.geometry\.(?:width|height|top|bottom|left|right)\b",
                                                                     'Variables/Canvas/Geometry',
                                                                     [(':canvas.geometry.width',
@@ -3612,7 +3660,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas bottom position, relative to origin\n'
                                                                                  'Returned in current unit')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brepeat\.(?:current|total|incAngle|currentAngle|first|last)\b",
                                                                     'Variables/Flow/Loops/Repeat',
@@ -3653,7 +3702,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Define the rotation angle for current iteration\n'
                                                                                  'Returned as decimal value, in current rotation unit')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bforeach\.(?:current|total|incAngle|currentAngle|first|last)\b",
                                                                     'Variables/Flow/Loops/For each',
                                                                     [(':foreach.current',
@@ -3693,13 +3743,14 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Define the rotation angle for current iteration\n'
                                                                                  'Returned as decimal value, in current rotation unit')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b"),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b", onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True),
-            TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.DUAL_OPERATOR, r"-", ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.SEPARATOR, r","),
             TokenizerRule(BSLanguageDef.ITokenType.PARENTHESIS_OPEN, r"\("),
@@ -3922,11 +3973,11 @@ class BSLanguageDef(LanguageDef):
                 GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR, False, '-'),
                 GROperatorPrecedence(80, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '*', '/', '//', '%'),
                 GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+', '-'),
-                GROperatorPrecedence(60,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
-                GROperatorPrecedence(50,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '!='),
-                GROperatorPrecedence(40,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
-                GROperatorPrecedence(30,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
-                GROperatorPrecedence(20,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
+                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
+                GROperatorPrecedence(50, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '<>'),
+                GROperatorPrecedence(40, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
+                GROperatorPrecedence(30, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
+                GROperatorPrecedence(20, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
             )
 
 
@@ -5090,6 +5141,34 @@ class BSLanguageDef(LanguageDef):
         if len(value)>1:
             return value[1:-1]
 
+        return value
+
+    def __initTokenBoolean(self, tokenType, value):
+        """Convert value for BOOLEAN"""
+
+        return (value.upper()=='ON')
+
+    def __initTokenLower(self, tokenType, value):
+        """Convert value for lower case"""
+
+        return value.lower()
+
+    def __initTokenUpper(self, tokenType, value):
+        """Convert value for upper case"""
+
+        return value.upper()
+
+    def __initTokenColor(self, tokenType, value):
+        """Convert value for QColor"""
+
+        try:
+            return QColor(value)
+        except:
+            # not a valid color?
+            pass
+
+        # normally shouln't occurs... return initial value
+        print('__initTokenColor ERROR??', tokenType, value)
         return value
 
     def grammarRules(self):
