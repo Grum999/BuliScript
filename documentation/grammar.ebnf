@@ -163,8 +163,8 @@ Action_Set_Text
 /* Settings: Drawings */
 Action_Set_Draw
         ::= 'set' 'draw' (
-                ( 'antialiasing'   Evaluate_Boolean_Expression ) |
-                ( 'blending'       BlendingMode_Expression )
+                ( 'antialiasing'        Evaluate_Boolean_Expression ) |
+                ( 'blending' 'mode'     BlendingMode_Expression )
             )
 
 
@@ -469,15 +469,15 @@ BlendingMode_Expression
               'DESTINATION_OUT' |
               'DESTINATION_ATOP' |
               'SOURCE_ATOP' |
-              'XOR' |
+              'EXCLUSIVE_OR' |
               'PLUS' |
               'MULTIPLY' |
               'SCREEN' |
               'OVERLAY' |
               'DARKEN' |
               'LIGHTEN' |
-              'ColorDODGE' |
-              'ColorBURN' |
+              'COLORDODGE' |
+              'COLORBURN' |
               'HARD_LIGHT' |
               'SOFT_LIGHT' |
               'DIFFERENCE' |
@@ -650,7 +650,8 @@ Reserved_Variable
             ( 'unit' '.' ( 'rotation' | 'canvas' ) ) |
             ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
-            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
+            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
+            ( 'draw' '.' ( 'antialiasing' | 'blendingMode' ) ) |
             ( 'canvas' '.'
                 ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
                 ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' ) ) |

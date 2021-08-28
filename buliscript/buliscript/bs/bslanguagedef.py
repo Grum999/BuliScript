@@ -501,7 +501,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode)\b",
                                                                     'Settings/Draw',
                                                                     [('set draw antialiasing \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -515,12 +515,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set draw antialiasing ON`**\n\n'
                                                                                 'Will enable antialiasing')),
-                                                                     ('set draw blending \x01<BLENDING>',
+                                                                     ('set draw blending mode \x01<BLENDING-MODE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define blending mode]',
                                                                                 # description
                                                                                 'Set blending mode applied to draw\n\n'
-                                                                                'Given *<BLENDING>* can be:\n'
+                                                                                'Given *<BLENDING-MODE>* can be:\n'
                                                                                 ' - **`NORMAL`**\n'
                                                                                 ' - **`SOURCE_OVER`**\n'
                                                                                 ' - **`DESTINATION_OVER`**\n'
@@ -3414,7 +3414,24 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letter_spacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode)\b",
+                                                                    'Variables/Draw',
+                                                                    [(':draw.antialiasing',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current antialiasing status]',
+                                                                                # description
+                                                                                'Current antialiasing status applied when drawing\n'
+                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                     (':draw.blendingMode',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current blending mode]',
+                                                                                # description
+                                                                                'Current blending mode applied when drawing\n'
+                                                                                'Returned as string value')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letterspacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
                                                                     'Variables/Text',
                                                                     [(':text.color',
                                                                             TokenizerRule.formatDescription(
@@ -3452,13 +3469,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current outline status\n'
                                                                                 'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
-                                                                     (':text.letter_spacing.spacing',
+                                                                     (':text.letterSpacing.spacing',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text letter spacing value]',
                                                                                 # description
                                                                                 'Current letter spacing value\n'
-                                                                                'Returned as number value, using `:text.letter_spacing.unit` unit')),
-                                                                     (':text.letter_spacing.unit',
+                                                                                'Returned as number value, using `:text.letterSpacing.unit` unit')),
+                                                                     (':text.letterSpacing.unit',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text letter spacing value]',
                                                                                 # description
@@ -4284,7 +4301,7 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Action_Set_Draw_Blending',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw blending', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw blending mode', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )

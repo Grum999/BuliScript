@@ -92,6 +92,8 @@ class BSInterpreter(QObject):
     CONST_FILL_RULE=['EVEN','WINDING']
     CONST_HALIGN=['LEFT','CENTER','RIGHT']
     CONST_VALIGN=['TOP','MIDDLE','BOTTOM']
+    CONST_DRAW_BLENDING_MODE=['NORMAL','SOURCE_OVER','DESTINATION_CLEAR','DESTINATION_OVER','SOURCE_IN','SOURCE_OUT','DESTINATION_IN','DESTINATION_OUT','DESTINATION_ATOP','SOURCE_ATOP','EXCLUSIVE_OR','PLUS','MULTIPLY','SCREEN','OVERLAY','DARKEN','LIGHTEN','COLORDODGE','COLORBURN','HARD_LIGHT','SOFT_LIGHT','DIFFERENCE','EXCLUSION',
+                              'BITWISE_S_OR_D','BITWISE_S_AND_D','BITWISE_S_XOR_D','BITWISE_S_NOR_D','BITWISE_S_NAND_D','BITWISE_NS_XOR_D','BITWISE_S_NOT','BITWISE_NS_AND_D','BITWISE_S_AND_ND','BITWISE_NS_OR_D','BITWISE_CLEAR','BITWISE_SET','BITWISE_NOT_D','BITWISE_S_OR_ND']
 
     def __init__(self, languageDef):
         super(BSInterpreter, self).__init__(None)
@@ -341,7 +343,6 @@ class BSInterpreter(QObject):
             return self.__executeActionSetFillRule(currentAst)
         elif currentAst.id() == 'Action_Set_Fill_Opacity':
             return self.__executeActionSetFillOpacity(currentAst)
-
         elif currentAst.id() == 'Action_Set_Text_Color':
             return self.__executeActionSetTextColor(currentAst)
         elif currentAst.id() == 'Action_Set_Text_Opacity':
@@ -364,6 +365,11 @@ class BSInterpreter(QObject):
             return self.__executeActionSetTextHAlignment(currentAst)
         elif currentAst.id() == 'Action_Set_Text_VAlignment':
             return self.__executeActionSetTextVAlignment(currentAst)
+
+        elif currentAst.id() == 'Action_Set_Draw_Antialiasing':
+            return self.__executeActionSetDrawAntialiasing(currentAst)
+        elif currentAst.id() == 'Action_Set_Draw_Blending':
+            return self.__executeActionSetDrawBlending(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -869,8 +875,8 @@ class BSInterpreter(QObject):
     def __executeActionSetTextLetterSpacing(self, currentAst):
         """Set text letter spacing
 
-        :text.letter_spacing.spacing
-        :text.letter_spacing.unit
+        :text.letterSpacing.spacing
+        :text.letterSpacing.unit
         """
         fctLabel='Action `set text letter spacing`'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
@@ -887,10 +893,10 @@ class BSInterpreter(QObject):
                 value=max(1, value)
 
         self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"letter spacing unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}     => :text.letter_spacing.spacing, text.letter_spacing.unit ", currentAst)
+        self.__verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}     => :text.letterSpacing.spacing, text.letterSpacing.unit ", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.letter_spacing.spacing', value, True)
-        self.__scriptBlockStack.current().setVariable(':text.letter_spacing.unit', unit, True)
+        self.__scriptBlockStack.current().setVariable(':text.letterspacing.spacing', value, True)
+        self.__scriptBlockStack.current().setVariable(':text.letterspacing.unit', unit, True)
 
         self.__delay()
         return None
@@ -953,6 +959,42 @@ class BSInterpreter(QObject):
         self.__verbose(f"set text vertical alignment {self.__strValue(value)}      => :text.alignment.vertical", currentAst)
 
         self.__scriptBlockStack.current().setVariable(':text.alignment.vertical', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetDrawAntialiasing(self, currentAst):
+        """Set draw antialiasing
+
+        :draw.antialiasing
+        """
+        fctLabel='Action `set draw antialiasing`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+
+        self.__verbose(f"set draw antialiasing {self.__strValue(value)}      => :draw.antialiasing", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':draw.antialiasing', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetDrawBlending(self, currentAst):
+        """Set draw blending mode
+
+        :draw.blendingMode
+        """
+        fctLabel='Action `set draw blending mode`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<BLENDING-MODE>', value in BSInterpreter.CONST_DRAW_BLENDING_MODE, f"blending mode value can be: {', '.join(BSInterpreter.CONST_DRAW_BLENDING_MODE)}")
+
+        self.__verbose(f"set draw blending mode {self.__strValue(value)}      => :draw.blendingMode", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':draw.blendingmode', value, True)
 
         self.__delay()
         return None
