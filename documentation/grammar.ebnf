@@ -653,7 +653,7 @@ Reserved_Variable
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
             ( 'draw' '.' ( 'antialiasing' | 'blendingMode' ) ) |
             ( 'canvas' '.'
-                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
+                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
                 ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' ) ) |
                 ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |

@@ -365,11 +365,19 @@ class BSInterpreter(QObject):
             return self.__executeActionSetTextHAlignment(currentAst)
         elif currentAst.id() == 'Action_Set_Text_VAlignment':
             return self.__executeActionSetTextVAlignment(currentAst)
-
         elif currentAst.id() == 'Action_Set_Draw_Antialiasing':
             return self.__executeActionSetDrawAntialiasing(currentAst)
         elif currentAst.id() == 'Action_Set_Draw_Blending':
             return self.__executeActionSetDrawBlending(currentAst)
+
+        elif currentAst.id() == 'Action_Set_Canvas_Grid_Color':
+            return self.__executeActionSetCanvasGridColor(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Grid_Style':
+            return self.__executeActionSetCanvasGridStyle(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Grid_Opacity':
+            return self.__executeActionSetCanvasGridOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Grid_Size':
+            return self.__executeActionSetCanvasGridSize(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -998,6 +1006,136 @@ class BSInterpreter(QObject):
 
         self.__delay()
         return None
+
+    def __executeActionSetCanvasGridColor(self, currentAst):
+        """Set canvas grid color
+
+        :canvas.grid.color
+        """
+        fctLabel='Action `set canvas grid color`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+
+        self.__verbose(f"set canvas grid color {self.__strValue(value)}      => :canvas.grid.color", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.color', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasGridStyle(self, currentAst):
+        """Set canvas grid style
+
+        :canvas.grid.style
+        """
+        fctLabel='Action `set canvas grid style`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<STYLE>', value in BSInterpreter.CONST_PEN_STYLE, f"style value for grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+
+        self.__verbose(f"set canvas grid style {self.__strValue(value)}      => :canvas.grid.style", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.style', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasGridOpacity(self, currentAst):
+        """Set canvas grid opacity
+
+        :canvas.grid.color
+        """
+        fctLabel='Action `set canvas grid opacity`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+
+        if isinstance(value, int):
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+                value=min(255, max(0, value))
+        else:
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+                value=min(1.0, max(0.0, value))
+
+        self.__verbose(f"set canvas grid opacity {self.__strValue(value)}      => :canvas.grid.color", currentAst)
+
+        color=self.__scriptBlockStack.current().variable(':canvas.grid.color', QColor(60,60,128))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.color', color, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasGridSize(self, currentAst):
+        """Set canvas grid size
+
+        :canvas.grid.size.major
+        :canvas.grid.size.minor
+        :canvas.grid.size.unit
+        """
+        fctLabel='Action `set canvas grid size`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2, 3)
+
+        major=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+
+        if p2 is None and p3 is None:
+            # no other parameters provided, set default value
+            minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', 0)
+            unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+        elif p3 is None:
+            # p2 has been provided
+            if isinstance(p2, (int, float)):
+                minor=p2
+                unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            else:
+                minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', 0)
+                unit=p2
+        else:
+            # p2+p3 provided
+            minor=p2
+            unit=p3
+
+        self.__checkParamType(currentAst, fctLabel, '<MAJOR>', major, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<MINOR>', minor, int, float)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<MAJOR>', major>0, f"a positive number is expected (current={major})", False):
+            # let default value being applied in this case
+            major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', major, True)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<MINOR>', minor>=0, f"a zero or positive number is expected (current={minor})", False):
+            # let default value being applied in this case
+            minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', minor, True)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<MINOR>', minor<major, f"size for minor grid must be lower than major grid size (current={minor}>{major})", False):
+            # force minor grid to be lower than major grid
+            minor=major/2
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"grid unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__verbose(f"set canvas grid size {self.__strValue(major)} {self.__strValue(minor)} {self.__strValue(unit)}     => :canvas.grid.size.major, :canvas.grid.size.minor, :canvas.grid.size.unit", currentAst)
+
+
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.major', major, True)
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.minor', minor, True)
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.unit', unit, True)
+
+        self.__delay()
+        return None
+
+
+
 
 
     # --------------------------------------------------------------------------

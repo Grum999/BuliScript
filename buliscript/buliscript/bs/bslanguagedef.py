@@ -206,14 +206,14 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define pen color]',
                                                                                 # description
                                                                                 'Set stroke color used for pen\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#RRGGBB[AA]`** or an expression returning a color',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instructions:\n'
                                                                                 '**`set pen color #ffff00`**\n'
                                                                                 '**`set pen color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define pen color as yellow, 100% opacity\n\n'
                                                                                 'Following instructions:\n'
-                                                                                '**`set pen color #ffff0080`**\n'
+                                                                                '**`set pen color #80ffff00`**\n'
                                                                                 '**`set pen color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define pen color as yellow, 50% opacity')),
                                                                      ('set pen size \x01<SIZE> [<UNIT>]',
@@ -302,14 +302,14 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define fill color]',
                                                                                 # description
                                                                                 'Set color used to fill areas\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#RRGGBB[AA]`** or an expression returning a color',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set fill color #ffff00`**\n'
                                                                                 '**`set fill color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define fill color as yellow, 100% opacity\n\n'
                                                                                 'Following instructions:\n'
-                                                                                '**`set fill color #ffff0080`**\n'
+                                                                                '**`set fill color #80ffff00`**\n'
                                                                                 '**`set fill color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define fill color as yellow, 50% opacity')),
                                                                      ('set fill rule \x01<RULE>',
@@ -348,14 +348,14 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define text color]',
                                                                                 # description
                                                                                 'Set color used print text\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#RRGGBB[AA]`** or an expression returning a color',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set text color #ffff00`**\n'
                                                                                 '**`set text color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define text color as yellow, 100% opacity\n\n'
                                                                                 'Following instructions:\n'
-                                                                                '**`set text color #ffff0080`**\n'
+                                                                                '**`set text color #80ffff00`**\n'
                                                                                 '**`set text color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define text color as yellow, 50% opacity')),
                                                                      ('set text opacity \x01<OPACITY>',
@@ -573,13 +573,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas grid color #0000FF88`**\n\n'
+                                                                                '**`set canvas grid color #880000FF`**\n\n'
                                                                                 'Will set a blue grid with 50% opacity')),
                                                                      ('set canvas grid style \x01<STYLE>',
                                                                             TokenizerRule.formatDescription(
@@ -597,13 +594,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid style DOT`**\n\n'
                                                                                 'Will set a dotted line style to render canvas grid')),
-                                                                     ('set canvas grid opacity \x01<VALUE>',
+                                                                     ('set canvas grid opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid opacity]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas grid opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set canvas grid color`** action',
@@ -647,7 +644,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
                                                                                 'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
+                                                                                ' - **`#[AA]RRGGBB`**: a color code\n'
                                                                                 ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
                                                                                 ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
                                                                                 # example
@@ -714,7 +711,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas position\n\n'
                                                                                 'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
+                                                                                ' - **`#[AA]RRGGBB`**: a color code\n'
                                                                                 ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
                                                                                 ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
                                                                                 # example
@@ -3529,6 +3526,12 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas minor grid size\n'
                                                                                  'Returned in current unit')),
+                                                                     (':canvas.grid.size.unit',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas grid unit]',
+                                                                                 # description
+                                                                                 'Current canvas grid unit\n'
+                                                                                 'Returned as string')),
                                                                      (':canvas.grid.style',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas grid style]',
