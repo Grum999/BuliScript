@@ -724,21 +724,18 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas position\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#[AA]RRGGBB`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position color #00FF0088`**\n\n'
-                                                                                'Will set a green position with 50% opacity')),
-                                                                     ('set canvas position opacity \x01<VALUE>',
+                                                                                '**`set canvas grid color #880000FF`**\n\n'
+                                                                                'Will set a blue position with 50% opacity')),
+                                                                     ('set canvas position opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas position opacity]',
                                                                                 # description
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas position opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set canvas position color`** action',
@@ -747,13 +744,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas position opacity 128`**\n'
                                                                                 '**`set canvas position opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas position opacity of 50%')),
-                                                                     ('set canvas position size \x01<VALUE> [<UNIT>]',
+                                                                     ('set canvas position size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas position size]',
                                                                                 # description
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas position size\n\n'
-                                                                                'Given *<VALUE>* is a positive number that define origin line size, expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
