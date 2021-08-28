@@ -793,7 +793,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas background opacity 128`**\n'
                                                                                 '**`set canvas background opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas background opacity of 50%')),
-
                                                                     ],
                                                                     'A'),
 
@@ -909,9 +908,9 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+execution\s+(?:verbose)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+script\s+execution\s+(?:verbose)\b",
                                                                     'Settings/Execution',
-                                                                    [('set execution verbose \x01<SWITCH>',
+                                                                    [('set script execution verbose \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define execution verbose state]',
                                                                                 # description
@@ -1227,7 +1226,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw star 8 40 MM 50 RPCT`**\n\n'
                                                                                 'Draw a 8 branches star of 40 millimeters outer width radius and 50% (of 40 MM) inner width whatever is default canvas unit')),
-
                                                                     ],
                                                                     'A'),
 
@@ -1739,7 +1737,7 @@ class BSLanguageDef(LanguageDef):
 
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw)))"
+                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script)))"
                                                                        r"|(?:draw(\s+(?:round|scaled))?)"
                                                                        r"|(?:clear|apply(?:\s+to)?)"
                                                                        r"|(?:fill|pen|move|turn|push|pop)"
@@ -3418,7 +3416,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current fill status]',
                                                                                 # description
                                                                                 'Current fill status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -3429,7 +3427,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current antialiasing status]',
                                                                                 # description
                                                                                 'Current antialiasing status applied when drawing\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':draw.blendingMode',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current blending mode]',
@@ -3464,19 +3462,19 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current text style: bold status]',
                                                                                 # description
                                                                                 'Current bold status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.italic',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text style: italic status]',
                                                                                 # description
                                                                                 'Current italic status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.outline',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text style: outline status]',
                                                                                 # description
                                                                                 'Current outline status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.letterSpacing.spacing',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text letter spacing value]',
@@ -3698,6 +3696,19 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas bottom position, relative to origin\n'
                                                                                  'Returned in current unit')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+
+
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\script\.bexecution\.(?:verbose)\b",
+                                                                    'Variables/Script/Execution',
+                                                                    [(':script.execution.verbose',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current verbose status]',
+                                                                                # description
+                                                                                'Current verbose status for script execution\n'
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -4088,7 +4099,7 @@ class BSLanguageDef(LanguageDef):
                       # TODO
                       #'Action_Set_Layer',
                       #'Action_Set_Selection',
-                      'Action_Set_Execution_Verbose',
+                      'Action_Set_Script_Execution_Verbose',
                       'Action_Draw_Shape_Square',
                       'Action_Draw_Shape_Round_Square',
                       'Action_Draw_Shape_Rect',
@@ -4452,10 +4463,10 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Execution_Verbose',
+        GrammarRule('Action_Set_Script_Execution_Verbose',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, 'set execution verbose', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, 'set script execution verbose', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )

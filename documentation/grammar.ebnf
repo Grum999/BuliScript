@@ -101,7 +101,7 @@ Action  ::= (
                 Action_Set_Layer |
                 Action_Set_Selection |
                 */
-                Action_Set_Execution |
+                Action_Set_Script_Execution |
                 Action_Draw_Shape |
                 Action_Draw_Misc |
                 Action_Draw_Fill |
@@ -195,8 +195,8 @@ Action_Set_Selection
         ::= 'TODO: define Set selection'
 */
 
-Action_Set_Execution
-        ::= 'set' 'execution' 'verbose' Evaluate_Boolean_Expression
+Action_Set_Script_Execution
+        ::= 'set' 'script' 'execution' 'verbose' Evaluate_Boolean_Expression
 
 
 Action_Draw_Shape
@@ -665,6 +665,7 @@ Reserved_Variable
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
             ) |
+            ( 'script' '.' 'execution' '.' 'verbose' ) |
             ( 'repeat' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) ) |
             ( 'foreach' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) )
         )

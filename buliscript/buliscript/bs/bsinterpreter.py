@@ -397,6 +397,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasPositionFulfill(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Background_Opacity':
             return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_Script_Execution_Verbose':
+            return self.__executeActionSetExecutionVerbose(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -1394,7 +1396,24 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
+    def __executeActionSetExecutionVerbose(self, currentAst):
+        """Set execution verbose
 
+        :script.execution.verbose
+        """
+        fctLabel='Action `set execution verbose`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+
+        self.__verbose(f"set execution verbose {self.__strValue(value)}      => :script.execution.verbose", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':script.execution.verbose', value, True)
+        self.__optionVerboseMode=value
+
+        self.__delay()
+        return None
 
     # --------------------------------------------------------------------------
     # Functions & Evaluation
