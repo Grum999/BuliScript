@@ -779,13 +779,13 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity)\b",
                                                                     'Settings/Canvas/Background',
-                                                                    [('set canvas background opacity \x01<VALUE>',
+                                                                    [('set canvas background opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas background opacity]',
                                                                                 # description
                                                                                 '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas background opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n',
                                                                                 # example

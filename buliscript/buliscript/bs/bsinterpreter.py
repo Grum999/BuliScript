@@ -395,6 +395,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasPositionSize(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Position_Fulfill':
             return self.__executeActionSetCanvasPositionFulfill(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Background_Opacity':
+            return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -1270,9 +1272,6 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
-
-
-
     def __executeActionSetCanvasPositionColor(self, currentAst):
         """Set canvas position color
 
@@ -1364,6 +1363,33 @@ class BSInterpreter(QObject):
         self.__verbose(f"set canvas position fulfilled {self.__strValue(value)}      => :canvas.position.fulfill", currentAst)
 
         self.__scriptBlockStack.current().setVariable(':canvas.position.fulfill', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasBackgroundOpacity(self, currentAst):
+        """Set canvas background opacity
+
+        :canvas.background.opacity
+        """
+        fctLabel='Action `set canvas background opacity`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+
+        if isinstance(value, int):
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+                value=min(255, max(0, value))
+            value/=255
+        else:
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+                value=min(1.0, max(0.0, value))
+
+        self.__verbose(f"set canvas background opacity {self.__strValue(value)}      => :canvas.background.opacity", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.background.opacity', value, True)
 
         self.__delay()
         return None
