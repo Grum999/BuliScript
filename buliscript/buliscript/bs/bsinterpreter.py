@@ -89,6 +89,7 @@ class BSInterpreter(QObject):
     CONST_PEN_STYLE=['SOLID','DASH','DOT','DASHDOT','NONE']
     CONST_PEN_CAP=['SQUARE','FLAT','ROUNDCAP']
     CONST_PEN_JOIN=['BEVEL','MITTER','ROUNDJOIN']
+    CONST_FILL_RULE=['EVEN','WINDING']
 
     def __init__(self, languageDef):
         super(BSInterpreter, self).__init__(None)
@@ -332,6 +333,13 @@ class BSInterpreter(QObject):
             return self.__executeActionSetPenJoin(currentAst)
         elif currentAst.id() == 'Action_Set_Pen_Opacity':
             return self.__executeActionSetPenOpacity(currentAst)
+
+        elif currentAst.id() == 'Action_Set_Fill_Color':
+            return self.__executeActionSetFillColor(currentAst)
+        elif currentAst.id() == 'Action_Set_Fill_Rule':
+            return self.__executeActionSetFillRule(currentAst)
+        elif currentAst.id() == 'Action_Set_Fill_Opacity':
+            return self.__executeActionSetFillOpacity(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -612,6 +620,75 @@ class BSInterpreter(QObject):
             color.setAlphaF(value)
 
         self.__scriptBlockStack.current().setVariable(':pen.color', color, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetFillColor(self, currentAst):
+        """Set fill color
+
+        :fill.color
+        """
+        fctLabel='Action `set fill color`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+
+        self.__verbose(f"set fill color {self.__strValue(value)}      => :fill.color", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':fill.color', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetFillRule(self, currentAst):
+        """Set fill rule
+
+        :fill.rule
+        """
+        fctLabel='Action `set fill rule`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<RULE>', value in BSInterpreter.CONST_FILL_RULE, f"rule value for fill can be: {', '.join(BSInterpreter.CONST_FILL_RULE)}")
+
+        self.__verbose(f"set fill rule {self.__strValue(value)}      => :fill.rule", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':fill.rule', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetFillOpacity(self, currentAst):
+        """Set fill opacity
+
+        :fill.color
+        """
+        fctLabel='Action `set fill opacity`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+
+        if isinstance(value, int):
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+                value=min(255, max(0, value))
+        else:
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+                value=min(1.0, max(0.0, value))
+
+        self.__verbose(f"set fill opacity {self.__strValue(value)}      => :fill.color", currentAst)
+
+        color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.current().setVariable(':fill.color', color, True)
 
         self.__delay()
         return None

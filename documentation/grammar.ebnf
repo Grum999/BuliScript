@@ -648,7 +648,7 @@ Reserved_Variable
             ( 'position' '.' ( 'x' | 'y' ) ) |
             'angle' |
             ( 'unit' '.' ( 'rotation' | 'coordinates' ) ) |
-            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'opacity' | 'status' ) ) |
+            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' | 'stretch' | 'align' | 'position' ) ) |
             ( 'canvas' '.'

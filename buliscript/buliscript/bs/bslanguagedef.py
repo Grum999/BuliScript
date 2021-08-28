@@ -302,20 +302,15 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define fill color]',
                                                                                 # description
                                                                                 'Set color used to fill areas\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#RRGGBB[AA]`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set fill color #ffff00`**\n'
-                                                                                '**`set fill color 255 255 0`**\n'
-                                                                                '**`set fill color 1.0 1.0 0.0`**\n\n'
+                                                                                '**`set fill color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define fill color as yellow, 100% opacity\n\n'
-                                                                                'Following instruction:\n'
+                                                                                'Following instructions:\n'
                                                                                 '**`set fill color #ffff0080`**\n'
-                                                                                '**`set fill color 255 255 0 128`**\n'
-                                                                                '**`set fill color 1.0 1.0 0.0 0.5`**\n\n'
+                                                                                '**`set fill color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define fill color as yellow, 50% opacity')),
                                                                      ('set fill rule \x01<RULE>',
                                                                             TokenizerRule.formatDescription(
@@ -329,12 +324,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set fill rule WINDING`**\n'
                                                                                 'Will define rule to fulfill area')),
-                                                                     ('set fill opacity \x01<VALUE>',
+                                                                     ('set fill opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define fill opacity]',
                                                                                 # description
                                                                                 'Set fill opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set fill color`** action',
@@ -3359,7 +3354,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
             # todo: add |brush
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|opacity|status)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|status)\b",
                                                                     'Variables/Pen',
                                                                     [(':pen.color',
                                                                             TokenizerRule.formatDescription(
