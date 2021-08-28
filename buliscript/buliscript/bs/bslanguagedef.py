@@ -170,9 +170,9 @@ class BSLanguageDef(LanguageDef):
                                                                     'Settings/Units',
                                                                     [('set unit canvas \x01<UNIT>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define default measure unit]',
+                                                                                'Action [Define default coordinates & measures unit on canvas]',
                                                                                 # description
-                                                                                'Set unit used to define measures (distances, sizes) on canvas\n\n'
+                                                                                'Set unit used to define coordinates & measures (distances, sizes) on canvas\n\n'
                                                                                 'Given *<UNIT>* can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
@@ -348,27 +348,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define text color]',
                                                                                 # description
                                                                                 'Set color used print text\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#RRGGBB[AA]`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set text color #ffff00`**\n'
-                                                                                '**`set text color 255 255 0`**\n'
-                                                                                '**`set text color 1.0 1.0 0.0`**\n\n'
+                                                                                '**`set text color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define text color as yellow, 100% opacity\n\n'
-                                                                                'Following instruction:\n'
+                                                                                'Following instructions:\n'
                                                                                 '**`set text color #ffff0080`**\n'
-                                                                                '**`set text color 255 255 0 128`**\n'
-                                                                                '**`set text color 1.0 1.0 0.0 0.5`**\n\n'
+                                                                                '**`set text color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define text color as yellow, 50% opacity')),
-                                                                     ('set text opacity \x01<VALUE>',
+                                                                     ('set text opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text opacity]',
                                                                                 # description
                                                                                 'Set text opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set text color`** action',
@@ -388,12 +383,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text font "DejaVu Sans"`**\n\n'
                                                                                 'Will define *DejaVu Sans* as text font')),
-                                                                     ('set text size \x01<VALUE> [<UNIT>]',
+                                                                     ('set text size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text size]',
                                                                                 # description
                                                                                 'Set size for text\n\n'
-                                                                                'Given *<VALUE>* is a positive number expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -444,12 +439,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text outline ON`**\n\n'
                                                                                 'Will define text as outline')),
-                                                                     ('set text letter spacing \x01<VALUE> [<UNIT>]',
+                                                                     ('set text letter spacing \x01<SPACING> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text letter spacing]',
                                                                                 # description
                                                                                 'Set space between text letters\n\n'
-                                                                                'Given *<VALUE>* is a number expressed:\n'
+                                                                                'Given *<SPACING>* is a number expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -462,16 +457,16 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set text letter spacing 8`**\n\n'
                                                                                 'Will define a letter spacing for text of 40 pixels if default canvas unit is **`PX`**\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`set text letter spacing 150 PERCENTAGE`**\n\n'
+                                                                                '**`set text letter spacing 150 PCT`**\n\n'
                                                                                 'Will define a letter spacing for text of 150% of base letter spacing')),
-                                                                     ('set text stretch \x01<VALUE>',
+                                                                     ('set text stretch \x01<STRETCH>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text stretch]',
                                                                                 # description
                                                                                 'Set text stretching\n\n'
-                                                                                'Given *<VALUE>* is a positive number that define stretch factor:\n'
-                                                                                ' - **`int`**: a number; integer value define no stretch to 100\n'
-                                                                                ' - **`dec`**: a number; decimal value define no stretch to 1.0',
+                                                                                'Given *<STRETCH>* is a positive number that define stretch factor:\n'
+                                                                                ' - **`int`**: a number; integer value define no stretch to 100 (100%)\n'
+                                                                                ' - **`dec`**: a number; decimal value define no stretch to 1.0 (100%)',
                                                                                 # example
                                                                                 'Following instructions:\n'
                                                                                 '**`set text stretch 150`**\n\n'
@@ -3336,7 +3331,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bunit\.(?:rotation|coordinates)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bunit\.(?:rotation|canvas)\b",
                                                                     'Variables/Units',
                                                                     [(':unit.rotation',
                                                                             TokenizerRule.formatDescription(
@@ -3344,9 +3339,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current rotation unit\n'
                                                                                 'Returned as string value')),
-                                                                     (':unit.coordinates',
+                                                                     (':unit.canvas',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current used measure unit]',
+                                                                                'Reserved variable [Current used coordinates & measures unit]',
                                                                                 # description
                                                                                 'Current canvas unit\n'
                                                                                 'Returned as string value')),
@@ -3419,7 +3414,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letter_spacing|stretch|color|align|position)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letter_spacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
                                                                     'Variables/Text',
                                                                     [(':text.color',
                                                                             TokenizerRule.formatDescription(
@@ -3457,25 +3452,31 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current outline status\n'
                                                                                 'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
-                                                                     (':text.letter_spacing',
+                                                                     (':text.letter_spacing.spacing',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text letter spacing value]',
                                                                                 # description
                                                                                 'Current letter spacing value\n'
-                                                                                'Returned as ???????????????? unit?????')),
+                                                                                'Returned as number value, using `:text.letter_spacing.unit` unit')),
+                                                                     (':text.letter_spacing.unit',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current text letter spacing value]',
+                                                                                # description
+                                                                                'Current letter spacing value\n'
+                                                                                'Returned as string')),
                                                                      (':text.stretch',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text stretch value]',
                                                                                 # description
                                                                                 'Current stretch value\n'
-                                                                                'Returned as decimal value unit????????????')),
-                                                                     (':text.align',
+                                                                                'Returned as an integer value (100=no strech)')),
+                                                                     (':text.alignment.horizontal',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text horizontal alignment]',
                                                                                 # description
                                                                                 'Current horizontal alignment\n'
                                                                                 'Returned as string value')),
-                                                                     (':text.position',
+                                                                     (':text.alignment.vertical',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text vertical alignment]',
                                                                                 # description

@@ -90,6 +90,8 @@ class BSInterpreter(QObject):
     CONST_PEN_CAP=['SQUARE','FLAT','ROUNDCAP']
     CONST_PEN_JOIN=['BEVEL','MITTER','ROUNDJOIN']
     CONST_FILL_RULE=['EVEN','WINDING']
+    CONST_HALIGN=['LEFT','CENTER','RIGHT']
+    CONST_VALIGN=['TOP','MIDDLE','BOTTOM']
 
     def __init__(self, languageDef):
         super(BSInterpreter, self).__init__(None)
@@ -333,13 +335,35 @@ class BSInterpreter(QObject):
             return self.__executeActionSetPenJoin(currentAst)
         elif currentAst.id() == 'Action_Set_Pen_Opacity':
             return self.__executeActionSetPenOpacity(currentAst)
-
         elif currentAst.id() == 'Action_Set_Fill_Color':
             return self.__executeActionSetFillColor(currentAst)
         elif currentAst.id() == 'Action_Set_Fill_Rule':
             return self.__executeActionSetFillRule(currentAst)
         elif currentAst.id() == 'Action_Set_Fill_Opacity':
             return self.__executeActionSetFillOpacity(currentAst)
+
+        elif currentAst.id() == 'Action_Set_Text_Color':
+            return self.__executeActionSetTextColor(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Opacity':
+            return self.__executeActionSetTextOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Font':
+            return self.__executeActionSetTextFont(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Size':
+            return self.__executeActionSetTextSize(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Bold':
+            return self.__executeActionSetTextBold(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Italic':
+            return self.__executeActionSetTextItalic(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Outline':
+            return self.__executeActionSetTextOutline(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Letter_Spacing':
+            return self.__executeActionSetTextLetterSpacing(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_Stretch':
+            return self.__executeActionSetTextStretch(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_HAlignment':
+            return self.__executeActionSetTextHAlignment(currentAst)
+        elif currentAst.id() == 'Action_Set_Text_VAlignment':
+            return self.__executeActionSetTextVAlignment(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -457,17 +481,17 @@ class BSInterpreter(QObject):
     def __executeActionSetUnitCanvas(self, currentAst):
         """Set canvas unit
 
-        :unit.coordinates
+        :unit.canvas
         """
         fctLabel='Action `set unit canvas`'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', value in BSInterpreter.CONST_MEASURE_UNIT, f"measure unit value for canvas can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', value in BSInterpreter.CONST_MEASURE_UNIT, f"coordinates & measures unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"set unit canvas {self.__strValue(value)}      => :unit.coordinates", currentAst)
+        self.__verbose(f"set unit canvas {self.__strValue(value)}      => :unit.canvas", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':unit.coordinates', value, True)
+        self.__scriptBlockStack.current().setVariable(':unit.canvas', value, True)
 
         self.__delay()
         return None
@@ -525,7 +549,7 @@ class BSInterpreter(QObject):
             value=max(0.1, value)
 
         if unit:
-            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"measure unit value for canvas can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
             self.__verbose(f"set pen size {self.__strValue(value)} {self.__strValue(unit)}     => :pen.size", currentAst)
         else:
             self.__verbose(f"set pen size {self.__strValue(value)}      => :pen.size", currentAst)
@@ -689,6 +713,246 @@ class BSInterpreter(QObject):
             color.setAlphaF(value)
 
         self.__scriptBlockStack.current().setVariable(':fill.color', color, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextColor(self, currentAst):
+        """Set text color
+
+        :text.color
+        """
+        fctLabel='Action `set text color`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+
+        self.__verbose(f"set text color {self.__strValue(value)}      => :text.color", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.color', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextOpacity(self, currentAst):
+        """Set text opacity
+
+        :text.color
+        """
+        fctLabel='Action `set text opacity`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+
+        if isinstance(value, int):
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+                value=min(255, max(0, value))
+        else:
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+                value=min(1.0, max(0.0, value))
+
+        self.__verbose(f"set text opacity {self.__strValue(value)}      => :text.color", currentAst)
+
+        color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.current().setVariable(':text.color', color, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextFont(self, currentAst):
+        """Set text font
+
+        :text.font
+        """
+        fctLabel='Action `set text font`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<FONT>', value, str)
+
+        self.__verbose(f"set text font {self.__strValue(value)}      => :text.font", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.font', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextSize(self, currentAst):
+        """Set text size
+
+        :text.size
+        """
+        fctLabel='Action `set text size`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, '<SIZE>', value, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<SIZE>', value>0, f"a positive number is expected (current={value})", False):
+            # if value<=0, force to 0.1 (non blocking)
+            value=max(0.1, value)
+
+        if unit:
+            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.__verbose(f"set text size {self.__strValue(value)} {self.__strValue(unit)}     => :text.size", currentAst)
+        else:
+            self.__verbose(f"set text size {self.__strValue(value)}      => :text.size", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.size', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextBold(self, currentAst):
+        """Set text bold
+
+        :text.bold
+        """
+        fctLabel='Action `set text bold`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+
+        self.__verbose(f"set text bold {self.__strValue(value)}      => :text.bold", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.bold', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextItalic(self, currentAst):
+        """Set text italic
+
+        :text.italic
+        """
+        fctLabel='Action `set text italic`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+
+        self.__verbose(f"set text italic {self.__strValue(value)}      => :text.italic", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.italic', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextOutline(self, currentAst):
+        """Set text outline
+
+        :text.outline
+        """
+        fctLabel='Action `set text outline`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+
+        self.__verbose(f"set text outline {self.__strValue(value)}      => :text.outline", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.outline', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextLetterSpacing(self, currentAst):
+        """Set text letter spacing
+
+        :text.letter_spacing.spacing
+        :text.letter_spacing.unit
+        """
+        fctLabel='Action `set text letter spacing`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<SPACING>', value, int, float)
+
+        if unit=='PCT':
+            # in this case, relative to text letter spacing base (not document dimension)
+            if not self.__checkParamDomain(currentAst, fctLabel, '<SPACING>', value>0, f"a non-zero positive number is expected when expressed in percentage (current={value})", False):
+                # if value<=0, force to 0.1 (non blocking)
+                value=max(1, value)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"letter spacing unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}     => :text.letter_spacing.spacing, text.letter_spacing.unit ", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.letter_spacing.spacing', value, True)
+        self.__scriptBlockStack.current().setVariable(':text.letter_spacing.unit', unit, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextStretch(self, currentAst):
+        """Set text stretch
+
+        :text.stretch
+        """
+        fctLabel='Action `set text stretch`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<STRETCH>', value, int, float)
+
+        if isinstance(value, int):
+            # from 1 to 4000
+            if not self.__checkParamDomain(currentAst, fctLabel, '<STRETCH>', value>0 and value<=4000, f"allowed stretch value when provided as an integer number is range [1;4000] (current={value})", False):
+                value=min(4000, max(1, value))
+        else:
+            if not self.__checkParamDomain(currentAst, fctLabel, '<STRETCH>', value>0 and value<=40, f"allowed stretch value when provided as a decimal number is range [0.01;40] (current={value})", False):
+                value=min(40.0, max(1.0, value))
+            value=round(value*100)
+
+        self.__scriptBlockStack.current().setVariable(':text.stretch', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextHAlignment(self, currentAst):
+        """Set text horizontal alignment
+
+        :text.alignment.horizontal
+        """
+        fctLabel='Action `set text horizontal alignment`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<H-ALIGNMENT>', value in BSInterpreter.CONST_HALIGN, f"text horizontal alignment value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
+
+        self.__verbose(f"set text horizontal alignment {self.__strValue(value)}      => :text.alignment.horizontal", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.alignment.horizontal', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetTextVAlignment(self, currentAst):
+        """Set text vertical alignment
+
+        :text.alignment.vertical
+        """
+        fctLabel='Action `set text vertical alignment`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<V-ALIGNMENT>', value in BSInterpreter.CONST_VALIGN, f"text vertical alignment value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
+
+        self.__verbose(f"set text vertical alignment {self.__strValue(value)}      => :text.alignment.vertical", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':text.alignment.vertical', value, True)
 
         self.__delay()
         return None

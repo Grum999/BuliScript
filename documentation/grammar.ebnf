@@ -647,10 +647,10 @@ Reserved_Variable
         ::= ':' (
             ( 'position' '.' ( 'x' | 'y' ) ) |
             'angle' |
-            ( 'unit' '.' ( 'rotation' | 'coordinates' ) ) |
+            ( 'unit' '.' ( 'rotation' | 'canvas' ) ) |
             ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
-            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' | 'stretch' | 'align' | 'position' ) ) |
+            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
             ( 'canvas' '.'
                 ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
                 ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' ) ) |
