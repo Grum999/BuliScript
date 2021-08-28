@@ -135,8 +135,8 @@ class BSLanguageDef(LanguageDef):
         CONSTANT_PENCAP = ('constPenCap', 'A pen cap constant')
         CONSTANT_PENJOIN = ('constPenJoin', 'A pen join constant')
         CONSTANT_FILLRULE = ('constFillRule', 'A fill rule constant')
-        CONSTANT_TEXTHALIGN = ('constTextHAlign', 'A horizontal text align constant')
-        CONSTANT_TEXTVALIGN = ('constTextVAlign', 'A vertical text align constant')
+        CONSTANT_POSHALIGN = ('constTextHAlign', 'A horizontal text align constant')
+        CONSTANT_POSVALIGN = ('constTextVAlign', 'A vertical text align constant')
         CONSTANT_BLENDINGMODE = ('constBlendingMode', 'A blending mode')
         CONSTANT_SELECTIONMODE = ('constSelectMode', 'A selection mode')
         CONSTANT_COLORLABEL = ('constColorlabel', 'A color label value')
@@ -635,7 +635,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will define a major grid for which line is drawn every 10 millimeters and a minor grid drawn every 5 millimeters')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size|position)\b",
                                                                     'Settings/Canvas/Origin',
                                                                     [('set canvas origin color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
@@ -643,14 +643,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#[AA]RRGGBB`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas origin color #FF000088`**\n\n'
-                                                                                'Will set a red origin with 50% opacity')),
+                                                                                '**`set canvas grid color #880000FF`**\n\n'
+                                                                                'Will set a blue origin with 50% opacity')),
                                                                      ('set canvas origin style \x01<STYLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin style]',
@@ -667,13 +664,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas origin style SOLID`**\n\n'
                                                                                 'Will set a solid line style to render canvas origin')),
-                                                                     ('set canvas origin opacity \x01<VALUE>',
+                                                                     ('set canvas origin opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin opacity]',
                                                                                 # description
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas origin opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set canvas origin color`** action',
@@ -682,13 +679,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas grid opacity 128`**\n'
                                                                                 '**`set canvas grid opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas origin size \x01<VALUE> [<UNIT>]',
+                                                                     ('set canvas origin size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin size]',
                                                                                 # description
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas origin size\n\n'
-                                                                                'Given *<VALUE>* is a positive number that define origin line size, expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -696,6 +693,23 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
                                                                                 ' - **`MM`**: use millimeters\n'
                                                                                 ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas origin size 40 PX`**\n\n'
+                                                                                'Will define an origin size of 40 pixels')),
+                                                                     ('set canvas origin position \x01<ABSISSA> <ORDINATE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas origin position]',
+                                                                                # description
+                                                                                'Set canvas origin position (ie: where to (0,0) coordinates is)\n\n'
+                                                                                'Given *<ABSISSA>* can be:\n'
+                                                                                ' - **`LEFT`**: use left canvas side for absissa origin\n'
+                                                                                ' - **`CENTER`**: use center canvas for absissa origin\n'
+                                                                                ' - **`RIGHT`**: use right canvas side for absissa origin\n\n'
+                                                                                'Given *<ORDINATE>* can be:\n'
+                                                                                ' - **`TOP`**: use top canvas side for ordinate origin\n'
+                                                                                ' - **`MIDDLE`**: use center canvas for ordinate origin\n'
+                                                                                ' - **`BOTTOM`**: use bottom canvas side for ordinate origin',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas origin size 40 PX`**\n\n'
@@ -3021,7 +3035,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'c',
                                                                     onInitValue=self.__initTokenUpper),
-            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, r"\b(?:LEFT|CENTER|RIGHT)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSHALIGN, r"\b(?:LEFT|CENTER|RIGHT)\b",
                                                                     'Constants/Text/Alignment/Horizontal',
                                                                     [('LEFT',
                                                                             TokenizerRule.formatDescription(
@@ -3041,7 +3055,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'c',
                                                                     onInitValue=self.__initTokenUpper),
-            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, r"\b(?:TOP|MIDDLE|BOTTOM)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN, r"\b(?:TOP|MIDDLE|BOTTOM)\b",
                                                                     'Constants/Text/Alignment/Vertical',
                                                                     [('TOP',
                                                                             TokenizerRule.formatDescription(
@@ -3577,6 +3591,18 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas origin opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
+                                                                     (':canvas.origin.position.absissa',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas origin absissa]',
+                                                                                 # description
+                                                                                 'Current canvas origin absissa\n'
+                                                                                 'Returned as a string')),
+                                                                     (':canvas.origin.position.ordinate',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas origin ordinate]',
+                                                                                 # description
+                                                                                 'Current canvas origin ordinate\n'
+                                                                                 'Returned as a string')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -3871,8 +3897,8 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_PENCAP, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_PENJOIN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_FILLRULE, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSHALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSVALIGN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
@@ -3962,8 +3988,8 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_PENCAP, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_PENJOIN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_FILLRULE, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSHALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSVALIGN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
@@ -4056,6 +4082,7 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Origin_Style',
                       'Action_Set_Canvas_Origin_Size',
                       'Action_Set_Canvas_Origin_Opacity',
+                      'Action_Set_Canvas_Origin_Position',
                       'Action_Set_Canvas_Position_Color',
                       'Action_Set_Canvas_Position_Size',
                       'Action_Set_Canvas_Position_Opacity',
@@ -4366,6 +4393,15 @@ class BSLanguageDef(LanguageDef):
                 'Any_Expression',
                 GROptional('Any_Expression'),
                 GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Origin_Position',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin position', False),
+                'Any_Expression',
+                'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -5012,8 +5048,8 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_PENCAP),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_PENJOIN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_FILLRULE),
-                      GRToken(BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN),
-                      GRToken(BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_POSHALIGN),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
                       'List_Value',
                     )

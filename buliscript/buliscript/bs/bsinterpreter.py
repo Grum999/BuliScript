@@ -369,7 +369,6 @@ class BSInterpreter(QObject):
             return self.__executeActionSetDrawAntialiasing(currentAst)
         elif currentAst.id() == 'Action_Set_Draw_Blending':
             return self.__executeActionSetDrawBlending(currentAst)
-
         elif currentAst.id() == 'Action_Set_Canvas_Grid_Color':
             return self.__executeActionSetCanvasGridColor(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Grid_Style':
@@ -378,6 +377,16 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasGridOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Grid_Size':
             return self.__executeActionSetCanvasGridSize(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Origin_Color':
+            return self.__executeActionSetCanvasOriginColor(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Origin_Style':
+            return self.__executeActionSetCanvasOriginStyle(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Origin_Opacity':
+            return self.__executeActionSetCanvasOriginOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Origin_Size':
+            return self.__executeActionSetCanvasOriginSize(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Origin_Position':
+            return self.__executeActionSetCanvasOriginPosition(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -1130,6 +1139,125 @@ class BSInterpreter(QObject):
         self.__scriptBlockStack.current().setVariable(':canvas.grid.size.major', major, True)
         self.__scriptBlockStack.current().setVariable(':canvas.grid.size.minor', minor, True)
         self.__scriptBlockStack.current().setVariable(':canvas.grid.size.unit', unit, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasOriginColor(self, currentAst):
+        """Set canvas origin color
+
+        :canvas.origin.color
+        """
+        fctLabel='Action `set canvas origin color`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+
+        self.__verbose(f"set canvas origin color {self.__strValue(value)}      => :canvas.origin.color", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.color', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasOriginStyle(self, currentAst):
+        """Set canvas origin style
+
+        :canvas.origin.style
+        """
+        fctLabel='Action `set canvas origin style`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<STYLE>', value in BSInterpreter.CONST_PEN_STYLE, f"style value for origin can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+
+        self.__verbose(f"set canvas origin style {self.__strValue(value)}      => :canvas.origin.style", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.style', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasOriginOpacity(self, currentAst):
+        """Set canvas origin opacity
+
+        :canvas.origin.color
+        """
+        fctLabel='Action `set canvas origin opacity`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+
+        if isinstance(value, int):
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+                value=min(255, max(0, value))
+        else:
+            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+                value=min(1.0, max(0.0, value))
+
+        self.__verbose(f"set canvas origin opacity {self.__strValue(value)}      => :canvas.origin.color", currentAst)
+
+        color=self.__scriptBlockStack.current().variable(':canvas.origin.color', QColor(60,60,128))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.color', color, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasOriginSize(self, currentAst):
+        """Set canvas origin size
+
+        :canvas.origin.size
+        """
+        fctLabel='Action `set canvas origin size`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, '<SIZE>', value, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<SIZE>', value>0, f"a positive number is expected (current={value})", False):
+            # if value<=0, force to 0.1 (non blocking)
+            value=max(0.1, value)
+
+        if unit:
+            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.__verbose(f"set canvas origin size {self.__strValue(value)} {self.__strValue(unit)}     => :canvas.origin.size", currentAst)
+        else:
+            self.__verbose(f"set canvas origin size {self.__strValue(value)}      => :canvas.origin.size", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.size', value, True)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasOriginPosition(self, currentAst):
+        """Set canvas origin position
+
+        :canvas.origin.position.absissa
+        :canvas.origin.position.ordinate
+        """
+        fctLabel='Action `set canvas origin position`'
+        self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        absissa=self.__evaluate(currentAst.node(0))
+        ordinate=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamDomain(currentAst, fctLabel, '<ABSISSA>', absissa in BSInterpreter.CONST_HALIGN, f"absissa position value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
+        self.__checkParamDomain(currentAst, fctLabel, '<ORDINATE>', ordinate in BSInterpreter.CONST_VALIGN, f"ordinate position value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
+
+        self.__verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}     => :canvas.origin.position.absissa, canvas.origin.position.ordinate", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.position.absissa', absissa, True)
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.position.ordinate', ordinate, True)
 
         self.__delay()
         return None

@@ -154,9 +154,9 @@ Action_Set_Text
                 ( 'letter' 'spacing'    Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'stretch'             Evaluate_Number_Expression ) |
                 ( 'horizontal' 'alignment'
-                                        AlignH_Expression ) |
+                                        PositionH_Expression ) |
                 ( 'vertical' 'alignment'
-                                        AlignV_Expression )
+                                        PositionV_Expression )
             )
 
 
@@ -173,9 +173,15 @@ Action_Set_Canvas
         ::= 'set' 'canvas' (
                 ( 'grid' | 'origin' | 'position' ) (
                     ( 'color'   Color_Expression ) |
-                    ( 'style'   PenStyle_Expression ) |
-                    ( 'size'    Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? )
+                    ( 'style'   PenStyle_Expression )
                 ) |
+
+                ( 'grid' 'size'  Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? ) |
+                ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
+
+
+                ( )
+                ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
                 'position' ( 'fulfilled' Evaluate_Boolean_Expression )
             )
@@ -402,12 +408,12 @@ Any_Expression
             PenCap_Expression |
             PenJoin_Expression |
             FillRule_Expression |
-            AlignH_Expression |
-            AlignV_Expression |
+            PositionH_Expression |
+            PositionV_Expression |
             BlendingMode_Expression
 
 Color_Expression
-        ::= ('#' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit (HexDigit HexDigit)?) |
+        ::= ('#' (HexDigit HexDigit)? HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit ) |
             Function |
             Variable
 
@@ -452,10 +458,10 @@ PenJoin_Expression
 FillRule_Expression
         ::= ( 'EVEN' | 'WINDING' ) | Function | Variable
 
-AlignH_Expression
+PositionH_Expression
         ::= ( 'LEFT' | 'CENTER' | 'RIGHT' ) | Function | Variable
 
-AlignV_Expression
+PositionV_Expression
         ::= ( 'TOP' | 'MIDDLE' | 'CENTER' ) | Function | Variable
 
 BlendingMode_Expression
@@ -654,7 +660,7 @@ Reserved_Variable
             ( 'draw' '.' ( 'antialiasing' | 'blendingMode' ) ) |
             ( 'canvas' '.'
                 ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
-                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' ) ) |
+                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
                 ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
