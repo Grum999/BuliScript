@@ -1342,11 +1342,11 @@ class BSLanguageDef(LanguageDef):
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Move pen to home (origin)]',
                                                                                 # description
-                                                                                'Move to home coordinates (canvas center)',
+                                                                                'Move to home coordinates (canvas origin)',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`move home`**\n\n'
-                                                                                'Set current position to center of canvas')),
+                                                                                'Set current position to origin of canvas')),
                                                                     ('move forward \x01<VALUE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Move pen forward]',

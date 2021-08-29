@@ -440,6 +440,24 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawPenUp(currentAst)
         elif currentAst.id() == 'Action_Draw_Pen_Down':
             return self.__executeActionDrawPenDown(currentAst)
+        elif currentAst.id() == 'Action_Draw_Move_Home':
+            return self.__executeActionDrawMoveHome(currentAst)
+        elif currentAst.id() == 'Action_Draw_Move_Forward':
+            return self.__executeActionDrawMoveForward(currentAst)
+        elif currentAst.id() == 'Action_Draw_Move_Backward':
+            return self.__executeActionDrawMoveBackward(currentAst)
+        elif currentAst.id() == 'Action_Draw_Move_Left':
+            return self.__executeActionDrawMoveLeft(currentAst)
+        elif currentAst.id() == 'Action_Draw_Move_Right':
+            return self.__executeActionDrawMoveRight(currentAst)
+        elif currentAst.id() == 'Action_Draw_Move_To':
+            return self.__executeActionDrawMoveTo(currentAst)
+        elif currentAst.id() == 'Action_Draw_Turn_Left':
+            return self.__executeActionDrawTurnLeft(currentAst)
+        elif currentAst.id() == 'Action_Draw_Turn_Right':
+            return self.__executeActionDrawTurnRight(currentAst)
+        elif currentAst.id() == 'Action_Draw_Turn_To':
+            return self.__executeActionDrawTurnTo(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -1977,6 +1995,172 @@ class BSInterpreter(QObject):
         self.__verbose(f"pen down", currentAst)
 
         self.__scriptBlockStack.current().setVariable(':pen.status', True, True)
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMoveHome(self, currentAst):
+        """Move home"""
+        fctLabel='Action `move home`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"move home", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMoveForward(self, currentAst):
+        """Move forward"""
+        fctLabel='Action `move forward`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__verbose(f"move forward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMoveBackward(self, currentAst):
+        """Move backward"""
+        fctLabel='Action `move backward`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__verbose(f"move backward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMoveLeft(self, currentAst):
+        """Move left"""
+        fctLabel='Action `move left`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__verbose(f"move left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMoveRight(self, currentAst):
+        """Move right"""
+        fctLabel='Action `move right`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__verbose(f"move right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMoveTo(self, currentAst):
+        """Move to"""
+        fctLabel='Action `move to`'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3)
+
+        valueX=self.__evaluate(currentAst.node(0))
+        valueY=self.__evaluate(currentAst.node(1))
+        unit=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<X>', valueX, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<Y>', valueY, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__verbose(f"move to {self.__strValue(valueX)} {self.__strValue(valueY)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawTurnLeft(self, currentAst):
+        """Turn left"""
+        fctLabel='Action `turn left`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.__verbose(f"turn left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawTurnRight(self, currentAst):
+        """Turn right"""
+        fctLabel='Action `turn right`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.__verbose(f"turn right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawTurnTo(self, currentAst):
+        """Turn to"""
+        fctLabel='Action `turn to`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        value=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.__verbose(f"turn to {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
         # TODO: implement canvas render
 
         self.__delay()
