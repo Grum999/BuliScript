@@ -424,6 +424,10 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawShapeText(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Star':
             return self.__executeActionDrawShapeStar(currentAst)
+        elif currentAst.id() == 'Action_Draw_Misc_Clear_Canvas':
+            return self.__executeActionDrawMiscClearCanvas(currentAst)
+        elif currentAst.id() == 'Action_Draw_Misc_Apply_To_Layer':
+            return self.__executeActionDrawMiscApplyToLayer(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -1842,6 +1846,31 @@ class BSInterpreter(QObject):
 
         self.__delay()
         return None
+
+    def __executeActionDrawMiscClearCanvas(self, currentAst):
+        """Clear canvas"""
+        fctLabel='Action `clear canvas`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"clear canvas", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMiscApplyToLayer(self, currentAst):
+        """Apply to layer"""
+        fctLabel='Action `apply to layer`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"apply to layer", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
 
 
 
