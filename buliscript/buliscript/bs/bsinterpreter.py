@@ -458,6 +458,10 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawTurnRight(currentAst)
         elif currentAst.id() == 'Action_Draw_Turn_To':
             return self.__executeActionDrawTurnTo(currentAst)
+        elif currentAst.id() == 'Action_State_Push':
+            return self.__executeActionStatePush(currentAst)
+        elif currentAst.id() == 'Action_State_Pop':
+            return self.__executeActionStatePop(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -2160,6 +2164,30 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
 
         self.__verbose(f"turn to {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionStatePush(self, currentAst):
+        """Push state"""
+        fctLabel='Action `push state`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"push state", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionStatePop(self, currentAst):
+        """Push state"""
+        fctLabel='Action `pop state`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"pop state", currentAst)
 
         # TODO: implement canvas render
 
