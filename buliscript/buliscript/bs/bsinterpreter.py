@@ -85,6 +85,7 @@ class BSInterpreter(QObject):
     executionFinished = Signal()
 
     CONST_MEASURE_UNIT=['PX', 'PCT', 'MM', 'INCH']
+    CONST_MEASURE_UNIT_RPCT=['PX', 'PCT', 'MM', 'INCH', 'RPCT']
     CONST_ROTATION_UNIT=['DEGREE', 'RADIAN']
     CONST_PEN_STYLE=['SOLID','DASH','DOT','DASHDOT','NONE']
     CONST_PEN_CAP=['SQUARE','FLAT','ROUNDCAP']
@@ -399,6 +400,30 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Execution_Verbose':
             return self.__executeActionSetExecutionVerbose(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Square':
+            return self.__executeActionDrawShapeSquare(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Round_Square':
+            return self.__executeActionDrawShapeRoundSquare(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Rect':
+            return self.__executeActionDrawShapeRect(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Round_Rect':
+            return self.__executeActionDrawShapeRoundRect(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Circle':
+            return self.__executeActionDrawShapeCircle(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Ellipse':
+            return self.__executeActionDrawShapeEllipse(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Dot':
+            return self.__executeActionDrawShapeDot(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Pixel':
+            return self.__executeActionDrawShapePixel(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Image':
+            return self.__executeActionDrawShapeImage(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Scaled_Image':
+            return self.__executeActionDrawShapeScaledImage(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Text':
+            return self.__executeActionDrawShapeText(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Star':
+            return self.__executeActionDrawShapeStar(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -513,6 +538,8 @@ class BSInterpreter(QObject):
     # --------------------------------------------------------------------------
     # Actions
     # --------------------------------------------------------------------------
+    # Set
+    # ---
     def __executeActionSetUnitCanvas(self, currentAst):
         """Set canvas unit
 
@@ -1414,6 +1441,409 @@ class BSInterpreter(QObject):
 
         self.__delay()
         return None
+
+    # Draw
+    # ----
+    def __executeActionDrawShapeSquare(self, currentAst):
+        """Draw square"""
+        fctLabel='Action `draw square`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        width=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeRoundSquare(self, currentAst):
+        """Draw square"""
+        fctLabel='Action `draw round square`'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3, 4)
+
+        width=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is radius
+            radius=p2
+            unitWidth=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # second parameter is a string, consider it's a width unit
+                radius=p3
+                unitWidth=p2
+                unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            else:
+                # second parameter is not a string, consider it's radius
+                radius=p2
+                unitWidth=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitRadius=p3
+        elif len(currentAst.nodes())==4:
+            radius=p3
+            unitWidth=p2
+            unitRadius=p4
+
+
+        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<W-UNIT>', unitWidth in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__checkParamType(currentAst, fctLabel, '<RADIUS>', radius, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<RADIUS>', radius>=0, f"a zero or positive number is expected (current={radius})", False):
+            radius=0
+
+        self.__checkParamDomain(currentAst, fctLabel, '<R-UNIT>', unitRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+
+        self.__verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeRect(self, currentAst):
+        """Draw rect"""
+        fctLabel='Action `draw rect`'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3)
+
+        width=self.__evaluate(currentAst.node(0))
+        height=self.__evaluate(currentAst.node(1))
+        unit=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<HEIGHT>', height, int, float)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<HEIGHT>', height>0, f"a positive number is expected (current={height})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeRoundRect(self, currentAst):
+        """Draw square"""
+        fctLabel='Action `draw round square`'
+        self.__checkParamNumber(currentAst, fctLabel, 3, 4, 5)
+
+        width=self.__evaluate(currentAst.node(0))
+        height=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+        p5=self.__evaluate(currentAst.node(4))
+
+        if len(currentAst.nodes())==3:
+            # third parameter is radius
+            radius=p3
+            unitDimension=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+        elif len(currentAst.nodes())==4:
+            if isinstance(p3, str):
+                # third parameter is a string, consider it's a dimension unit
+                radius=p4
+                unitDimension=p3
+                unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            else:
+                # third parameter is not a string, consider it's radius
+                radius=p3
+                unitDimension=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitRadius=p4
+        elif len(currentAst.nodes())==5:
+            radius=p4
+            unitDimension=p3
+            unitRadius=p5
+
+
+        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<HEIGHT>', height, int, float)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<HEIGHT>', height>0, f"a positive number is expected (current={height})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<S-UNIT>', unitDimension in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.__checkParamType(currentAst, fctLabel, '<RADIUS>', radius, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<RADIUS>', radius>=0, f"a zero or positive number is expected (current={radius})", False):
+            radius=0
+
+        self.__checkParamDomain(currentAst, fctLabel, '<R-UNIT>', unitRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+
+        self.__verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeCircle(self, currentAst):
+        """Draw circle"""
+        fctLabel='Action `draw circle`'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        radius=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<RADIUS>', radius, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, '<RADIUS>', radius>0, f"a positive number is expected (current={radius})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeEllipse(self, currentAst):
+        """Draw ellipse"""
+        fctLabel='Action `draw ellipse`'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3)
+
+        hRadius=self.__evaluate(currentAst.node(0))
+        vRadius=self.__evaluate(currentAst.node(1))
+        unit=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<H-RADIUS>', hRadius, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<V-RADIUS>', vRadius, int, float)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<H-RADIUS>', hRadius>0, f"a positive number is expected (current={hRadius})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<V-RADIUS>', vRadius>0, f"a positive number is expected (current={vRadius})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeDot(self, currentAst):
+        """Draw dot"""
+        fctLabel='Action `draw dot`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"draw dot", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapePixel(self, currentAst):
+        """Draw pixel"""
+        fctLabel='Action `draw pixel`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"draw pixel", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeImage(self, currentAst):
+        """Draw image"""
+        fctLabel='Action `draw image`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        fileName=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<IMAGE>', fileName, str)
+
+        # TODO: implement file management
+        fileIsValid=True
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<IMAGE>', fileIsValid, f"image can't be found: {fileName}", False):
+            # if value<=0, exit
+            self.__verbose(f"draw image {self.__strValue(fileName)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__verbose(f"draw image {self.__strValue(fileName)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeScaledImage(self, currentAst):
+        """Draw scaled image"""
+        fctLabel='Action `draw scaled image`'
+        self.__checkParamNumber(currentAst, fctLabel, 3, 4)
+
+        fileName=self.__evaluate(currentAst.node(0))
+        width=self.__evaluate(currentAst.node(1))
+        height=self.__evaluate(currentAst.node(2))
+        unit=self.__evaluate(currentAst.node(3, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, '<IMAGE>', fileName, str)
+        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<HEIGHT>', height, int, float)
+
+        # TODO: implement file management
+        fileIsValid=True
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<IMAGE>', fileIsValid, f"image can't be found: {fileName}", False):
+            # if value<=0, exit
+            self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<HEIGHT>', height>0, f"a positive number is expected (current={height})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+
+
+        self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeText(self, currentAst):
+        """Draw text"""
+        fctLabel='Action `draw text`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        text=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<TEXT>', text, str)
+
+        self.__verbose(f"draw text {self.__strValue(text)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeStar(self, currentAst):
+        """Draw star"""
+        fctLabel='Action `draw star`'
+        self.__checkParamNumber(currentAst, fctLabel, 3, 4, 5)
+
+        branches=self.__evaluate(currentAst.node(0))
+        oRadius=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+        p5=self.__evaluate(currentAst.node(4))
+
+        if len(currentAst.nodes())==3:
+            # third parameter is inner radius
+            iRadius=p3
+            unitORadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitIRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+        elif len(currentAst.nodes())==4:
+            if isinstance(p3, str):
+                # third parameter is a string, consider it's a dimension unit
+                iRadius=p4
+                unitORadius=p3
+                unitIRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            else:
+                # third parameter is not a string, consider it's radius
+                iRadius=p3
+                unitORadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitIRadius=p4
+        elif len(currentAst.nodes())==5:
+            iRadius=p4
+            unitORadius=p3
+            unitIRadius=p5
+
+        self.__checkParamType(currentAst, fctLabel, '<BRANCHES>', branches, int)
+        self.__checkParamType(currentAst, fctLabel, '<O-RADIUS>', oRadius, int, float)
+        self.__checkParamType(currentAst, fctLabel, '<I-RADIUS>', iRadius, int, float)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<BRANCHES>', branches>=3, f"a positive integer greater or equal than 3 is expected (current={branches})", False):
+            # force minimum
+            branches=3
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<O-RADIUS>', oRadius>0, f"a positive number is expected (current={oRadius})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<I-RADIUS>', iRadius>0, f"a positive number is expected (current={iRadius})", False):
+            # if value<=0, exit
+            self.__verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, '<OR-UNIT>', unitORadius in BSInterpreter.CONST_MEASURE_UNIT, f"outer radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, '<IR-UNIT>', unitIRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"inter radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+
+        self.__verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}", currentAst)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+
 
     # --------------------------------------------------------------------------
     # Functions & Evaluation
