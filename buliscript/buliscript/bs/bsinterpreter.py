@@ -428,6 +428,18 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawMiscClearCanvas(currentAst)
         elif currentAst.id() == 'Action_Draw_Misc_Apply_To_Layer':
             return self.__executeActionDrawMiscApplyToLayer(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Start':
+            return self.__executeActionDrawShapeStart(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Stop':
+            return self.__executeActionDrawShapeStop(currentAst)
+        elif currentAst.id() == 'Action_Draw_Fill_Activate':
+            return self.__executeActionDrawFillActivate(currentAst)
+        elif currentAst.id() == 'Action_Draw_Fill_Deactivate':
+            return self.__executeActionDrawFillDeactivate(currentAst)
+        elif currentAst.id() == 'Action_Draw_Pen_Up':
+            return self.__executeActionDrawPenUp(currentAst)
+        elif currentAst.id() == 'Action_Draw_Pen_Down':
+            return self.__executeActionDrawPenDown(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -1866,6 +1878,105 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"apply to layer", currentAst)
 
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeStart(self, currentAst):
+        """Start to draw shape
+
+        :draw.shape.status
+        """
+        fctLabel='Action `start to draw shape`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"start to draw shape", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':draw.shape.status', True, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeStop(self, currentAst):
+        """Stop to draw shape
+
+        :draw.shape.status
+        """
+        fctLabel='Action `stop to draw shape`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"stop to draw shape", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':draw.shape.status', False, True)
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawFillActivate(self, currentAst):
+        """Activate fill mode
+
+        :fill.status
+        """
+        fctLabel='Action `activate fill`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"activate fill", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':fill.status', True, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawFillDeactivate(self, currentAst):
+        """Deactivate fill mode
+
+        :fill.status
+        """
+        fctLabel='Action `deactivate fill`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"deactivate fill", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':fill.status', False, True)
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawPenUp(self, currentAst):
+        """Pen up
+
+        :pen.status
+        """
+        fctLabel='Action `pen up`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"pen up", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':pen.status', False, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawPenDown(self, currentAst):
+        """Pen down
+
+        :pen.status
+        """
+        fctLabel='Action `pen down`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"pen down", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':pen.status', True, True)
         # TODO: implement canvas render
 
         self.__delay()

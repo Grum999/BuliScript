@@ -216,7 +216,8 @@ Action_Draw_Shape
                 ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Evaluate_Number_Expression Unit_RM_Expression? ) |
                 ( 'text' Evaluate_String_Expression ) |
                 ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
-            )
+            ) |
+            ('start' | 'stop' ) 'to' 'draw' 'shape'
 
 
 Action_Draw_Misc
@@ -230,7 +231,7 @@ Action_Draw_Misc
 
 
 Action_Draw_Fill
-        ::= 'fill' ('begin' | 'end' )
+        ::= ('activate' | 'deactivate') 'fill'
 
 
 Action_Draw_Pen
@@ -657,7 +658,7 @@ Reserved_Variable
             ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
-            ( 'draw' '.' ( 'antialiasing' | 'blendingMode' ) ) |
+            ( 'draw' '.' ( 'antialiasing' | 'blendingMode' | 'shape' '.' 'status') ) |
             ( 'canvas' '.'
                 ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
                 ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |

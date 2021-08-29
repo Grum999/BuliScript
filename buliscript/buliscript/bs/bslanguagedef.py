@@ -909,7 +909,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+script\s+execution\s+(?:verbose)\b",
-                                                                    'Settings/Execution',
+                                                                    'Settings/Script',
                                                                     [('set script execution verbose \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define execution verbose state]',
@@ -1252,30 +1252,59 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, r"^\x20*\bfill\s+(?:begin|end)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\b(?:start|stop)\s+to\s+draw\s+shape\b",
+                                                                    'Drawing/Shapes',
+                                                                    [('start to draw shape',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Start to draw a shape]',
+                                                                                # description
+                                                                                'Enter in drawing *shape* mode\n\n'
+                                                                                'By default when using **`move`** instructions, drawn lines are not connected.\n'
+                                                                                'Entering in *shape* mode will connect all drawn segments in a single shape: this allows in particular to fill area made by drawn segments.\n'
+                                                                                'Use action **`stop to draw shape`** to close current shape; in this case if fill mode is active, closed shape area will be filled.'
+                                                                                'Action is ignored if *shape* mode is already active',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`start to draw shape`**\n\n'
+                                                                                'All following **`move`** actions will be taken in account to define a single shape')),
+                                                                    ('stop to draw shape',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Stop to draw a shape]',
+                                                                                # description
+                                                                                'Leave drawing *shape* mode\n\n'
+                                                                                'Leaving *shape* mode will close current shape started with **`start to draw shape`**; in this case if fill mode is active, closed shape area will be filled.'
+                                                                                'Action is ignored if *shape* mode is not active',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`stop to draw shape`**\n\n'
+                                                                                'All following **`move`** action will close current shape')),
+                                                                    ],
+                                                                    'A'),
+
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, r"^\x20*\b(?:activate|deactivate)\s+fill\b",
                                                                     'Drawing/Fill',
-                                                                    [('fill begin',
+                                                                    [('activate fill',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Start to fill an area]',
+                                                                                'Action [Activate fill tool]',
                                                                                 # description
-                                                                                'Start to fill area\n\n'
-                                                                                'Use `fill end` to stop to draw a filled area\n\n'
-                                                                                'Action is ignored if fill area is already active',
+                                                                                'Activate fill tool, drawn shapes will be filled out.\n\n'
+                                                                                'Use **`deactivate fill`** to stop to fill shapes\n\n'
+                                                                                'Action is ignored if fill tool is already activated',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`start begin`**\n\n'
-                                                                                'All `move` action will be taken in account to define a filled area')),
-                                                                    ('fill end',
+                                                                                '**`activate fill`**\n\n'
+                                                                                'All drawn shapes will be filled out')),
+                                                                    ('deactivate fill',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Stop to fill an area]',
+                                                                                'Action [Deactivate fill tool]',
                                                                                 # description
-                                                                                'Stop to fill area\n\n'
-                                                                                'Use `fill start` to start to draw a filled area\n\n'
-                                                                                'Action is ignored if fill area is already inactive',
+                                                                                'Deactivate fill tool, drawn shapes will be empty.\n\n'
+                                                                                'Use **`activate fill`** to start to fill shapes\n\n'
+                                                                                'Action is ignored if fill tool is already deactivated',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`start end`**\n\n'
-                                                                                'All `move` action are taken in account to define a filled area')),
+                                                                                '**`deactivate fill`**\n\n'
+                                                                                'All drawn shapes will be empty')),
                                                                     ],
                                                                     'A'),
 
@@ -1528,7 +1557,7 @@ class BSLanguageDef(LanguageDef):
 
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background)\b",
-                                                                    'Canvas/Show',
+                                                                    'Canvas',
                                                                     [('show canvas grid',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Set canvas grid visible]',
@@ -1736,18 +1765,6 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script)))"
-                                                                       r"|(?:draw(\s+(?:round|scaled))?)"
-                                                                       r"|(?:clear|apply(?:\s+to)?)"
-                                                                       r"|(?:fill|pen|move|turn|push|pop)"
-                                                                       r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
-                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean)?)?)?)?)"
-                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default))?)"
-                                                                       r")\b"
-                                                                       ),
-
-
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_EXEC, r"^\x20*\bstop\s+script\b",
                                                                     'Flow/Execution',
                                                                     [('stop script',
@@ -1774,7 +1791,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_DEFMACRO, r"^\x20*\bdefine\s+macro\b",
-                                                                    'Flow/Macro',
+                                                                    'Flow/Declarations',
                                                                     [('define macro "\x01<NAME>\x01"\x01 [\x01with parameters\x01 <ARG1> [<ARGN>]]\x01 as',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Define a macro]',
@@ -1795,7 +1812,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_RETURN, r"^\x20*\breturn\b",
-                                                                    'Flow/Macro',
+                                                                    'Flow/Execution',
                                                                     [('return \x01[<VALUE>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Exit macro]',
@@ -1810,7 +1827,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+(?:macro|image)\s+from\b",
-                                                                    'Flow/Import',
+                                                                    'Flow/Declarations',
                                                                     [('import macro from \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Import macro defined from an another script document]',
@@ -1860,15 +1877,15 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\b",
                                                                     'Flow/Loops',
-                                                                    [('for each \x01:variable \x01 in \x01<VALUE>\x01 do',
+                                                                    [('for each \x01:variable \x01 in \x01<LIST>\x01 do',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Loop over items in a list]',
                                                                                 # description
-                                                                                'Iterate over given <VALUE>\n'
-                                                                                'On each iteration *`:variable` is defined with value from <VALUE>\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
-                                                                                ' - **`string`**: in this case, iterate over all characters in string\n'
-                                                                                ' - **`list`**: in this case iterate over all item in list',
+                                                                                'Iterate over given <LIST>\n'
+                                                                                'On each iteration *`:variable` is defined with value from <LIST>\n\n'
+                                                                                'Given *<LIST>* can be:\n'
+                                                                                ' - **`list`**: iterate over all item in list\n',
+                                                                                ' - **`string`**: a string is in this case considered as a list of characters'
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`for each :character in "test"`**\n'
@@ -1957,6 +1974,17 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
+                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script)))"
+                                                                       r"|(?:draw(:?\s+(?:round|scaled))?)"
+                                                                       r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
+                                                                       r"|(?:clear|apply(?:\s+to)?)"
+                                                                       r"|(?:pen|move|turn|push|pop|activate|deactivate)"
+                                                                       r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
+                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean)?)?)?)?)"
+                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default))?)"
+                                                                       r")\b"
+                                                                       ),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for)"
@@ -3420,7 +3448,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape])\b",
                                                                     'Variables/Draw',
                                                                     [(':draw.antialiasing',
                                                                             TokenizerRule.formatDescription(
@@ -3434,6 +3462,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current blending mode applied when drawing\n'
                                                                                 'Returned as string value')),
+                                                                     (':draw.shape.status',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current shape mode status]',
+                                                                                # description
+                                                                                'Current shape mode active or not\n'
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -4115,8 +4149,10 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Misc_Clear_Canvas',
                       # TODO
                       #'Action_Draw_Misc_Apply_To_Layer',
-                      'Action_Draw_Fill_Begin',
-                      'Action_Draw_Fill_End',
+                      'Action_Draw_Shape_Start',
+                      'Action_Draw_Shape_Stop',
+                      'Action_Draw_Fill_Activate',
+                      'Action_Draw_Fill_Deactivate',
                       'Action_Draw_Pen_Up',
                       'Action_Draw_Pen_Down',
                       'Action_Draw_Move_Home',
@@ -4592,17 +4628,31 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Draw_Fill_Begin',
+        GrammarRule('Action_Draw_Shape_Start',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'fill begin', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'start to draw shape', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Draw_Fill_End',
+        GrammarRule('Action_Draw_Shape_Stop',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'fill end', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'stop to draw shape', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Fill_Activate',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'activate fill', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Fill_Deactivate',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'deactivate fill', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
