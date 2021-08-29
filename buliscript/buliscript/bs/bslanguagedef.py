@@ -1581,7 +1581,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Set background visible]',
                                                                                 # description
                                                                                 'Render background under canvas\n'
-                                                                                'Background is drawn under canvas and is not rendered on final drawing')),
+                                                                                'Background (made from current document projection) is drawn under canvas and is not rendered on final drawing')),
                                                                     ('hide canvas grid',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Set canvas grid invisible]',

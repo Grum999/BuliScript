@@ -462,6 +462,22 @@ class BSInterpreter(QObject):
             return self.__executeActionStatePush(currentAst)
         elif currentAst.id() == 'Action_State_Pop':
             return self.__executeActionStatePop(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Show_Grid':
+            return self.__executeActionCanvasShowGrid(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Show_Origin':
+            return self.__executeActionCanvasShowOrigin(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Show_Position':
+            return self.__executeActionCanvasShowPosition(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Show_Background':
+            return self.__executeActionCanvasShowBackground(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Hide_Grid':
+            return self.__executeActionCanvasHideGrid(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Hide_Origin':
+            return self.__executeActionCanvasHideOrigin(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Hide_Position':
+            return self.__executeActionCanvasHidePosition(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Hide_Background':
+            return self.__executeActionCanvasHideBackground(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -2194,6 +2210,141 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
+    def __executeActionCanvasShowGrid(self, currentAst):
+        """Show canvas grid
+
+        :canvas.grid.visibility
+        """
+        fctLabel='Action `show canvas grid`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"show canvas grid", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.visibility', True, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasHideGrid(self, currentAst):
+        """Hide canvas grid
+
+        :canvas.grid.visibility
+        """
+        fctLabel='Action `hide canvas grid`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"hide canvas grid", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.grid.visibility', False, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasShowOrigin(self, currentAst):
+        """Show canvas origin
+
+        :canvas.origin.visibility
+        """
+        fctLabel='Action `show canvas origin`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"show canvas origin", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.visibility', True, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasHideOrigin(self, currentAst):
+        """Hide canvas origin
+
+        :canvas.origin.visibility
+        """
+        fctLabel='Action `hide canvas origin`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"hide canvas origin", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.origin.visibility', False, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasShowPosition(self, currentAst):
+        """Show canvas position
+
+        :canvas.position.visibility
+        """
+        fctLabel='Action `show canvas position`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"show canvas position", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.position.visibility', True, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasHidePosition(self, currentAst):
+        """Hide canvas position
+
+        :canvas.position.visibility
+        """
+        fctLabel='Action `hide canvas position`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"hide canvas position", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.position.visibility', False, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasShowBackground(self, currentAst):
+        """Show canvas background
+
+        :canvas.background.visibility
+        """
+        fctLabel='Action `show canvas background`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"show canvas background", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.background.visibility', True, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasHideBackground(self, currentAst):
+        """Hide canvas background
+
+        :canvas.background.visibility
+        """
+        fctLabel='Action `hide canvas background`'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.__verbose(f"hide canvas background", currentAst)
+
+        self.__scriptBlockStack.current().setVariable(':canvas.background.visibility', False, True)
+
+        # TODO: implement canvas render
+
+        self.__delay()
+        return None
 
 
 
