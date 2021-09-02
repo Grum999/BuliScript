@@ -1605,34 +1605,50 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean)\s+input\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice)\s+input\b", #|(?:single|multiple)\s+choice
                                                                     'User interface/Window',
-                                                                    [('open dialog for string input \x01<:variable>',
+                                                                    [('open dialog for string input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog string]',
                                                                                 # description
                                                                                 'Ask user for input a string value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for string input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user for a string value and store result into variable `:value`')),
-                                                                    ('open dialog for integer input \x01<:variable>',
+                                                                    ('open dialog for integer input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog integer]',
                                                                                 # description
                                                                                 'Ask user for input an integer value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`\n'
+                                                                                '- `with minimum value`\n'
+                                                                                '- `with maximum value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for integer input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user for an integer value and store result into variable `:value`')),
-                                                                    ('open dialog for decimal input \x01<:variable>',
+                                                                    ('open dialog for decimal input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog decimal]',
                                                                                 # description
                                                                                 'Ask user for input an decimal value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`\n'
+                                                                                '- `with minimum value`\n'
+                                                                                '- `with maximum value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for decimal input :value`**\n\n'
@@ -1642,21 +1658,62 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Display an input dialog color]',
                                                                                 # description
                                                                                 'Ask user for input a color value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for color input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user for a color value and store result into variable `:value`')),
-                                                                    ('open dialog for boolean input \x01<:variable>',
+                                                                    ('open dialog for boolean input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog boolean]',
                                                                                 # description
                                                                                 'Ask user to provide a YES or NO answer\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for boolean input :value`**\n\n'
-                                                                                'Will open a dialog box to ask user to clikc on YES or NO button and store result into variable `:value`')),
+                                                                                'Will open a dialog box to ask user to click on YES or NO button and store result into variable `:value`')),
+                                                                    ('open dialog for single choice input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog with different possibles value]',
+                                                                                # description
+                                                                                'Ask user to select on value in possible provided values\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored (and index value, starting from 1)\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with combobox choices`\n'
+                                                                                '- `with radio button choices`\n'
+                                                                                '- `with default index`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for choice input :value`**\n'
+                                                                                '**`     with combobox choices ["Red", "Green", "Blue"]`**\n\n'
+                                                                                'Will open a dialog box to ask user to select one value from provided choices, and store index of selected choice into `:value`')),
+                                                                    ('open dialog for multiple choice input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog with different possibles value]',
+                                                                                # description
+                                                                                'Ask user to select on value in possible provided values\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored (a list of index values)\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with choices`\n'
+                                                                                '- `with default index`\n'
+                                                                                '- `with minimum choices`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for choice input :value`**\n'
+                                                                                '**`     with combobox choices ["Red", "Green", "Blue"]`**\n\n'
+                                                                                'Will open a dialog box to ask user to select one value from provided choices, and store index of selected choice into `:value`')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+message\b",
@@ -1677,7 +1734,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, r"\x20*\bwith\s+(?:title|message|minimum\s+value|maximum\s+value|default\s+value|decimals)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, r"\x20*\bwith\s+(?:title|message|minimum\s+(?:value|choices)|maximum\s+value|default\s+(?:value|index)|(?:combobox\s+|radio\s+button\s+)?choices)\b",
                                                                     'User interface/Window/Options',
                                                                     [('with title \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
@@ -1709,7 +1766,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is:\n'
                                                                                 '- **`int`**: for integer input dialog\n'
                                                                                 '- **`dec`**: for decimal input dialog\n\n'
-                                                                                '*Option is ignored for input dialog box other than **integer** and **decimal**',
+                                                                                '*Option is not allowed for input dialog box other than **integer** and **decimal**',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for integer input :value`**\n'
@@ -1723,7 +1780,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is:\n'
                                                                                 '- **`int`**: for integer input dialog\n'
                                                                                 '- **`dec`**: for decimal input dialog\n\n'
-                                                                                '*Option is ignored for input dialog box other than **integer** and **decimal**',
+                                                                                '*Option is not allowed for input dialog box other than **integer** and **decimal**',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for decimal input :value`**\n'
@@ -1738,12 +1795,80 @@ class BSLanguageDef(LanguageDef):
                                                                                 '- **`string`**: for string input dialog\n'
                                                                                 '- **`int`**: for integer input dialog\n'
                                                                                 '- **`dec`**: for decimal input dialog\n'
-                                                                                '- **`color`**: for color input dialog',
+                                                                                '- **`color`**: for color input dialog\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **string**, **integer**, **decimal** and **color**',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for integer input :value`**\n'
                                                                                 '**`     with default value 25`**\n\n'
                                                                                 'Will open a dialog box for which default value is 25')),
+                                                                    ('with combobox choices \x01<LIST>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: list of choice values, provided in a combobox list]',
+                                                                                # description
+                                                                                'Define list of values for input dialog, provided as a combobox list\n\n'
+                                                                                'Given *<LIST>* is a list of string\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **single choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for single choice input :value`**\n'
+                                                                                '**`     with combobox choices ["Item A", "Item B", "Item C"]`**\n\n'
+                                                                                'Will open a dialog box for which a combobox list will provide 3 possible values')),
+                                                                    ('with radio button choices \x01<LIST>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: list of choice values, provided as radio button items]',
+                                                                                # description
+                                                                                'Define list of values for input dialog, provided as radio button items\n\n'
+                                                                                'Given *<LIST>* is a list of string\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **single choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for single choice input :value`**\n'
+                                                                                '**`     with radio button choices ["Item A", "Item B", "Item C"]`**\n\n'
+                                                                                'Will open a dialog box for which radio buttons will provide 3 possible values')),
+                                                                    ('with choices \x01<LIST>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: list of choice values, provided as checkbox items]',
+                                                                                # description
+                                                                                'Define list of values for input dialog, provided as checkbox items\n\n'
+                                                                                'Given *<LIST>* is a list of string\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **multiple choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for multiple choice input :value`**\n'
+                                                                                '**`     with choices ["Item A", "Item B", "Item C"]`**\n\n'
+                                                                                'Will open a dialog box for which 3 checkbox are provided')),
+                                                                    ('with default index \x01<VALUE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: default value(s) for choices dialog box]',
+                                                                                # description
+                                                                                'Define default selected index for choices input dialog\n\n'
+                                                                                'Given *<VALUE>* can be:\n'
+                                                                                '- An **`int`** value, to define a selected index in choices (**`single choice`** and **`multiple choice`**)\n'
+                                                                                '- A list of **`int`** value, to define all selected indexes in choices (**`multiple choice`**)\n'
+                                                                                '*Option is not allowed for input dialog box other than **single choice** and **multilpe choice**\n\n'
+                                                                                'Index value in list start from 1',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for multiple choice input :value`**\n'
+                                                                                '**`     with choices ["Item A", "Item B", "Item C"]`**\n'
+                                                                                '**`     with defaul index [1, 3]`**\n\n'
+                                                                                'Will open a dialog box for which a multiple choice list is provided, with values `Item A` and `Item C` already selected')),
+                                                                    ('with minimum choices \x01<VALUE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: minimum number of values that must be selected for multiple choice dialog box]',
+                                                                                # description
+                                                                                'Define minimum number of selected indexes expected in a multiple choices input dialog\n\n'
+                                                                                'Given *<VALUE>* can be:\n'
+                                                                                '- An **`int`** value, to define a selected index in choices (**`single choice`** and **`multiple choice`**)\n'
+                                                                                '- A list of **`int`** value, to define all selected indexes in choices (**`multiple choice`**)\n'
+                                                                                '*Option is not allowed for input dialog box other than **multilpe choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for multiple choice input :value`**\n'
+                                                                                '**`     with choices ["Item A", "Item B", "Item C"]`**\n'
+                                                                                '**`     with minimum choices 2`**\n\n'
+                                                                                'Will open a dialog box for which a multiple choice list is provided, and user must check at least 2 of 3 items')),
                                                                     ],
                                                                     'A',
                                                                     ignoreIndent=True),
@@ -1751,12 +1876,12 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint\b",
                                                                     'User interface/Console',
-                                                                    [('print \x01<INFO>',
+                                                                    [('print \x01<INFO>[, <INFO>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Print information to console]',
                                                                                 # description
                                                                                 'Print given *<INFO>* to console\n\n'
-                                                                                'Given *<INFO>* can be of any type',
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`print "hello!"`**\n\n'
@@ -1981,10 +2106,13 @@ class BSLanguageDef(LanguageDef):
                                                                        r"|(?:clear|apply(?:\s+to)?)"
                                                                        r"|(?:pen|move|turn|push|pop|activate|deactivate)"
                                                                        r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
-                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean)?)?)?)?)"
-                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default))?)"
+                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|(?:single|multiple)(?:\s+choice)?))?)?)?)"
+                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
+
+                                                                       # (?:single|multiple) (?:\s+(?:choice)?)?
+                                                                       # (?:combobox|radio)(?:\s+(?:button)?)?
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for)"
@@ -4180,7 +4308,9 @@ class BSLanguageDef(LanguageDef):
                       'Action_UIDialog_Integer_Input',
                       'Action_UIDialog_Decimal_Input',
                       'Action_UIDialog_Color_Input',
-                      'Action_UIDialog_String_Input'                    # TODO
+                      'Action_UIDialog_String_Input',
+                      'Action_UIDialog_Single_Choice_Input',
+                      'Action_UIDialog_Multiple_Choice_Input'
 
                 )
             )
@@ -4895,6 +5025,32 @@ class BSLanguageDef(LanguageDef):
                             'Action_UIDialog_Option_With_Message')
             )
 
+        GrammarRule('Action_UIDialog_Single_Choice_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for single choice input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Index',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Combobox_Choices',
+                            'Action_UIDialog_Option_With_RadioButton_Choices',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
+        GrammarRule('Action_UIDialog_Multiple_Choice_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for multiple choice input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Index',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Choices',
+                            'Action_UIDialog_Option_With_Minimum_Choices',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
         GrammarRule('Action_UIDialog_Option_With_Title',
                 GrammarRule.OPTION_AST,
                 # --
@@ -4931,6 +5087,46 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with default value', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Default_Index',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with default index', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Combobox_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with combobox choices', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_RadioButton_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with radio button choices', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with choices', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Minimum_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with minimum choices', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )

@@ -56,6 +56,22 @@ from buliscript.pktk.modules.parser import (
         ASTItem
     )
 
+from buliscript.pktk.widgets.wcolorselector import (
+        WColorPicker,
+        WColorComplementary
+    )
+from buliscript.pktk.widgets.wiodialog import (
+        WDialogMessage,
+        WDialogBooleanInput,
+        WDialogStrInput,
+        WDialogIntInput,
+        WDialogFloatInput,
+        WDialogComboBoxChoiceInput,
+        WDialogRadioButtonChoiceInput,
+        WDialogCheckBoxChoiceInput,
+        WDialogColorInput
+    )
+
 from buliscript.pktk.pktk import (
         EInvalidType,
         EInvalidValue,
@@ -174,7 +190,7 @@ class BSInterpreter(QObject):
             else:
                 msg=f'Verbose [{position["from"]["column"]:03}:{position["from"]["row"]:05}>{position["to"]["column"]:03}:{position["to"]["row"]:05}] >> {text}'
         # need to review print... (callback, signal?)
-        print(msg)
+        self.__print(msg)
 
     def __warning(self, text, ast=None):
         """Even if execution is not defined as verbose, will print given text as warning"""
@@ -189,7 +205,7 @@ class BSInterpreter(QObject):
                 msg=f'Warning [{position["from"]["column"]:03}:{position["from"]["row"]:05}>{position["to"]["column"]:03}:{position["to"]["row"]:05}] >> {text}'
 
         # need to review print... (callback, signal?)
-        print(msg)
+        self.__print(msg)
 
     def __error(self, text, ast=None):
         """Even if execution is not defined as verbose, will print given text as error"""
@@ -204,9 +220,11 @@ class BSInterpreter(QObject):
                 msg=f'Error   [{position["from"]["column"]:03}:{position["from"]["row"]:05}>{position["to"]["column"]:03}:{position["to"]["row"]:05}] >> {text}'
 
         # need to review print... (callback, signal?)
-        print(msg)
+        self.__print(msg)
 
-
+    def __print(self, text):
+        """Print text to console"""
+        print(text)
 
     def __delay(self):
         """Do a pause in execution"""
@@ -233,17 +251,17 @@ class BSInterpreter(QObject):
             return item
 
     def __checkFctParamNumber(self, currentAst, fctLabel, *values):
-        """raise an exception is number of provided parameters is not expected (used for functions)"""
+        """raise an exception if number of provided parameters is not expected (used for functions)"""
         if not len(currentAst.nodes())-1 in values:
             raise EInterpreter(f"{fctLabel}: invalid number of provided arguments", currentAst)
 
     def __checkParamNumber(self, currentAst, fctLabel, *values):
-        """raise an exception is number of provided parameters is not expected (used for others)"""
+        """raise an exception if number of provided parameters is not expected (used for others)"""
         if not len(currentAst.nodes()) in values:
             raise EInterpreter(f"{fctLabel}: invalid number of provided arguments", currentAst)
 
     def __checkParamType(self, currentAst, fctLabel, name, value, *types):
-        """raise an exception is value if not of given type"""
+        """raise an exception if value is not of given type"""
         if not isinstance(value, types):
             raise EInterpreter(f"{fctLabel}: invalid type for argument {name}", currentAst)
 
@@ -255,6 +273,11 @@ class BSInterpreter(QObject):
             else:
                 self.__warning(f"{fctLabel}: invalid domain for argument {name}, {msg}", currentAst)
         return controlOk
+
+    def __checkOption(self, currentAst, fctLabel, value, forceRaise=False):
+        """raise an exception is value if not of given type"""
+        if not isinstance(value, ASTItem) or forceRaise:
+            raise EInterpreter(f"{fctLabel}: invalid/unknown option provided", currentAst)
 
     def __strValue(self, variableValue):
         """Return formatted string value"""
@@ -313,6 +336,10 @@ class BSInterpreter(QObject):
 
         # ----------------------------------------------------------------------
         # Flows
+        # -----
+
+        # ----------------------------------------------------------------------
+        # Flows
         # -----
         elif currentAst.id() == 'Flow_Set_Variable':
             return self.__executeFlowSetVariable(currentAst)
@@ -478,6 +505,24 @@ class BSInterpreter(QObject):
             return self.__executeActionCanvasHidePosition(currentAst)
         elif currentAst.id() == 'Action_Canvas_Hide_Background':
             return self.__executeActionCanvasHideBackground(currentAst)
+        elif currentAst.id() == 'Action_UIConsole_Print':
+            return self.__executeActionUIConsolePrint(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Message':
+            return self.__executeActionUIDialogMessage(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Boolean_Input':
+            return self.__executeActionUIDialogBooleanInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_String_Input':
+            return self.__executeActionUIDialogStringInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Integer_Input':
+            return self.__executeActionUIDialogIntegerInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Decimal_Input':
+            return self.__executeActionUIDialogDecimalInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Color_Input':
+            return self.__executeActionUIDialogColorInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Single_Choice_Input':
+            return self.__executeActionUIDialogSingleChoiceInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Multiple_Choice_Input':
+            return self.__executeActionUIDialogMultipleChoiceInput(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -2345,6 +2390,554 @@ class BSInterpreter(QObject):
 
         self.__delay()
         return None
+
+    def __executeActionUIConsolePrint(self, currentAst):
+        """Print"""
+        fctLabel='Action `print`'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        printed=[]
+        for node in currentAst.nodes():
+            printed.append(str(self.__strValue(self.__evaluate(node))))
+
+        self.__print(' '.join(printed))
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogOptionWithMessage(self, currentAst):
+        """with message
+
+        Return optional message for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with message`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        text=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<TEXT>', text, str)
+
+        return text
+
+    def __executeActionUIDialogOptionWithTitle(self, currentAst):
+        """with title
+
+        Return optional title for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with title`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        text=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<TEXT>', text, str)
+
+        return text
+
+    def __executeActionUIDialogOptionWithDefaultValue(self, currentAst, type):
+        """with default value
+
+        Return optional default for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with default value`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+
+        return value
+
+    def __executeActionUIDialogOptionWithMinimumValue(self, currentAst, type):
+        """with minimum value
+
+        Return optional minimum value for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with minimum value`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+
+        return value
+
+    def __executeActionUIDialogOptionWithMaximumValue(self, currentAst, type):
+        """with maximum value
+
+        Return optional minimum value for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with maximum value`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+
+        return value
+
+    def __executeActionUIDialogOptionWithDefaultIndex(self, currentAst, type):
+        """with default index
+
+        Return optional default index for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with default index`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+
+        return value
+
+    def __executeActionUIDialogOptionWithChoices(self, currentAst):
+        """with default combobox choices
+
+        Return optional list of choices for a dialog box
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option `with combobox choices`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, list)
+        value=[str(item) for item in value]
+
+        return value
+
+    def __executeActionUIDialogMessage(self, currentAst):
+        """Open dialog for message"""
+        fctLabel='Action `open dialog for message`'
+
+        # there's no control about number of parameter: just, each parameter MUSt be a ACTION_UIDIALOG_OPTION
+
+        message='<h1>Oops!</h1><p>Did you forgot to set a <b>with message</b> option?'
+        title='BuliScript message!'
+
+        for node in currentAst.nodes():
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        WDialogMessage.display(title, message)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogBooleanInput(self, currentAst):
+        """Open dialog for boolean input"""
+        fctLabel='Action `open dialog for boolean input`'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message='<h1>Oops!</h1><p>Did you forgot to set a <b>with message</b> option?'
+        title='BuliScript message!'
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+        scriptBlock.setVariable(variableName, WDialogBooleanInput.display(title, message), True)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogStringInput(self, currentAst):
+        """Open dialog for string input"""
+        fctLabel='Action `open dialog for string input`'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=''
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, str)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+        scriptBlock.setVariable(variableName, WDialogStrInput.display(title, message, defaultValue=defaultValue), True)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogIntegerInput(self, currentAst):
+        """Open dialog for integer input"""
+        fctLabel='Action `open dialog for integer input`'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=0
+        minimumValue=None
+        maximumValue=None
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, int)
+            elif node.id()=="Action_UIDialog_Option_With_Minimum_Value":
+                minimumValue=self.__executeActionUIDialogOptionWithMinimumValue(node, int)
+            elif node.id()=="Action_UIDialog_Option_With_Maximum_Value":
+                maximumValue=self.__executeActionUIDialogOptionWithMaximumValue(node, int)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+        scriptBlock.setVariable(variableName, WDialogIntInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), True)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogDecimalInput(self, currentAst):
+        """Open dialog for decimal input"""
+        fctLabel='Action `open dialog for decimal input`'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=0
+        minimumValue=None
+        maximumValue=None
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, float)
+            elif node.id()=="Action_UIDialog_Option_With_Minimum_Value":
+                minimumValue=self.__executeActionUIDialogOptionWithMinimumValue(node, float)
+            elif node.id()=="Action_UIDialog_Option_With_Maximum_Value":
+                maximumValue=self.__executeActionUIDialogOptionWithMaximumValue(node, float)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+        scriptBlock.setVariable(variableName, WDialogFloatInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), True)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogColorInput(self, currentAst):
+        """Open dialog for color input"""
+        fctLabel='Action `open dialog for color input`'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=QColor('#FF0000')
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, QColor)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        minSize=None
+        if message=='':
+            minSize=QSize(640, 480)
+
+        scriptBlock=self.__scriptBlockStack.current()
+
+        scriptBlock.setVariable(variableName, WDialogColorInput.display(title, message, defaultValue=defaultValue,
+                                options={'layout':
+                                            ['colorRGB',
+                                             'colorHSV',
+                                             'colorWheel',
+                                             'colorAlpha',
+                                             'colorPreview',
+                                             f'colorCombination:{WColorComplementary.COLOR_COMBINATION_TETRADIC}',
+                                             f'layoutOrientation:{WColorPicker.OPTION_ORIENTATION_HORIZONTAL}']
+                                    },
+                                minSize=minSize), True)
+
+        #self.__delay()
+        return None
+
+
+
+
+
+
+
+        #choiceList=['Item A', 'Item B', 'Item C', 'Item D']
+
+        #print(WDialogComboBoxChoiceInput.display('test combobox', msg, inputLabel='Please make a choice', choicesValue=choiceList))
+        #print(WDialogComboBoxChoiceInput.display('test combobox', msg2, choicesValue=choiceList, defaultIndex=2))
+        #print(WDialogComboBoxChoiceInput.display('test combobox', inputLabel='Your choice', choicesValue=choiceList))
+
+        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg, inputLabel='Please make a choice', choicesValue=choiceList))
+        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg2, choicesValue=choiceList, defaultIndex=2))
+        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', inputLabel='Your choice', choicesValue=choiceList))
+
+        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg, inputLabel='Please make a choice', choicesValue=choiceList, defaultChecked=[1,3], minimumChecked=2))
+        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg2, choicesValue=choiceList))
+        #print(WDialogCheckBoxChoiceInput.display('test checkbox', inputLabel='Your choice', choicesValue=choiceList))
+
+
+        #print(WDialogColorInput.display('test checkbox', msg, inputLabel='Please choose a color'))
+        #print(WDialogColorInput.display('test checkbox', inputLabel='Choose', defaultValue='#ffff00', options={"menu":WColorPicker.OPTION_MENU_ALL, "layout": ['layoutOrientation:1', 'colorWheel', 'colorRGB']}, minSize=QSize(300,700)))
+        #print(WDialogColorInput.display('test checkbox', msg2, defaultValue=QColor('#ff00ff'), options={"layout": ['colorpalette', 'colorWheel', 'colorRGB', 'colorHSL']}))
+
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogSingleChoiceInput(self, currentAst):
+        """Open dialog for single choice input"""
+        fctLabel='Action `open dialog for single choice input`'
+
+        if len(currentAst.nodes())<2:
+            # at least need 2 parameters (variable + option choices)
+            self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultIndex=0
+        choicesValue=None
+        comboboxListChoice=True
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Index":
+                defaultIndex=self.__executeActionUIDialogOptionWithDefaultIndex(node, int)
+            elif node.id()=="Action_UIDialog_Option_With_Combobox_Choices":
+                choicesValue=self.__executeActionUIDialogOptionWithChoices(node)
+                comboboxListChoice=True
+            elif node.id()=="Action_UIDialog_Option_With_RadioButton_Choices":
+                choicesValue=self.__executeActionUIDialogOptionWithChoices(node)
+                comboboxListChoice=False
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        if choicesValue is None:
+            raise EInterpreter(f"{fctLabel}: option 'with combobox choices' or 'with radio button choices' is required", currentAst)
+        elif len(choicesValue)==0:
+            raise EInterpreter(f"{fctLabel}: provided choices can't be an empty list", currentAst)
+
+        defaultIndex-=1         # given index is in [1 ; len(choices)] ==> so in python [0 ; len(choices) - 1]
+        defaultIndex=max(0, min(defaultIndex, len(choicesValue) - 1))
+
+        scriptBlock=self.__scriptBlockStack.current()
+        if comboboxListChoice:
+            value=WDialogComboBoxChoiceInput.display(title, message, defaultIndex=defaultIndex, choicesValue=choicesValue)
+        else:
+            value=WDialogRadioButtonChoiceInput.display(title, message, defaultIndex=defaultIndex, choicesValue=choicesValue)
+
+
+        if isinstance(value, int):
+            # +1 because in BuliScript, index in list start from 1, not 0
+            value+=1
+        scriptBlock.setVariable(variableName, value, True)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogMultipleChoiceInput(self, currentAst):
+        """Open dialog for multiple choice input"""
+        fctLabel='Action `open dialog for multiple choice input`'
+
+        if len(currentAst.nodes())<2:
+            # at least need 2 parameters (variable + option choices)
+            self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultChecked=[0]
+        choicesValue=None
+        minimumChecked=0
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Index":
+                defaultChecked=self.__executeActionUIDialogOptionWithDefaultIndex(node, (int, list))
+            elif node.id()=="Action_UIDialog_Option_With_Choices":
+                choicesValue=self.__executeActionUIDialogOptionWithChoices(node)
+            elif node.id()=="Action_UIDialog_Option_With_Minimum_Choices":
+                minimumChecked=self.__executeActionUIDialogOptionWithMinimumValue(node, int)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        if choicesValue is None:
+            raise EInterpreter(f"{fctLabel}: option 'with choices' is required", currentAst)
+        elif len(choicesValue)==0:
+            raise EInterpreter(f"{fctLabel}: provided choices can't be an empty list", currentAst)
+
+        if isinstance(defaultChecked, int):
+            defaultChecked=[defaultChecked]
+        defaultChecked=[max(0, min(item, len(choicesValue) - 1)) for item in defaultChecked]
+
+        minimumChecked=max(0, min(minimumChecked, len(choicesValue) - 1))
+
+        scriptBlock=self.__scriptBlockStack.current()
+        value=WDialogCheckBoxChoiceInput.display(title, message, defaultChecked=defaultChecked, choicesValue=choicesValue, minimumChecked=minimumChecked)
+
+
+        if isinstance(value, list):
+            # +1 because in BuliScript, index in list start from 1, not 0
+            value=[item+1 for item in value]
+        scriptBlock.setVariable(variableName, value, True)
+
+        #self.__delay()
+        return None
+
+
+
+
+
+
+
+
+        #choiceList=['Item A', 'Item B', 'Item C', 'Item D']
+
+        #print(WDialogComboBoxChoiceInput.display('test combobox', msg, inputLabel='Please make a choice', choicesValue=choiceList))
+        #print(WDialogComboBoxChoiceInput.display('test combobox', msg2, choicesValue=choiceList, defaultIndex=2))
+        #print(WDialogComboBoxChoiceInput.display('test combobox', inputLabel='Your choice', choicesValue=choiceList))
+
+        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg, inputLabel='Please make a choice', choicesValue=choiceList))
+        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg2, choicesValue=choiceList, defaultIndex=2))
+        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', inputLabel='Your choice', choicesValue=choiceList))
+
+        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg, inputLabel='Please make a choice', choicesValue=choiceList, defaultChecked=[1,3], minimumChecked=2))
+        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg2, choicesValue=choiceList))
+        #print(WDialogCheckBoxChoiceInput.display('test checkbox', inputLabel='Your choice', choicesValue=choiceList))
+
+
+        #print(WDialogColorInput.display('test checkbox', msg, inputLabel='Please choose a color'))
+        #print(WDialogColorInput.display('test checkbox', inputLabel='Choose', defaultValue='#ffff00', options={"menu":WColorPicker.OPTION_MENU_ALL, "layout": ['layoutOrientation:1', 'colorWheel', 'colorRGB']}, minSize=QSize(300,700)))
+        #print(WDialogColorInput.display('test checkbox', msg2, defaultValue=QColor('#ff00ff'), options={"layout": ['colorpalette', 'colorWheel', 'colorRGB', 'colorHSL']}))
+
+
+        #self.__delay()
+        return None
+
+
 
 
 

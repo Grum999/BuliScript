@@ -295,6 +295,27 @@ Action_UIDialog
                         (
                             'with' ( 'default' 'value' Evaluate_String_Expression )
                         )?
+                    ) |
+                    /* SINGLE CHOICE INPUT */
+                    (
+                        'single' 'choice' 'input' Variable
+                        (
+                            'with' ( ('combobox'|'radio button') 'choices' List_Expression  )
+                        )
+                        (
+                            'with' ( 'default' 'index' Evaluate_Number_Expression )
+                        )?
+                    ) |
+                    /* MULTIPLE CHOICE INPUT */
+                    (
+                        'multiple' 'choice' 'input' Variable
+                        (
+                            'with' ( 'choices' List_Expression  )
+                        )
+                        (
+                            'with' ( 'default' 'index' (List_Expression|Evaluate_Number_Expression) ) |
+                                   ( 'minimum' 'choices' Evaluate_Number_Expression)
+                        )*
                     )
                 )
             )
