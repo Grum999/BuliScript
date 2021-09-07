@@ -118,11 +118,6 @@ class Parser:
         self.__ast=ASTItem(ASTSpecialItemType.ROOT)
 
         # rewind tokens list to first position
-        token=self.__tokens.first()
-        while not token is None:
-            #Debug.print(token)
-            token=self.__tokens.next()
-
         self.__tokens.first()
 
         # start to check grammar rules for tokens
@@ -170,7 +165,7 @@ class Parser:
         checkResult=self.__grammarRules.check()
         if len(checkResult)>0:
             # grammar is not correct?
-            print(checkResult)
+            #print(checkResult)
             raise EInvalidStatus("Current grammar is not complete, some referenced grammar rule are missing")
 
         if self.__grammarRules.idFirst() is None:
@@ -317,8 +312,8 @@ class ASTItem:
                     # and it's designed optionAst() to be stored as a node
                     self.__nodes.append(item)
                 else:
-                    # AST item is refering to a grammar rule or a specital item type (probaly a binary operator)
-                    # and it's NOT designed optionAst() to be stored as a node
+                    # AST item is refering to a grammar rule or a special item type (probably a binary operator)
+                    # and it's NOT designed to be stored as a node (optionAst()=False)
                     #
                     # or
                     #
@@ -410,117 +405,152 @@ class ASTItem:
             return self.__grammarRule.optionOperatorPrecedence()
 
     def checkOperatorPrecedence(self):
-        """Check if curent AST item is concerned by opertor precedence rules
+        """Check if current AST item is concerned by operator precedence rules
 
         If yes, do a conversion of current AST item to a BinaryOperator AST
         """
-        def lookahead(nodes):
-            left=nodes.value()
+        def getOperator(nodes, move=True):
+            """return current operator Token"""
+            returned=nodes.value()
 
-            if isinstance(left, Token) and self.__grammarRule.grammarRules().operatorType(left)==1:
-                # an unary operator
-                left=None
-            else:
-                returned=left
-                # current token is not an operator
-                # go to next token to be on operator
+            if move:
+                # continue with next token
+                # if no more token, loop will be exited and last operator returned as head of AST
                 nodes.next()
 
-            while nodes.value():
-                node=nodes.value()
+            return returned
 
+        def getOperand(nodes):
+            """From current index in nodes list, get operand
+
+            Returned value can be a Token (a number) or an ASTItem
+
+            when operand is returned, index in nodes list is moved on Operator
+            """
+            # get current node in list from current index
+            node=nodes.value()
+            # move to next one
+            nodes.next()
+
+            if isinstance(node, Token) and self.__grammarRule.grammarRules().operatorType(node)==GrammarRules.OPERATOR_UNARY:
+                # current node is an unary operator
+                # create ASTItem for operator
+                operator=ASTItem(ASTSpecialItemType.UNARY_OPERATOR)
+                operator.add(node)
+                # as it's an unary operator, there's only one branch child on which next operand is added
+                operator.add(getOperand(nodes))
+                operator.setStatus(ASTStatus.MATCH)
+
+                returned=operator
+            else:
+                # not a Token (an ASTItem) or a Token that is not an unary operator
+                # note: it shouldn't be a binary operator too, but normaly this case is already blocked when parser
+                #       is build AST from grammar rules
+                returned=node
+
+            return returned
+
+        def lookahead(nodes, notFirstLevel=True):
+            """Look ahead for next AST item"""
+            # normally, current index in nodes list is on an operand
+            # get it
+            left=getOperand(nodes)
+
+            # define return value, in case of we only have one operand in evaluated list
+            returned=left
+
+
+            # starting from here, current node should be an operator or None (if reached end of evaluation tokens list)
+            # if it's not an operator, it's not normal (parser in this case already stopped because it might not match grammar rule of a 'valid' evaluation expression)
+
+            # initialise the exitloop to false because we didn't entered in yet :-)
+            exitLoop=False
+            while node:=getOperator(nodes):
                 # get priority of current operator
+                # note: it could only be a binary operator, unray operator are managed through getOperand()
                 priority=self.__grammarRule.grammarRules().operatorPrecedence(node)
 
+                # get default right value for operator
+                right=getOperand(nodes)
+
                 # need to analyse lookahead, to get next operator and compare priority
+                nodeLA=getOperator(nodes, False)
+                if nodeLA:
+                    # got an operator
 
-                for laIndex in range(1,3):
-                    nodeLA=nodes.relativeValue(laIndex)
-                    if nodeLA:
-                        right=None
-                        if self.__grammarRule.grammarRules().operatorType(nodeLA)>0:
-                            # there's a node in list, get priority
-                            priorityLA=self.__grammarRule.grammarRules().operatorPrecedence(nodeLA)
+                    # get operator's priority
+                    priorityLA=self.__grammarRule.grammarRules().operatorPrecedence(nodeLA)
 
-                            # get default right value for operator
-                            right=nodes.next()
+                    # if priority==priorityLA:
+                    #       same priority, then we don't care
+                    #       example:
+                    #         a + b + c
+                    #           ^   ^
+                    #           |   +-- priorityLA=10     [node - look ahead]
+                    #           +------ priority=10       [node - current]
+                    #
+                    # else if priority>priorityLA:
+                    #       current operator priority is higher
+                    #       example:
+                    #         a * b + c
+                    #           ^   ^
+                    #           |   +-- priorityLA=10     [node - look ahead]
+                    #           +------ priority=20       [node - current]
+                    #
+                    #       in this case need to build
+                    #              +
+                    #           *     c
+                    #          a b
+                    #
+                    #
+                    #   ===> right value already defined with expected value
 
-                            # if priority==priorityLA:
-                            #       same priority, then we don't care
-                            #       example:
-                            #         a + b + c
-                            #           ^   ^
-                            #           |   +-- priorityLA=10     [node.relativeValue(2)]
-                            #           +------ priority=10       [node]
-                            #
-                            # else if priority>priorityLA:
-                            #       current operator priority is higher
-                            #       example:
-                            #         a * b + c
-                            #           ^   ^
-                            #           |   +-- priorityLA=10     [node.relativeValue(2)]
-                            #           +------ priority=20       [node]
-                            #
-                            #       in this case need to build
-                            #              +
-                            #           *     c
-                            #          a b
-                            #
-
-                            if priority<=priorityLA:
-                                # current operator priority is lower
-                                # example:
-                                #   a + b * c
-                                #     ^   ^
-                                #     |   +-- priorityLA=20     [node.relativeValue(2)]
-                                #     +------ priority=10       [node]
-                                #
-                                # in this case need to build
-                                #        +
-                                #     a    *
-                                #         b c
-                                #
-                                # get next look head as right value
-                                right=lookahead(nodes)
-
-                            break
-                    else:
-                        # there's no token anymore to analyse; set last token as right value
+                    if priorityLA>priority:
+                        # current operator priority is lower
+                        # example:
+                        #   a + b * c
+                        #     ^   ^
+                        #     |   +-- priorityLA=20     [node - look ahead]
+                        #     +------ priority=10       [node - current]
                         #
-                        right=nodes.next()
-                        break
+                        # in this case need to build
+                        #        +
+                        #     a    *
+                        #         b c
+                        #
+                        # get next look head as right value
+                        nodes.prev()
+                        right=lookahead(nodes)
+                    elif priorityLA<priority and notFirstLevel:
+                        # in this case we need to exit current look ahead and
+                        # continue on parent node.
+                        # except if there's no parent node :-)
+                        exitLoop=True
 
+                    # if priority is the same, "do nothing" continue, to look ahead in current node
 
-                # create AST for current operator
-                if left is None:
-                    operator=ASTItem(ASTSpecialItemType.UNARY_OPERATOR)
-                    operator.add(node)
-                    operator.add(right)
-                else:
-                    operator=ASTItem(ASTSpecialItemType.BINARY_OPERATOR)
-                    operator.add(node)
-                    operator.add(left)
-                    operator.add(right)
+                operator=ASTItem(ASTSpecialItemType.BINARY_OPERATOR)
+                operator.add(node)
+                operator.add(left)
+                operator.add(right)
                 operator.setStatus(ASTStatus.MATCH)
+
+                if exitLoop:
+                    return operator
 
                 # left value for next operator will be current operator created
                 left=operator
 
-                # and return last operator from current lookahead (if exit loop)
+                # and return last operator from current lookahead (if next while condition exit loop)
                 returned=operator
-
-                # continue with next token
-                # if no more token, loop will be exited and last operator returned as hed of AST
-                nodes.next()
 
             return returned
 
         if self.__checkOperatorPrecedenceEnabled and self.optionOperatorPrecedence():
             # need to reorganise items
-            #
             nodes=EList(self.__nodes)
             nodes.first()
-            self.__nodes=[lookahead(nodes)]
+            self.__nodes=[lookahead(nodes, False)]
 
             # AST item has been processed, ensure that it won't be processed anymore
             self.__checkOperatorPrecedenceEnabled=False
@@ -603,6 +633,9 @@ class GROperatorPrecedence:
 
 class GrammarRules:
     """A pool of grammar rules"""
+    OPERATOR_BINARY=2
+    OPERATOR_UNARY=1
+    OPERATOR_NONE=0
 
     def __init__(self):
         self.__rules={}
@@ -695,7 +728,7 @@ class GrammarRules:
                 raise EInvalidType("Given `rules` must be <GROperatorPrecedence>")
             self.__operatorPrecedence.append(rule)
 
-    def operatorPrecedence(self, token=None):
+    def operatorPrecedence(self, token=None, binary=True):
         """Return defined operator precedence rules
 
         If no `token` is provided, return all rules
@@ -706,7 +739,7 @@ class GrammarRules:
             return self.__operatorPrecedence
         elif isinstance(token, Token):
             for rule in self.__operatorPrecedence:
-                if rule.tokenType()==token.type():
+                if rule.tokenType()==token.type() and rule.binary()==binary:
                     values=rule.tokenValues()
                     if len(values)>0:
                         if token.equal(values):
@@ -715,7 +748,6 @@ class GrammarRules:
                         return rule.priority()
             return 0
         else:
-            # print(token)
             raise EInvalidType('When provided `token` must be a <Token>')
 
     def operatorType(self, token):
@@ -731,13 +763,13 @@ class GrammarRules:
                     if len(values)>0:
                         if token.equal(values):
                             if rule.binary():
-                                return 2
-                            return 1
+                                return GrammarRules.OPERATOR_BINARY
+                            return GrammarRules.OPERATOR_UNARY
                     else:
                         if rule.binary():
-                            return 2
-                        return 1
-        return 0
+                            return GrammarRules.OPERATOR_BINARY
+                        return GrammarRules.OPERATOR_UNARY
+        return GrammarRules.OPERATOR_NONE
 
 
 
@@ -1220,8 +1252,6 @@ class GRRule(GRObject):
         for grObject in self.__grammarRule.grammarList():
             checked=grObject.check(tokens, ignoredTokens)
 
-            # test
-
             if checked.status()==ASTStatus.END:
                 #print('Check GRRule: END', self.id(), checked)
                 ast.add(checked)
@@ -1230,5 +1260,4 @@ class GRRule(GRObject):
                 return ast.setStatus(ASTStatus.NOMATCH)
             ast.add(checked)
 
-        #print('Check GRRule: MATCH', self.id())
         return ast.setStatus(ASTStatus.MATCH)
