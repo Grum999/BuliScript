@@ -4181,12 +4181,13 @@ class BSLanguageDef(LanguageDef):
 
         """
         self.__grammarRules.setOperatorPrecedence(
-                GROperatorPrecedence(90, BSLanguageDef.ITokenType.UNARY_OPERATOR, False, 'not'),
-                GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR, False, '-'),
+                GROperatorPrecedence(90, BSLanguageDef.ITokenType.UNARY_OPERATOR,  False, 'not'),
+                GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR,   False, '-'),
                 GROperatorPrecedence(80, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '*', '/', '//', '%'),
-                GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+', '-'),
+                GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+'),
+                GROperatorPrecedence(70, BSLanguageDef.ITokenType.DUAL_OPERATOR,   True, '-'),
                 GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
-                GROperatorPrecedence(50, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '<>'),
+                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '<>'),
                 GROperatorPrecedence(40, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
                 GROperatorPrecedence(30, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
                 GROperatorPrecedence(20, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
@@ -5320,7 +5321,19 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GROne('Evaluation_Expression_Unary_Operator',
                       'Evaluation_Expression_Parenthesis',
-                      #'Evaluation_Expression_Comparison',
+                      'Any_Value'),
+                GROptional('Evaluation_Expression_Binary_Operator')
+            )
+
+        # When an evaluation expression start, only the first one need to manage operator precedence
+        # for this, grammar rules are built:
+        # - first evaluation expression manage OPTION_OPERATOR_PRECEDENCE
+        # - following evaluation expression do not manage OPTION_OPERATOR_PRECEDENCE
+        # for this, create a second Evaluation_Expression rule, without option, that is called for binary operators
+        GrammarRule('Evaluation_Expression__noop',
+                # --
+                GROne('Evaluation_Expression_Unary_Operator',
+                      'Evaluation_Expression_Parenthesis',
                       'Any_Value'),
                 GROptional('Evaluation_Expression_Binary_Operator')
             )
@@ -5329,6 +5342,7 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.PARENTHESIS_OPEN, False),
+                # use the evaluation expression with OPTION_OPERATOR_PRECEDENCE here as we're in an another level of evaluation
                 'Evaluation_Expression',
                 GRToken(BSLanguageDef.ITokenType.PARENTHESIS_CLOSE, False),
             )
@@ -5336,16 +5350,7 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Evaluation_Expression_Binary_Operator',
                 GROne(GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '+', '*', '/', '//', '%', 'and', 'or', 'xor', '<=', '<>', '<', '>', '>=', '='),
                       GRToken(BSLanguageDef.ITokenType.DUAL_OPERATOR, '-')),
-                'Evaluation_Expression',
-                GROptional('Evaluation_Expression_Binary_Operator')
-            )
-
-        GrammarRule('Evaluation_Expression__noComparison',
-                GrammarRule.OPTION_AST|GrammarRule.OPTION_OPERATOR_PRECEDENCE,
-                # --
-                GROne('Evaluation_Expression_Unary_Operator',
-                      'Evaluation_Expression_Parenthesis',
-                      'Any_Value'),
+                'Evaluation_Expression__noop',
                 GROptional('Evaluation_Expression_Binary_Operator')
             )
 
@@ -5356,7 +5361,6 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.DUAL_OPERATOR, '-')),
                 GROne('Evaluation_Expression_Unary_Operator',
                       'Evaluation_Expression_Parenthesis',
-                      'Evaluation_Expression_Comparison',
                       'Any_Value'),
                 GROptional('Evaluation_Expression_Binary_Operator')
             )
