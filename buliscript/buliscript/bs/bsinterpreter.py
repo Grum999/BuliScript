@@ -80,18 +80,35 @@ from buliscript.pktk.pktk import (
 
 
 class EInterpreter(Exception):
-    """An error occured during execution"""
-    def __init__(self, message, ast):
+    """An error occured during script execution
+
+    Usually error is
+    """
+    ERROR_LEVEL_STOP = 0
+    ERROR_LEVEL_ERROR = 1
+    ERROR_LEVEL_CRITICAL = 2
+
+    def __init__(self, message, ast, errorLevel=1):
         super(EInterpreter, self).__init__(message)
         self.__ast=ast
+        self.__errorLevel=errorLevel
 
     def ast(self):
+        """Return AST from which exception has been raised"""
         return self.__ast
 
+    def errorLevel(self):
+        """Return error level for exception"""
+        return self.__errorLevel
+
 class EInterpreterInternalError(EInterpreter):
-    """An error occured during execution"""
-    def __init__(self, message, ast):
-        super(EInterpreterInternalError, self).__init__(f"Internal error: <<{message}>>", ast)
+    """An error occured during execution
+
+    These exception are more related to an internal problem (initialisation, internal bug, ...)
+    than a problem from script
+    """
+    def __init__(self, message, ast, errorLevel=2):
+        super(EInterpreterInternalError, self).__init__(f"Internal error: <<{message}>>", ast, errorLevel)
 
 
 class BSInterpreter(QObject):
@@ -345,6 +362,18 @@ class BSInterpreter(QObject):
             return self.__executeFlowSetVariable(currentAst)
         elif currentAst.id() == 'Flow_Define_Macro':
             return self.__executeFlowDefineMacro(currentAst)
+        elif currentAst.id() == 'Flow_Stop_Script':
+            return self.__executeFlowStopScript(currentAst)
+        elif currentAst.id() == 'Flow_Call_Macro':
+            return self.__executeFlowCallMacro(currentAst)
+        elif currentAst.id() == 'Flow_Return':
+            return self.__executeFlowReturn(currentAst)
+        elif currentAst.id() == 'Flow_If':
+            return self.__executeFlowIfElseIf(currentAst, 'if')
+        elif currentAst.id() == 'Flow_ElseIf':
+            return self.__executeFlowIfElseIf(currentAst, 'else if')
+        elif currentAst.id() == 'Flow_Else':
+            return self.__executeFlowElse(currentAst)
 
         # ----------------------------------------------------------------------
         # Actions
@@ -551,16 +580,30 @@ class BSInterpreter(QObject):
             print('************************************************************* TODO: implement', currentAst.id())
             return None
 
-    def __executeScriptBlock(self, currentAst, allowLocalVariable, name):
+    def __executeScriptBlock(self, currentAst, allowLocalVariable, name, createLocalVariables=None):
         """Execute a script block
 
         Each script block:
         - is defined by a UUID
         - keep is own local variables
         - can access to parent variables
+
+
+        If `createLocalVariables` is provided, must be a <dict>
+        In this case, local variables from dict will be created for current AST
+
         """
+        returned=None
+
         self.__verbose(f"Enter scriptblock: '{name}'", currentAst)
         self.__scriptBlockStack.push(currentAst, allowLocalVariable, name)
+
+        scriptBlock=self.__scriptBlockStack.current()
+
+        if isinstance(createLocalVariables, dict):
+            # create local variables if any provided before starting block execution
+            for variableName in createLocalVariables:
+                scriptBlock.setVariable(variableName, createLocalVariables[variableName], True, True)
 
         for ast in currentAst.nodes():
             # execute all instructions from current script block
@@ -569,11 +612,17 @@ class BSInterpreter(QObject):
                 for subAst in ast.nodes():
                     self.__executeAst(subAst)
             else:
-                self.__executeAst(ast)
+                returned=self.__executeAst(ast)
 
-        Debug.print("Variables: {0}", self.__scriptBlockStack.current().variables(True))
+            if not returned is None:
+                # when a value is returned, that's a RETURN flow
+                break
+
+        #Debug.print("Variables: {0}", scriptBlock.variables(True))
         self.__scriptBlockStack.pop()
         self.__verbose(f"Exit scriptblock: '{name}'", currentAst)
+
+        return returned
 
 
     # --------------------------------------------------------------------------
@@ -632,6 +681,171 @@ class BSInterpreter(QObject):
 
         #self.__delay()
         return None
+
+    def __executeFlowStopScript(self, currentAst):
+        """stop script
+
+        Stop script execution
+        """
+        raise EInterpreter("Explicit call to stop script", currentAst, EInterpreter.ERROR_LEVEL_STOP)
+
+    def __executeFlowCallMacro(self, currentAst):
+        """call macro
+
+        Call defined and execute it
+        """
+        fctLabel='Flow `call macro`'
+
+        if len(currentAst.nodes())<1:
+            # at least, must have one parameter (macro name to call)
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        macroName=None
+        variablesAsParameter=[]
+        storeResultName=None
+        storeResultValue=None
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                macroName=self.__evaluate(node)
+            elif isinstance(node, ASTItem) and node.id()=='Flow_Call_Macro__storeResult':
+                # <ASTItem(Flow_Call_Macro__storeResult>
+                #       <Token(ITokenType.VARIABLE_USER, `:v1`)>
+                storeResultName=node.nodes()[0].value()
+            else:
+                variablesAsParameter.append(self.__evaluate(node))
+
+
+        self.__checkParamType(currentAst, fctLabel, '<MACRO>', macroName, str)
+
+        macroDefinition=self.__macroDefinitions.get(macroName)
+        self.__checkParamDomain(currentAst, fctLabel, '<MACRO>', not macroDefinition is None, f"no macro matching given name '{macroName}' found")
+
+        nbExpectedArgs=len(macroDefinition.argumentsName())
+        nbProvidedArgs=len(variablesAsParameter)
+
+        if nbExpectedArgs!=nbProvidedArgs:
+            raise EInterpreter(f"{fctLabel}: number of provided parameters ({nbProvidedArgs}) do not match expected number of parameters ({nbExpectedArgs}) for macro '{macroName}'", currentAst)
+
+        localVariables={}
+        for index, argName in enumerate(macroDefinition.argumentsName()):
+            # build a dictionnary to match variable name with given values
+            localVariables[argName]=variablesAsParameter[index]
+
+        #self.__delay()
+        verboseText=f"call macro '{macroName}' "
+        if len(localVariables)>0:
+            verboseText+="with parameters"+' '.join([f'{key}={localVariables[key]}' for key in localVariables])+' '
+        if not storeResultName is None:
+            verboseText+='and store result into variable '+storeResultName
+        self.__verbose(verboseText, currentAst)
+
+        storeResultValue=self.__executeScriptBlock(macroDefinition.ast(), True, f"Macro: {macroName}", localVariables)
+
+        if isinstance(storeResultName, str):
+            self.__scriptBlockStack.current().setVariable(storeResultName, storeResultValue, True)
+
+        return storeResultValue
+
+    def __executeFlowReturn(self, currentAst):
+        """return
+
+        Return given value or False if no value is provided
+        """
+        fctLabel='Flow `return`'
+        self.__checkParamNumber(currentAst, fctLabel, 0, 1)
+
+        returned=False
+
+        if len(currentAst.nodes())>0:
+            returned=self.__evaluate(currentAst.node(0))
+
+        self.__verbose(f"return {self.__strValue(returned)}", currentAst)
+
+        #self.__delay()
+        return returned
+
+    def __executeFlowIfElseIf(self, currentAst, mode='if'):
+        """if <condition> then
+
+        Execute a scriptblock if condition is met
+        """
+        fctLabel='Flow `if ... then`'
+
+        # 1st parameter: condition
+        # 2nd parameter: scriptblock to execute
+        # 3rd parameter: Else/ElseIf
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3)
+
+        condition=self.__evaluate(currentAst.node(0))
+
+        if isinstance(condition, (int, float)):
+            # when condition is a number value, consider 0 value as FALSE and other as TRUE
+            condition=(condition!=0)
+        elif isinstance(condition, str):
+            # when condition is a string value, consider empty string value as FALSE and non empty string as TRUE
+            condition=(condition!='')
+        elif isinstance(condition, list):
+            # when condition is a list value, consider empty list value as FALSE and non empty list as TRUE
+            condition=(len(condition)>0)
+        elif isinstance(condition, QColor):
+            # when condition is a color value, consider black color value as FALSE and any other color as TRUE
+            condition=condition!=QColor(Qt.black)
+        elif not isinstance(condition, bool):
+            # when condition is not a boolean (can occurs?), condition is False
+            condition=False
+
+        astScriptBlock=None
+        execFct=None
+
+        if condition==True:
+            verboseText=f'{mode} (condition validated) then ...'
+            astBlockName=f'{mode} (ON) then (Execute statement)'
+            astScriptBlock=currentAst.node(1)
+            execFct='__executeScriptBlock'
+        elif len(currentAst.nodes())==3:
+            # else or else if
+            astScriptBlock=currentAst.node(2)
+            if astScriptBlock.id()=='Flow_ElseIf':
+                verboseText=f'{mode} (condition not validated) then ... else if (...)'
+                astBlockName=f'{mode} (OFF) then ... elseif (...)'
+                execFct='__executeFlowIfElseIf'
+            else:
+                verboseText=f'{mode} (condition not validated) then ... else'
+                astBlockName=f'{mode} (OFF) then ... else '
+                execFct='__executeFlowElse'
+        else:
+            verboseText=f'{mode} (condition not validated) then ...'
+
+        self.__verbose(verboseText, currentAst)
+
+        if execFct=='__executeScriptBlock':
+            self.__executeScriptBlock(astScriptBlock, False, astBlockName)
+        elif execFct=='__executeFlowIfElseIf':
+            self.__executeFlowIfElseIf(astScriptBlock, 'else if')
+        elif execFct=='__executeFlowElse':
+            self.__executeFlowElse(astScriptBlock)
+
+
+        #self.__delay()
+        return None
+
+    def __executeFlowElse(self, currentAst):
+        """... else ...
+
+        Execute a scriptblock
+        """
+        fctLabel='Flow `else ...`'
+
+        # 1st parameter: scriptblock to execute
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        self.__verbose('else ...', currentAst)
+        self.__executeScriptBlock(currentAst.node(0), False, 'else')
+
+        #self.__delay()
+        return None
+
+
 
 
     # --------------------------------------------------------------------------
@@ -4261,12 +4475,12 @@ class BSScriptBlockProperties:
         else:
             return default
 
-    def setVariable(self, name, value, localVariable):
+    def setVariable(self, name, value, localVariable, forceToBeLocal=False):
         """Set `value` for variable designed by given `name`
 
         If variable doesn't exist in script block, create it
         """
-        if localVariable and self.__allowLocalVariable or not localVariable:
+        if localVariable and self.__allowLocalVariable or not localVariable or forceToBeLocal:
             self.__variables[name]=value
         elif not self.__parent is None:
             self.__parent.setVariable(name, value, localVariable)
