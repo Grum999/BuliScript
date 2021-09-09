@@ -2694,7 +2694,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgba?|hsla?|hsva?|cmyka?)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgba?|hsla?|hsva?|cmyka?|red|green|blue|hue|saturation|value|lightness|cyan|magenta|yellow|black|opacity)\b",
                                                                     'Functions/Color',
                                                                     [('color.rgb(\x01<R-VALUE>, <G-VALUE>, <B-VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2812,6 +2812,114 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`color.cmyk(255, 0, 255, 191, 127)`**\n'
                                                                                 '**`color.hsv(1.0, 0.0, 1.0, 0.75, 0.5)`**\n\n'
                                                                                 'Will both return a green color equivalent to rgb(0,64,0), with 50% opacity')),
+                                                                    ('color.red(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *red* value for given color]',
+                                                                                # description
+                                                                                'Return red value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.red(#55364347)`**\n\n'
+                                                                                'Will return value 54')),
+                                                                    ('color.green(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *green* value for given color]',
+                                                                                # description
+                                                                                'Return green value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.green(#55364347)`**\n\n'
+                                                                                'Will return value 67')),
+                                                                    ('color.blue(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *blue* value for given color]',
+                                                                                # description
+                                                                                'Return blue value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.blue(#55364347)`**\n\n'
+                                                                                'Will return value 71')),
+                                                                    ('color.cyan(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *cyan* value for given color]',
+                                                                                # description
+                                                                                'Return cyan value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.cyan(#55364347)`**\n\n'
+                                                                                'Will return value 61')),
+                                                                    ('color.magenta(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *magenta* value for given color]',
+                                                                                # description
+                                                                                'Return magenta value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.magenta(#55364347)`**\n\n'
+                                                                                'Will return value 14')),
+                                                                    ('color.black(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *black* value for given color]',
+                                                                                # description
+                                                                                'Return black value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.black(#55364347)`**\n\n'
+                                                                                'Will return value 184')),
+                                                                    ('color.yellow(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *yellow* value for given color]',
+                                                                                # description
+                                                                                'Return yellow value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.yellow(#55364347)`**\n\n'
+                                                                                'Will return value 0')),
+                                                                    ('color.hue(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *hue* value for given color]',
+                                                                                # description
+                                                                                'Return hue value (0-360) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.hue(#55364347)`**\n\n'
+                                                                                'Will return value 194')),
+                                                                    ('color.saturation(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *saturation* value for given color]',
+                                                                                # description
+                                                                                'Return saturation value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.saturation(#55364347)`**\n\n'
+                                                                                'Will return value 61')),
+                                                                    ('color.value(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *value* value for given color]',
+                                                                                # description
+                                                                                'Return value value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.value(#55364347)`**\n\n'
+                                                                                'Will return value 71')),
+                                                                    ('color.lightness(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *lightness* value for given color]',
+                                                                                # description
+                                                                                'Return lightness value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.lightness(#55364347)`**\n\n'
+                                                                                'Will return value 62')),
+                                                                    ('color.opacity(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *opacity* value for given color]',
+                                                                                # description
+                                                                                'Return opacity value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.opacity(#55364347)`**\n\n'
+                                                                                'Will return value 85')),
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),

@@ -578,7 +578,19 @@ Function
                 ( 'hsv' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
                 ( 'hsva' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
                 ( 'cmyk' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
-                ( 'cmyka' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' )
+                ( 'cmyka' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
+                ( 'red' '(' Color_Expression ')' ) |
+                ( 'green' '(' Color_Expression ')' ) |
+                ( 'blue' '(' Color_Expression ')' ) |
+                ( 'cyan' '(' Color_Expression ')' ) |
+                ( 'magenta' '(' Color_Expression ')' ) |
+                ( 'yellow' '(' Color_Expression ')' ) |
+                ( 'black' '(' Color_Expression ')' ) |
+                ( 'hue' '(' Color_Expression ')' ) |
+                ( 'saturation' '(' Color_Expression ')' ) |
+                ( 'lightness' '(' Color_Expression ')' ) |
+                ( 'value' '(' Color_Expression ')' ) |
+                ( 'opacity' '(' Color_Expression ')' )
             )
             |
             'string' '.' (

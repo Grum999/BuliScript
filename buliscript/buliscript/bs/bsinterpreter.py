@@ -101,6 +101,7 @@ class EInterpreter(Exception):
         """Return error level for exception"""
         return self.__errorLevel
 
+
 class EInterpreterInternalError(EInterpreter):
     """An error occured during execution
 
@@ -4033,6 +4034,78 @@ class BSInterpreter(QObject):
                 aValue=round(aValue*255)
 
             return QColor.fromCmyk(cValue, mValue, yValue, kValue, aValue)
+        elif fctName=='color.red':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.red()
+        elif fctName=='color.green':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.green()
+        elif fctName=='color.blue':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.blue()
+        elif fctName=='color.cyan':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.cyan()
+        elif fctName=='color.magenta':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.magenta()
+        elif fctName=='color.yellow':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.yellow()
+        elif fctName=='color.black':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.black()
+        elif fctName=='color.hue':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.hue()
+        elif fctName=='color.saturation':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.saturation()
+        elif fctName=='color.lightness':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.lightness()
+        elif fctName=='color.value':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.value()
+        elif fctName=='color.opacity':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<COLOR>', color, QColor)
+            return color.alpha()
         elif fctName=='list.length':
             self.__checkFctParamNumber(currentAst, fctLabel, 1)
 
@@ -4506,7 +4579,6 @@ class BSInterpreter(QObject):
         elif not self.__optionDebugMode:
             # can't execute if not in debug mode
             raise EInterpreterInternalError("Interpreter is not in Debug Mode", None)
-
 
 
 class BSScriptBlockProperties:
