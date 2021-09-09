@@ -2000,9 +2000,9 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\s+item\s+from\b",
                                                                     'Flow/Loops',
-                                                                    [('for each \x01:variable \x01 in \x01<LIST>\x01 do',
+                                                                    [('for each item from \x01<LIST>\x01 as \x01:variable\x01 do',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Loop over items in a list]',
                                                                                 # description
@@ -2013,7 +2013,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`string`**: a string is in this case considered as a list of characters'
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`for each :character in "test"`**\n'
+                                                                                '**`for each item from "test" as :character do`**\n'
                                                                                 '**`    draw text :character`**\n'
                                                                                 '**`    move forward 40`**\n\n'
                                                                                 'Will iterate over all characters in string "test", draw character and move forward from 40 pixels')),
@@ -2115,7 +2115,7 @@ class BSLanguageDef(LanguageDef):
                                                                        # (?:combobox|radio)(?:\s+(?:button)?)?
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"|(?:stop|call|define|for)"
+                                                                       r"|(?:stop|call|define|for(?:\s+(?:each(?:\s+(?:item))?))?)"
                                                                        r"|(?:import(?:\s+(?:macro|image))?)"
                                                                        r"|(?:and\s+store(?:\s+(?:result(?:\s+(?:into))?))?)"
                                                                        r")\b"
@@ -5390,10 +5390,10 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.FLOW_FOREACH, False),
+                'Any_Expression',
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
-                GRToken(BSLanguageDef.ITokenType.FLOW_IN, False),
-                'Any_Expression',
                 GRToken(BSLanguageDef.ITokenType.FLOW_DO, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),

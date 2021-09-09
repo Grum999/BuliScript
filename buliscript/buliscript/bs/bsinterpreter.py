@@ -905,13 +905,13 @@ class BSInterpreter(QObject):
         """
         fctLabel='Flow `for each ... in ...`'
 
-        # 1st parameter: target variable
-        # 2nd parameter: source list
+        # 1st parameter: source list
+        # 2nd parameter: target variable
         # 3rd parameter: scriptblock to execute
         self.__checkParamNumber(currentAst, fctLabel, 3)
 
-        forVarName=currentAst.node(0).value()
-        forEachList=self.__evaluate(currentAst.node(1))
+        forEachList=self.__evaluate(currentAst.node(0))
+        forVarName=currentAst.node(1).value()
         astScriptBlock=currentAst.node(2)
 
 
@@ -921,9 +921,9 @@ class BSInterpreter(QObject):
             forEachList=[c for c in forEachList]
 
         if len(forEachList)>5:
-            scriptBlockName=f'for {forVarName} in {forEachList[0:5]}'.replace(']', ', ...]')
+            scriptBlockName=f'for each item from {forEachList[0:5]} as {forVarName} do'.replace(']', ', ...]')
         else:
-            scriptBlockName=f'for {forVarName} in {forEachList}'
+            scriptBlockName=f'for each item from {forEachList} as {forVarName} do'
 
         # define loop variable
         forEachTotal=len(forEachList)

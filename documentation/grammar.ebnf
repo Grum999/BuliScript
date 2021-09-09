@@ -401,7 +401,7 @@ Flow_Repeat
                 DEDENT
 
 Flow_ForEach
-        ::= 'for' 'each' User_Variable 'in' List_Expression 'do'
+        ::= 'for' 'each' 'item' 'from' (List_Expression|String_Expression) 'as' User_Variable 'do'
                 INDENT
                 ScriptBlock
                 DEDENT
