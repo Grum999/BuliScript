@@ -614,12 +614,12 @@ Function
             |
             'math' '.' (
                 ( 'random' '(' ( Evaluation_Number_Expression ',' Evaluation_Number_Expression )?  ')' ) |
-                ( 'abs' '(' Evaluation_Number_Expression ')' ) |
+                ( 'absolute' '(' Evaluation_Number_Expression ')' ) |
                 ( 'sign' '(' Evaluation_Number_Expression ')' ) |
                 ( 'even' '(' Evaluation_Number_Expression ')' ) |
                 ( 'odd' '(' Evaluation_Number_Expression ')' ) |
                 ( 'exp' '(' Evaluation_Number_Expression ')' ) |
-                ( 'square_root' '(' Evaluation_Number_Expression ')' ) |
+                ( 'squareRoot' '(' Evaluation_Number_Expression ')' ) |
                 ( 'power' '(' Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
                 ( 'logn' '(' Evaluation_Number_Expression ')' ) |
                 ( 'log' '(' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |

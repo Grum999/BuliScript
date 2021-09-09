@@ -3311,7 +3311,7 @@ class BSInterpreter(QObject):
                     # at least one decimal value, return decimal value
                     return random.uniform(minValue, maxValue)
 
-        elif fctName=='math.abs':
+        elif fctName=='math.absolute':
             self.__checkFctParamNumber(currentAst, fctLabel, 1)
 
             value=self.__evaluate(currentAst.node(1))
@@ -3373,7 +3373,7 @@ class BSInterpreter(QObject):
             self.__checkParamType(currentAst, fctLabel, '<POWER>', power, int, float)
 
             return math.pow(value, power)
-        elif fctName=='math.square_root':
+        elif fctName=='math.squareroot':
             self.__checkFctParamNumber(currentAst, fctLabel, 1)
 
             value=self.__evaluate(currentAst.node(1))

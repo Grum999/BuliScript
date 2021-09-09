@@ -2149,9 +2149,9 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:abs|even|odd|sign)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:absolute|even|odd|sign)\b",
                                                                     'Functions/Math/Numbers',
-                                                                    [('math.abs(\x01<VALUE>\x01)',
+                                                                    [('math.absolute(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *absolute* value for a given number]',
                                                                                 # description
@@ -2160,10 +2160,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is a number',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`math.abs(-4)`**\n\n'
+                                                                                '**`math.absolute(-4)`**\n\n'
                                                                                 'Will return value **`4`**\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`math.abs(-4.0)`**\n\n'
+                                                                                '**`math.absolute(-4.0)`**\n\n'
                                                                                 'Will return value **`4.0`**')),
                                                                     ('math.sign(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2207,7 +2207,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:exp|logn?|power|square_root)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:exp|logn?|power|squareRoot)\b",
                                                                     'Functions/Math/Power and Logarithmic',
                                                                     [('math.exp(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2231,7 +2231,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`math.power(4, 2)`**\n\n'
                                                                                 'Will return value *`4`* to the power of `2` (4^2)')),
-                                                                    ('math.square_root(\x01<VALUE>\x01)',
+                                                                    ('math.squareRoot(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *square root* value for a given number]',
                                                                                 # description
@@ -2240,7 +2240,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is a number',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`math.square_root(4)`**\n\n'
+                                                                                '**`math.squareRoot(4)`**\n\n'
                                                                                 'Will return value **`2.00`**')),
                                                                     ('math.logn(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
