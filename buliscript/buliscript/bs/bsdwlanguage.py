@@ -59,6 +59,7 @@ class BSDockWidgetLangageQuickHelp(QDockWidget):
         self.__title.setStyleSheet("QLabel { background-color: palette(light); padding: 6; font-weight: bold; }")
 
         self.__documentation=QTextBrowser(self)
+        self.__documentation.setOpenExternalLinks(True)
         self.__documentation.setSizePolicy(QSizePolicy(QSizePolicy.Preferred,QSizePolicy.MinimumExpanding))
         self.__documentation.setHtml(i18n("""<html><body><p>Quick help is displayed from:</p>
             <ul>

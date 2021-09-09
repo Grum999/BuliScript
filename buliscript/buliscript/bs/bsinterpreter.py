@@ -299,9 +299,7 @@ class BSInterpreter(QObject):
 
     def __strValue(self, variableValue):
         """Return formatted string value"""
-        if isinstance(variableValue, str):
-            return f'"{variableValue}"'
-        elif isinstance(variableValue, QColor):
+        if isinstance(variableValue, QColor):
             if variableValue.alpha()==0xff:
                 return variableValue.name(QColor.HexRgb)
             else:
@@ -3662,6 +3660,25 @@ class BSInterpreter(QObject):
                 else:
                     # return all characters
                     return value[fromIndex:]
+        elif fctName=='string.format':
+            if len(currentAst.nodes())<1:
+                # at least need one parameter
+                self.__checkParamNumber(currentAst, fctLabel, 1)
+
+            formatStr=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, '<FORMAT>', formatStr, str)
+
+            values=[]
+            for index, node in enumerate(currentAst.nodes()):
+                if index>1:
+                    # 0 = function name
+                    # 1 = format str
+                    # 2+ = values
+                    values.append(str(self.__strValue(self.__evaluate(node))))
+
+            returned=formatStr.format(*values)
+
+            return returned
         elif fctName=='color.rgb':
             self.__checkFctParamNumber(currentAst, fctLabel, 3)
 

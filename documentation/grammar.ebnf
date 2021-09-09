@@ -598,7 +598,8 @@ Function
                 ( 'upper' '(' Evaluation_String_Expression ')' ) |
                 ( 'lower' '(' Evaluation_String_Expression ')' ) |
                 ( 'substring' '(' Evaluation_String_Expression ',' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |
-                ( 'split' '(' Evaluation_String_Expression (',' Evaluation_String_Expression)? ')' )
+                ( 'split' '(' Evaluation_String_Expression (',' Evaluation_String_Expression)? ')' ) |
+                ( 'format' '(' Evaluation_String_Expression ( ',' Any_Expression)* ')' )
             )
             |
             'list' '.' (

@@ -2638,7 +2638,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\bstring\.(?:upper|lower|substring)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\bstring\.(?:upper|lower|substring|format)\b",
                                                                     'Functions/String',
                                                                     [('string.upper(\x01<TEXT>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2689,6 +2689,16 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`string.character("HELLO!", 4, 15)`**\n'
                                                                                 '**`string.character("HELLO!", -3, 15)`**\n\n'
                                                                                 'Will return value **`LLO!`**')),
+                                                                    ('string.format(\x01<FORMAT>[, <VALUE>]\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return formatted string using given format for provided]',
+                                                                                # description
+                                                                                'Format provided <VALUE> (from 0 to N) in a string using given <FORMAT>\n'
+                                                                                'The format specification follows the Python *(format specification mini language)[https://docs.python.org/3/library/string.html#format-specification-mini-language]*\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`string.uppercase("Hi {0}, this is an example!", :name)`**\n\n'
+                                                                                'Will return (if **`:name`** is defined as `"John"`) value **`Hi John, this is an example!`**')),
 
                                                                     ],
                                                                     'f',
