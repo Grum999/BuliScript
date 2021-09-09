@@ -374,6 +374,10 @@ class BSInterpreter(QObject):
             return self.__executeFlowIfElseIf(currentAst, 'else if')
         elif currentAst.id() == 'Flow_Else':
             return self.__executeFlowElse(currentAst)
+        elif currentAst.id() == 'Flow_Repeat':
+            return self.__executeFlowRepeat(currentAst)
+        elif currentAst.id() == 'Flow_ForEach':
+            return self.__executeFlowForEach(currentAst)
 
         # ----------------------------------------------------------------------
         # Actions
@@ -845,6 +849,107 @@ class BSInterpreter(QObject):
         #self.__delay()
         return None
 
+    def __executeFlowRepeat(self, currentAst):
+        """repeat <COUNT> times
+
+        Execute a repeat loop
+        """
+        fctLabel='Flow `repeat <COUNT> times`'
+
+        # 1st parameter: number of repetition
+        # 2nd parameter: scriptblock to execute
+        self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        repeatTotal=self.__evaluate(currentAst.node(0))
+        astScriptBlock=currentAst.node(1)
+
+        if isinstance(repeatTotal, float):
+            asInt=round(repeatTotal)
+            if asInt==repeatTotal:
+                # a float value without decimals (4.0 for exsample => convert to <int>)
+                repeatTotal=asInt
+
+        self.__checkParamType(currentAst, fctLabel, '<COUNT>', repeatTotal, int)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<COUNT>', repeatTotal>=0, f"Can't repeat negative value (count={repeatTotal})", False):
+            return None
+
+        scriptBlockName=f'repeat {repeatTotal} times'
+
+        # define loop variable
+        if repeatTotal>0:
+            repeatIncAngle=360/repeatTotal
+        else:
+            repeatIncAngle=0
+
+        repeatCurrentAngle=0
+        for repeatCurrent in range(repeatTotal):
+            loopVariables={
+                    ':repeat.total': repeatTotal,
+                    ':repeat.current': repeatCurrent+1,
+                    ':repeat.first': (repeatCurrent==0),
+                    ':repeat.last': (repeatCurrent==repeatTotal-1),
+                    ':repeat.incAngle': repeatIncAngle,
+                    ':repeat.currentAngle': repeatCurrentAngle
+                }
+
+            self.__executeScriptBlock(astScriptBlock, False, scriptBlockName, loopVariables)
+
+            repeatCurrentAngle+=repeatIncAngle
+
+        return None
+
+    def __executeFlowForEach(self, currentAst):
+        """for each <variable> in <list>
+
+        Do llop over items in list
+        """
+        fctLabel='Flow `for each ... in ...`'
+
+        # 1st parameter: target variable
+        # 2nd parameter: source list
+        # 3rd parameter: scriptblock to execute
+        self.__checkParamNumber(currentAst, fctLabel, 3)
+
+        forVarName=currentAst.node(0).value()
+        forEachList=self.__evaluate(currentAst.node(1))
+        astScriptBlock=currentAst.node(2)
+
+
+        self.__checkParamType(currentAst, fctLabel, '<LIST>', forEachList, list, str)
+
+        if isinstance(forEachList, str):
+            forEachList=[c for c in forEachList]
+
+        if len(forEachList)>5:
+            scriptBlockName=f'for {forVarName} in {forEachList[0:5]}'.replace(']', ', ...]')
+        else:
+            scriptBlockName=f'for {forVarName} in {forEachList}'
+
+        # define loop variable
+        forEachTotal=len(forEachList)
+        if forEachTotal>0:
+            forEachIncAngle=360/forEachTotal
+        else:
+            forEachIncAngle=0
+
+        forEachCurrentAngle=0
+        for index, forEachCurrentValue in enumerate(forEachList):
+            loopVariables={
+                    ':foreach.total': forEachTotal,
+                    ':foreach.current': index+1,
+                    ':foreach.first': (index==0),
+                    ':foreach.last': (index==forEachTotal-1),
+                    ':foreach.incAngle': forEachIncAngle,
+                    ':foreach.currentAngle': forEachCurrentAngle,
+                    forVarName: forEachCurrentValue
+                }
+
+            self.__executeScriptBlock(astScriptBlock, False, scriptBlockName, loopVariables)
+
+            forEachCurrentAngle+=forEachIncAngle
+
+        return None
 
 
 
@@ -4468,6 +4573,7 @@ class BSScriptBlockProperties:
         If variable doesn't exist in current dictionnary, return variable from
         parent script block, if exist, otherwise return default value
         """
+        name=name.lower()
         if name in self.__variables:
             return self.__variables[name]
         elif not self.__parent is None:
@@ -4480,6 +4586,7 @@ class BSScriptBlockProperties:
 
         If variable doesn't exist in script block, create it
         """
+        name=name.lower()
         if localVariable and self.__allowLocalVariable or not localVariable or forceToBeLocal:
             self.__variables[name]=value
         elif not self.__parent is None:
