@@ -135,8 +135,8 @@ class BSLanguageDef(LanguageDef):
         CONSTANT_PENCAP = ('constPenCap', 'A pen cap constant')
         CONSTANT_PENJOIN = ('constPenJoin', 'A pen join constant')
         CONSTANT_FILLRULE = ('constFillRule', 'A fill rule constant')
-        CONSTANT_TEXTHALIGN = ('constTextHAlign', 'A horizontal text align constant')
-        CONSTANT_TEXTVALIGN = ('constTextVAlign', 'A vertical text align constant')
+        CONSTANT_POSHALIGN = ('constTextHAlign', 'A horizontal text align constant')
+        CONSTANT_POSVALIGN = ('constTextVAlign', 'A vertical text align constant')
         CONSTANT_BLENDINGMODE = ('constBlendingMode', 'A blending mode')
         CONSTANT_SELECTIONMODE = ('constSelectMode', 'A selection mode')
         CONSTANT_COLORLABEL = ('constColorlabel', 'A color label value')
@@ -154,7 +154,8 @@ class BSLanguageDef(LanguageDef):
             #TokenizerRule(BSLanguageDef.ITokenType.STRING, r"'[^'\\]*(?:\\.[^'\\]*)*'"),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.COLOR_CODE,  r'#(?:\b[a-f0-9]{6}\b|[a-f0-9]{8}\b)'),
+            TokenizerRule(BSLanguageDef.ITokenType.COLOR_CODE,  r'#(?:\b[a-f0-9]{6}\b|[a-f0-9]{8}\b)',
+                                                                onInitValue=self.__initTokenColor),
 
             #TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r"(?s)#>>.*#<<[^\n]*$"),
             TokenizerRule(BSLanguageDef.ITokenType.COMMENT,  r'#[^\n]*', ignoreIndent=True),
@@ -169,9 +170,9 @@ class BSLanguageDef(LanguageDef):
                                                                     'Settings/Units',
                                                                     [('set unit canvas \x01<UNIT>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define default measure unit]',
+                                                                                'Action [Define default coordinates & measures unit on canvas]',
                                                                                 # description
-                                                                                'Set unit used to define measures (distances, sizes) on canvas\n\n'
+                                                                                'Set unit used to define coordinates & measures (distances, sizes) on canvas\n\n'
                                                                                 'Given *<UNIT>* can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
@@ -205,27 +206,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define pen color]',
                                                                                 # description
                                                                                 'Set stroke color used for pen\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instructions:\n'
                                                                                 '**`set pen color #ffff00`**\n'
-                                                                                '**`set pen color 255 255 0`**\n'
-                                                                                '**`set pen color 1.0 1.0 0.0`**\n\n'
+                                                                                '**`set pen color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define pen color as yellow, 100% opacity\n\n'
                                                                                 'Following instructions:\n'
-                                                                                '**`set pen color #ffff0080`**\n'
-                                                                                '**`set pen color 255 255 0 128`**\n'
-                                                                                '**`set pen color 1.0 1.0 0.0 0.5`**\n\n'
+                                                                                '**`set pen color #80ffff00`**\n'
+                                                                                '**`set pen color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define pen color as yellow, 50% opacity')),
-                                                                     ('set pen size \x01<VALUE> [<UNIT>]',
+                                                                     ('set pen size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define pen size]',
                                                                                 # description
                                                                                 'Set stroke width for pen\n\n'
-                                                                                'Given *<VALUE>* is a positive number expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -263,10 +259,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<CAP>* can be:\n'
                                                                                 ' - **`SQUARE`**\n'
                                                                                 ' - **`FLAT`**\n'
-                                                                                ' - **`ROUND`**',
+                                                                                ' - **`ROUNDCAP`**',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set pen cap ROUND`**\n\n'
+                                                                                '**`set pen cap ROUNDCAP`**\n\n'
                                                                                 'Will define a rounded pen cap')),
                                                                      ('set pen join \x01<JOIN>',
                                                                             TokenizerRule.formatDescription(
@@ -276,17 +272,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<JOIN>* can be:\n'
                                                                                 ' - **`BEVEL`**\n'
                                                                                 ' - **`MITTER`**\n'
-                                                                                ' - **`ROUND`**',
+                                                                                ' - **`ROUNDJOIN`**',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set pen join ROUND`**\n\n'
+                                                                                '**`set pen join ROUNDJOIN`**\n\n'
                                                                                 'Will define a rounded pen join')),
-                                                                     ('set pen opacity \x01<VALUE>',
+                                                                     ('set pen opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define pen opacity]',
+                                                                                'Action [Define pen color opacity]',
                                                                                 # description
-                                                                                'Set pen opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Set pen color opacity without changing color property\n\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set pen color`** action',
@@ -306,20 +302,15 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define fill color]',
                                                                                 # description
                                                                                 'Set color used to fill areas\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set fill color #ffff00`**\n'
-                                                                                '**`set fill color 255 255 0`**\n'
-                                                                                '**`set fill color 1.0 1.0 0.0`**\n\n'
+                                                                                '**`set fill color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define fill color as yellow, 100% opacity\n\n'
-                                                                                'Following instruction:\n'
-                                                                                '**`set fill color #ffff0080`**\n'
-                                                                                '**`set fill color 255 255 0 128`**\n'
-                                                                                '**`set fill color 1.0 1.0 0.0 0.5`**\n\n'
+                                                                                'Following instructions:\n'
+                                                                                '**`set fill color #80ffff00`**\n'
+                                                                                '**`set fill color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define fill color as yellow, 50% opacity')),
                                                                      ('set fill rule \x01<RULE>',
                                                                             TokenizerRule.formatDescription(
@@ -333,12 +324,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set fill rule WINDING`**\n'
                                                                                 'Will define rule to fulfill area')),
-                                                                     ('set fill opacity \x01<VALUE>',
+                                                                     ('set fill opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define fill opacity]',
                                                                                 # description
                                                                                 'Set fill opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set fill color`** action',
@@ -357,27 +348,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Define text color]',
                                                                                 # description
                                                                                 'Set color used print text\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set text color #ffff00`**\n'
-                                                                                '**`set text color 255 255 0`**\n'
-                                                                                '**`set text color 1.0 1.0 0.0`**\n\n'
+                                                                                '**`set text color color.rgb(255, 255, 0)`**\n\n'
                                                                                 'Will all define text color as yellow, 100% opacity\n\n'
-                                                                                'Following instruction:\n'
-                                                                                '**`set text color #ffff0080`**\n'
-                                                                                '**`set text color 255 255 0 128`**\n'
-                                                                                '**`set text color 1.0 1.0 0.0 0.5`**\n\n'
+                                                                                'Following instructions:\n'
+                                                                                '**`set text color #80ffff00`**\n'
+                                                                                '**`set text color color.rgba(255, 255, 0, 128)`**\n\n'
                                                                                 'Will all define text color as yellow, 50% opacity')),
-                                                                     ('set text opacity \x01<VALUE>',
+                                                                     ('set text opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text opacity]',
                                                                                 # description
                                                                                 'Set text opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set text color`** action',
@@ -397,12 +383,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text font "DejaVu Sans"`**\n\n'
                                                                                 'Will define *DejaVu Sans* as text font')),
-                                                                     ('set text size \x01<VALUE> [<UNIT>]',
+                                                                     ('set text size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text size]',
                                                                                 # description
                                                                                 'Set size for text\n\n'
-                                                                                'Given *<VALUE>* is a positive number expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -453,12 +439,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text outline ON`**\n\n'
                                                                                 'Will define text as outline')),
-                                                                     ('set text letter spacing \x01<VALUE> [<UNIT>]',
+                                                                     ('set text letter spacing \x01<SPACING> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text letter spacing]',
                                                                                 # description
                                                                                 'Set space between text letters\n\n'
-                                                                                'Given *<VALUE>* is a number expressed:\n'
+                                                                                'Given *<SPACING>* is a number expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -471,16 +457,16 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set text letter spacing 8`**\n\n'
                                                                                 'Will define a letter spacing for text of 40 pixels if default canvas unit is **`PX`**\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`set text letter spacing 150 PERCENTAGE`**\n\n'
+                                                                                '**`set text letter spacing 150 PCT`**\n\n'
                                                                                 'Will define a letter spacing for text of 150% of base letter spacing')),
-                                                                     ('set text stretch \x01<VALUE>',
+                                                                     ('set text stretch \x01<STRETCH>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text stretch]',
                                                                                 # description
                                                                                 'Set text stretching\n\n'
-                                                                                'Given *<VALUE>* is a positive number that define stretch factor:\n'
-                                                                                ' - **`int`**: a number; integer value define no stretch to 100\n'
-                                                                                ' - **`dec`**: a number; decimal value define no stretch to 1.0',
+                                                                                'Given *<STRETCH>* is a positive number that define stretch factor:\n'
+                                                                                ' - **`int`**: a number; integer value define no stretch to 100 (100%)\n'
+                                                                                ' - **`dec`**: a number; decimal value define no stretch to 1.0 (100%)',
                                                                                 # example
                                                                                 'Following instructions:\n'
                                                                                 '**`set text stretch 150`**\n\n'
@@ -515,7 +501,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode)\b",
                                                                     'Settings/Draw',
                                                                     [('set draw antialiasing \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -529,12 +515,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set draw antialiasing ON`**\n\n'
                                                                                 'Will enable antialiasing')),
-                                                                     ('set draw blending \x01<BLENDING>',
+                                                                     ('set draw blending mode \x01<BLENDING-MODE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define blending mode]',
                                                                                 # description
                                                                                 'Set blending mode applied to draw\n\n'
-                                                                                'Given *<BLENDING>* can be:\n'
+                                                                                'Given *<BLENDING-MODE>* can be:\n'
                                                                                 ' - **`NORMAL`**\n'
                                                                                 ' - **`SOURCE_OVER`**\n'
                                                                                 ' - **`DESTINATION_OVER`**\n'
@@ -587,13 +573,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas grid color #0000FF88`**\n\n'
+                                                                                '**`set canvas grid color #880000FF`**\n\n'
                                                                                 'Will set a blue grid with 50% opacity')),
                                                                      ('set canvas grid style \x01<STYLE>',
                                                                             TokenizerRule.formatDescription(
@@ -611,13 +594,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid style DOT`**\n\n'
                                                                                 'Will set a dotted line style to render canvas grid')),
-                                                                     ('set canvas grid opacity \x01<VALUE>',
+                                                                     ('set canvas grid opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid opacity]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas grid opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set canvas grid color`** action',
@@ -652,7 +635,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will define a major grid for which line is drawn every 10 millimeters and a minor grid drawn every 5 millimeters')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size|position)\b",
                                                                     'Settings/Canvas/Origin',
                                                                     [('set canvas origin color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
@@ -660,14 +643,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas origin color #FF000088`**\n\n'
-                                                                                'Will set a red origin with 50% opacity')),
+                                                                                '**`set canvas grid color #880000FF`**\n\n'
+                                                                                'Will set a blue origin with 50% opacity')),
                                                                      ('set canvas origin style \x01<STYLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin style]',
@@ -684,13 +664,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas origin style SOLID`**\n\n'
                                                                                 'Will set a solid line style to render canvas origin')),
-                                                                     ('set canvas origin opacity \x01<VALUE>',
+                                                                     ('set canvas origin opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin opacity]',
                                                                                 # description
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas origin opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set canvas origin color`** action',
@@ -699,13 +679,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas grid opacity 128`**\n'
                                                                                 '**`set canvas grid opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas origin size \x01<VALUE> [<UNIT>]',
+                                                                     ('set canvas origin size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin size]',
                                                                                 # description
                                                                                 '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas origin size\n\n'
-                                                                                'Given *<VALUE>* is a positive number that define origin line size, expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -713,6 +693,23 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
                                                                                 ' - **`MM`**: use millimeters\n'
                                                                                 ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas origin size 40 PX`**\n\n'
+                                                                                'Will define an origin size of 40 pixels')),
+                                                                     ('set canvas origin position \x01<ABSISSA> <ORDINATE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas origin position]',
+                                                                                # description
+                                                                                'Set canvas origin position (ie: where to (0,0) coordinates is)\n\n'
+                                                                                'Given *<ABSISSA>* can be:\n'
+                                                                                ' - **`LEFT`**: use left canvas side for absissa origin\n'
+                                                                                ' - **`CENTER`**: use center canvas for absissa origin\n'
+                                                                                ' - **`RIGHT`**: use right canvas side for absissa origin\n\n'
+                                                                                'Given *<ORDINATE>* can be:\n'
+                                                                                ' - **`TOP`**: use top canvas side for ordinate origin\n'
+                                                                                ' - **`MIDDLE`**: use center canvas for ordinate origin\n'
+                                                                                ' - **`BOTTOM`**: use bottom canvas side for ordinate origin',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas origin size 40 PX`**\n\n'
@@ -727,21 +724,18 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas position\n\n'
-                                                                                'Given *<COLOR>* can be:\n'
-                                                                                ' - **`#RRGGBB[AA]`**: a color code\n'
-                                                                                ' - **`int int int [int]`**: a number sequence (Red Green Blue [Alpha]); integer values from 0 to 255\n'
-                                                                                ' - **`dec dec dec [dec]`**: a number sequence (Red Green Blue [Alpha]); decimal values from 0.0 to 1.0',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position color #00FF0088`**\n\n'
-                                                                                'Will set a green position with 50% opacity')),
-                                                                     ('set canvas position opacity \x01<VALUE>',
+                                                                                '**`set canvas grid color #880000FF`**\n\n'
+                                                                                'Will set a blue position with 50% opacity')),
+                                                                     ('set canvas position opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas position opacity]',
                                                                                 # description
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas position opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
                                                                                 'Opacity can also be set from **`set canvas position color`** action',
@@ -750,13 +744,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas position opacity 128`**\n'
                                                                                 '**`set canvas position opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas position opacity of 50%')),
-                                                                     ('set canvas position size \x01<VALUE> [<UNIT>]',
+                                                                     ('set canvas position size \x01<SIZE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas position size]',
                                                                                 # description
                                                                                 '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas position size\n\n'
-                                                                                'Given *<VALUE>* is a positive number that define origin line size, expressed:\n'
+                                                                                'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
                                                                                 'Given *<UNIT>*, if provided can be:\n'
@@ -785,13 +779,13 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity)\b",
                                                                     'Settings/Canvas/Background',
-                                                                    [('set canvas background opacity \x01<VALUE>',
+                                                                    [('set canvas background opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas background opacity]',
                                                                                 # description
                                                                                 '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas background opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
+                                                                                'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n',
                                                                                 # example
@@ -799,7 +793,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas background opacity 128`**\n'
                                                                                 '**`set canvas background opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas background opacity of 50%')),
-
                                                                     ],
                                                                     'A'),
 
@@ -915,9 +908,9 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+execution\s+(?:verbose)\b",
-                                                                    'Settings/Execution',
-                                                                    [('set execution verbose \x01<SWITCH>',
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+script\s+execution\s+(?:verbose)\b",
+                                                                    'Settings/Script',
+                                                                    [('set script execution verbose \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define execution verbose state]',
                                                                                 # description
@@ -1233,7 +1226,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw star 8 40 MM 50 RPCT`**\n\n'
                                                                                 'Draw a 8 branches star of 40 millimeters outer width radius and 50% (of 40 MM) inner width whatever is default canvas unit')),
-
                                                                     ],
                                                                     'A'),
 
@@ -1260,30 +1252,59 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, r"^\x20*\bfill\s+(?:begin|end)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\b(?:start|stop)\s+to\s+draw\s+shape\b",
+                                                                    'Drawing/Shapes',
+                                                                    [('start to draw shape',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Start to draw a shape]',
+                                                                                # description
+                                                                                'Enter in drawing *shape* mode\n\n'
+                                                                                'By default when using **`move`** instructions, drawn lines are not connected.\n'
+                                                                                'Entering in *shape* mode will connect all drawn segments in a single shape: this allows in particular to fill area made by drawn segments.\n'
+                                                                                'Use action **`stop to draw shape`** to close current shape; in this case if fill mode is active, closed shape area will be filled.'
+                                                                                'Action is ignored if *shape* mode is already active',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`start to draw shape`**\n\n'
+                                                                                'All following **`move`** actions will be taken in account to define a single shape')),
+                                                                    ('stop to draw shape',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Stop to draw a shape]',
+                                                                                # description
+                                                                                'Leave drawing *shape* mode\n\n'
+                                                                                'Leaving *shape* mode will close current shape started with **`start to draw shape`**; in this case if fill mode is active, closed shape area will be filled.'
+                                                                                'Action is ignored if *shape* mode is not active',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`stop to draw shape`**\n\n'
+                                                                                'All following **`move`** action will close current shape')),
+                                                                    ],
+                                                                    'A'),
+
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, r"^\x20*\b(?:activate|deactivate)\s+fill\b",
                                                                     'Drawing/Fill',
-                                                                    [('fill begin',
+                                                                    [('activate fill',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Start to fill an area]',
+                                                                                'Action [Activate fill tool]',
                                                                                 # description
-                                                                                'Start to fill area\n\n'
-                                                                                'Use `fill end` to stop to draw a filled area\n\n'
-                                                                                'Action is ignored if fill area is already active',
+                                                                                'Activate fill tool, drawn shapes will be filled out.\n\n'
+                                                                                'Use **`deactivate fill`** to stop to fill shapes\n\n'
+                                                                                'Action is ignored if fill tool is already activated',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`start begin`**\n\n'
-                                                                                'All `move` action will be taken in account to define a filled area')),
-                                                                    ('fill end',
+                                                                                '**`activate fill`**\n\n'
+                                                                                'All drawn shapes will be filled out')),
+                                                                    ('deactivate fill',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Stop to fill an area]',
+                                                                                'Action [Deactivate fill tool]',
                                                                                 # description
-                                                                                'Stop to fill area\n\n'
-                                                                                'Use `fill start` to start to draw a filled area\n\n'
-                                                                                'Action is ignored if fill area is already inactive',
+                                                                                'Deactivate fill tool, drawn shapes will be empty.\n\n'
+                                                                                'Use **`activate fill`** to start to fill shapes\n\n'
+                                                                                'Action is ignored if fill tool is already deactivated',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`start end`**\n\n'
-                                                                                'All `move` action are taken in account to define a filled area')),
+                                                                                '**`deactivate fill`**\n\n'
+                                                                                'All drawn shapes will be empty')),
                                                                     ],
                                                                     'A'),
 
@@ -1321,11 +1342,11 @@ class BSLanguageDef(LanguageDef):
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Move pen to home (origin)]',
                                                                                 # description
-                                                                                'Move to home coordinates (canvas center)',
+                                                                                'Move to home coordinates (canvas origin)',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`move home`**\n\n'
-                                                                                'Set current position to center of canvas')),
+                                                                                'Set current position to origin of canvas')),
                                                                     ('move forward \x01<VALUE> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Move pen forward]',
@@ -1536,7 +1557,7 @@ class BSLanguageDef(LanguageDef):
 
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background)\b",
-                                                                    'Canvas/Show',
+                                                                    'Canvas',
                                                                     [('show canvas grid',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Set canvas grid visible]',
@@ -1560,7 +1581,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Set background visible]',
                                                                                 # description
                                                                                 'Render background under canvas\n'
-                                                                                'Background is drawn under canvas and is not rendered on final drawing')),
+                                                                                'Background (made from current document projection) is drawn under canvas and is not rendered on final drawing')),
                                                                     ('hide canvas grid',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Set canvas grid invisible]',
@@ -1584,34 +1605,50 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean)\s+input\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice)\s+input\b", #|(?:single|multiple)\s+choice
                                                                     'User interface/Window',
-                                                                    [('open dialog for string input \x01<:variable>',
+                                                                    [('open dialog for string input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog string]',
                                                                                 # description
                                                                                 'Ask user for input a string value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for string input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user for a string value and store result into variable `:value`')),
-                                                                    ('open dialog for integer input \x01<:variable>',
+                                                                    ('open dialog for integer input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog integer]',
                                                                                 # description
                                                                                 'Ask user for input an integer value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`\n'
+                                                                                '- `with minimum value`\n'
+                                                                                '- `with maximum value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for integer input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user for an integer value and store result into variable `:value`')),
-                                                                    ('open dialog for decimal input \x01<:variable>',
+                                                                    ('open dialog for decimal input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog decimal]',
                                                                                 # description
                                                                                 'Ask user for input an decimal value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`\n'
+                                                                                '- `with minimum value`\n'
+                                                                                '- `with maximum value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for decimal input :value`**\n\n'
@@ -1621,21 +1658,62 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Display an input dialog color]',
                                                                                 # description
                                                                                 'Ask user for input a color value\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for color input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user for a color value and store result into variable `:value`')),
-                                                                    ('open dialog for boolean input \x01<:variable>',
+                                                                    ('open dialog for boolean input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Display an input dialog boolean]',
                                                                                 # description
                                                                                 'Ask user to provide a YES or NO answer\n\n'
-                                                                                'Given *<:variable>* define variable in which input data is stored',
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for boolean input :value`**\n\n'
-                                                                                'Will open a dialog box to ask user to clikc on YES or NO button and store result into variable `:value`')),
+                                                                                'Will open a dialog box to ask user to click on YES or NO button and store result into variable `:value`')),
+                                                                    ('open dialog for single choice input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog with different possibles value]',
+                                                                                # description
+                                                                                'Ask user to select on value in possible provided values\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored (and index value, starting from 1)\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with combobox choices`\n'
+                                                                                '- `with radio button choices`\n'
+                                                                                '- `with default index`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for choice input :value`**\n'
+                                                                                '**`     with combobox choices ["Red", "Green", "Blue"]`**\n\n'
+                                                                                'Will open a dialog box to ask user to select one value from provided choices, and store index of selected choice into `:value`')),
+                                                                    ('open dialog for multiple choice input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog with different possibles value]',
+                                                                                # description
+                                                                                'Ask user to select on value in possible provided values\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which input data is stored (a list of index values)\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with choices`\n'
+                                                                                '- `with default index`\n'
+                                                                                '- `with minimum choices`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for choice input :value`**\n'
+                                                                                '**`     with combobox choices ["Red", "Green", "Blue"]`**\n\n'
+                                                                                'Will open a dialog box to ask user to select one value from provided choices, and store index of selected choice into `:value`')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+message\b",
@@ -1656,7 +1734,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, r"\x20*\bwith\s+(?:title|message|minimum\s+value|maximum\s+value|default\s+value|decimals)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, r"\x20*\bwith\s+(?:title|message|minimum\s+(?:value|choices)|maximum\s+value|default\s+(?:value|index)|(?:combobox\s+|radio\s+button\s+)?choices)\b",
                                                                     'User interface/Window/Options',
                                                                     [('with title \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
@@ -1688,7 +1766,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is:\n'
                                                                                 '- **`int`**: for integer input dialog\n'
                                                                                 '- **`dec`**: for decimal input dialog\n\n'
-                                                                                '*Option is ignored for input dialog box other than **integer** and **decimal**',
+                                                                                '*Option is not allowed for input dialog box other than **integer** and **decimal**',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for integer input :value`**\n'
@@ -1702,7 +1780,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is:\n'
                                                                                 '- **`int`**: for integer input dialog\n'
                                                                                 '- **`dec`**: for decimal input dialog\n\n'
-                                                                                '*Option is ignored for input dialog box other than **integer** and **decimal**',
+                                                                                '*Option is not allowed for input dialog box other than **integer** and **decimal**',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for decimal input :value`**\n'
@@ -1717,12 +1795,80 @@ class BSLanguageDef(LanguageDef):
                                                                                 '- **`string`**: for string input dialog\n'
                                                                                 '- **`int`**: for integer input dialog\n'
                                                                                 '- **`dec`**: for decimal input dialog\n'
-                                                                                '- **`color`**: for color input dialog',
+                                                                                '- **`color`**: for color input dialog\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **string**, **integer**, **decimal** and **color**',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for integer input :value`**\n'
                                                                                 '**`     with default value 25`**\n\n'
                                                                                 'Will open a dialog box for which default value is 25')),
+                                                                    ('with combobox choices \x01<LIST>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: list of choice values, provided in a combobox list]',
+                                                                                # description
+                                                                                'Define list of values for input dialog, provided as a combobox list\n\n'
+                                                                                'Given *<LIST>* is a list of string\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **single choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for single choice input :value`**\n'
+                                                                                '**`     with combobox choices ["Item A", "Item B", "Item C"]`**\n\n'
+                                                                                'Will open a dialog box for which a combobox list will provide 3 possible values')),
+                                                                    ('with radio button choices \x01<LIST>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: list of choice values, provided as radio button items]',
+                                                                                # description
+                                                                                'Define list of values for input dialog, provided as radio button items\n\n'
+                                                                                'Given *<LIST>* is a list of string\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **single choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for single choice input :value`**\n'
+                                                                                '**`     with radio button choices ["Item A", "Item B", "Item C"]`**\n\n'
+                                                                                'Will open a dialog box for which radio buttons will provide 3 possible values')),
+                                                                    ('with choices \x01<LIST>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: list of choice values, provided as checkbox items]',
+                                                                                # description
+                                                                                'Define list of values for input dialog, provided as checkbox items\n\n'
+                                                                                'Given *<LIST>* is a list of string\n\n'
+                                                                                '*Option is not allowed for input dialog box other than **multiple choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for multiple choice input :value`**\n'
+                                                                                '**`     with choices ["Item A", "Item B", "Item C"]`**\n\n'
+                                                                                'Will open a dialog box for which 3 checkbox are provided')),
+                                                                    ('with default index \x01<VALUE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: default value(s) for choices dialog box]',
+                                                                                # description
+                                                                                'Define default selected index for choices input dialog\n\n'
+                                                                                'Given *<VALUE>* can be:\n'
+                                                                                '- An **`int`** value, to define a selected index in choices (**`single choice`** and **`multiple choice`**)\n'
+                                                                                '- A list of **`int`** value, to define all selected indexes in choices (**`multiple choice`**)\n'
+                                                                                '*Option is not allowed for input dialog box other than **single choice** and **multilpe choice**\n\n'
+                                                                                'Index value in list start from 1',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for multiple choice input :value`**\n'
+                                                                                '**`     with choices ["Item A", "Item B", "Item C"]`**\n'
+                                                                                '**`     with defaul index [1, 3]`**\n\n'
+                                                                                'Will open a dialog box for which a multiple choice list is provided, with values `Item A` and `Item C` already selected')),
+                                                                    ('with minimum choices \x01<VALUE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set dialog option: minimum number of values that must be selected for multiple choice dialog box]',
+                                                                                # description
+                                                                                'Define minimum number of selected indexes expected in a multiple choices input dialog\n\n'
+                                                                                'Given *<VALUE>* can be:\n'
+                                                                                '- An **`int`** value, to define a selected index in choices (**`single choice`** and **`multiple choice`**)\n'
+                                                                                '- A list of **`int`** value, to define all selected indexes in choices (**`multiple choice`**)\n'
+                                                                                '*Option is not allowed for input dialog box other than **multilpe choice**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for multiple choice input :value`**\n'
+                                                                                '**`     with choices ["Item A", "Item B", "Item C"]`**\n'
+                                                                                '**`     with minimum choices 2`**\n\n'
+                                                                                'Will open a dialog box for which a multiple choice list is provided, and user must check at least 2 of 3 items')),
                                                                     ],
                                                                     'A',
                                                                     ignoreIndent=True),
@@ -1730,30 +1876,18 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint\b",
                                                                     'User interface/Console',
-                                                                    [('print \x01<INFO>',
+                                                                    [('print \x01<INFO>[, <INFO>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Print information to console]',
                                                                                 # description
                                                                                 'Print given *<INFO>* to console\n\n'
-                                                                                'Given *<INFO>* can be of any type',
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`print "hello!"`**\n\n'
                                                                                 'Will print text `hello!` to console')),
                                                                     ],
                                                                     'A'),
-
-
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw)))"
-                                                                       r"|(?:draw(\s+(?:round|scaled))?)"
-                                                                       r"|(?:clear|apply(?:\s+to)?)"
-                                                                       r"|(?:fill|pen|move|turn|push|pop)"
-                                                                       r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
-                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean)?)?)?)?)"
-                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default))?)"
-                                                                       r")\b"
-                                                                       ),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_EXEC, r"^\x20*\bstop\s+script\b",
@@ -1782,7 +1916,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_DEFMACRO, r"^\x20*\bdefine\s+macro\b",
-                                                                    'Flow/Macro',
+                                                                    'Flow/Declarations',
                                                                     [('define macro "\x01<NAME>\x01"\x01 [\x01with parameters\x01 <ARG1> [<ARGN>]]\x01 as',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Define a macro]',
@@ -1803,7 +1937,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_RETURN, r"^\x20*\breturn\b",
-                                                                    'Flow/Macro',
+                                                                    'Flow/Execution',
                                                                     [('return \x01[<VALUE>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Exit macro]',
@@ -1818,7 +1952,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+(?:macro|image)\s+from\b",
-                                                                    'Flow/Import',
+                                                                    'Flow/Declarations',
                                                                     [('import macro from \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Import macro defined from an another script document]',
@@ -1868,15 +2002,15 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\b",
                                                                     'Flow/Loops',
-                                                                    [('for each \x01:variable \x01 in \x01<VALUE>\x01 do',
+                                                                    [('for each \x01:variable \x01 in \x01<LIST>\x01 do',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Loop over items in a list]',
                                                                                 # description
-                                                                                'Iterate over given <VALUE>\n'
-                                                                                'On each iteration *`:variable` is defined with value from <VALUE>\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
-                                                                                ' - **`string`**: in this case, iterate over all characters in string\n'
-                                                                                ' - **`list`**: in this case iterate over all item in list',
+                                                                                'Iterate over given <LIST>\n'
+                                                                                'On each iteration *`:variable` is defined with value from <LIST>\n\n'
+                                                                                'Given *<LIST>* can be:\n'
+                                                                                ' - **`list`**: iterate over all item in list\n',
+                                                                                ' - **`string`**: a string is in this case considered as a list of characters'
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`for each :character in "test"`**\n'
@@ -1965,6 +2099,20 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
+                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script)))"
+                                                                       r"|(?:draw(:?\s+(?:round|scaled))?)"
+                                                                       r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
+                                                                       r"|(?:clear|apply(?:\s+to)?)"
+                                                                       r"|(?:pen|move|turn|push|pop|activate|deactivate)"
+                                                                       r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
+                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|(?:single|multiple)(?:\s+choice)?))?)?)?)"
+                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
+                                                                       r")\b"
+                                                                       ),
+
+                                                                       # (?:single|multiple) (?:\s+(?:choice)?)?
+                                                                       # (?:combobox|radio)(?:\s+(?:button)?)?
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for)"
@@ -1999,8 +2147,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.random(-10.0, 10.0)`**\n\n'
                                                                                 'Will return a decimal random value between -10.0 and 10.0')),
                                                                     ],
-                                                                    'f'),
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:abs|even|sign)\b",
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:abs|even|odd|sign)\b",
                                                                     'Functions/Math/Numbers',
                                                                     [('math.abs(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2031,9 +2180,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will return value **`1.0`**')),
                                                                     ('math.even(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Function [Return if given number is an *even* or *odd* number]',
+                                                                                'Function [Return if given number is an *even* number]',
                                                                                 # description
-                                                                                'Return if given <VALUE> is an even number (ON) or an odd number (OFF)\n'
+                                                                                'Return ON if given <VALUE> is an even number otherwise return OFF\n'
                                                                                 'Returns a boolean',
                                                                                 # example
                                                                                 'Following instruction:\n'
@@ -2042,8 +2191,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`math.even(5)`**\n\n'
                                                                                 'Will return a`OFF`')),
+                                                                    ('math.odd(\x01<VALUE>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return if given number is an *odd* number]',
+                                                                                # description
+                                                                                'Return ON if given <VALUE> is an odd number otherwise return OFF\n'
+                                                                                'Returns a boolean',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`math.odd(4)`**\n\n'
+                                                                                'Will return `OFF`\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`math.even(4)`**\n\n'
+                                                                                'Will return a`ON`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:exp|logn?|power|square_root)\b",
                                                                     'Functions/Math/Power and Logarithmic',
                                                                     [('math.exp(\x01<VALUE>\x01)',
@@ -2085,7 +2248,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate natural logarithm for given <VALUE>\n'
                                                                                 'Returns a decimal value\n'
-                                                                                'Given *<VALUE>* is a numbers')),
+                                                                                'Given *<VALUE>* is a number')),
                                                                     ('math.log(\x01<VALUE>[, <BASE>]\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *logarithm* for a given number]',
@@ -2093,24 +2256,27 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Calculate logarithm for given <VALUE> using given <BASE>\n'
                                                                                 'Returns a decimal value\n'
                                                                                 'Given *<VALUE>* is a number\n'
-                                                                                'Given *<BASE>* is a number; if not provided default value is 10 (bae 10 logarithm)')),
+                                                                                'Given *<BASE>* is a number; if not provided default value is 10 (base 10 logarithm)')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:convert)\b",
                                                                     'Functions/Math/Convert',
-                                                                    [('math.convert(\x01<VALUE>, <F-UNIT>, <T-UNIT>\x01)',
+                                                                    [('math.convert(\x01<VALUE>, <F-UNIT>, <T-UNIT>[, <PCT-REF>]\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Convert a value from a unit to another one]',
                                                                                 # description
                                                                                 'Convert  given <VALUE> from unit <F-UNIT> to unit <T-UNIT>\n'
+                                                                                'If a conversion unit is given in PCT, by default conversion is made from layer width; use <PCT-REF> to provide WIDTH or HEIGHT reference to use for conversion.\n'
                                                                                 'Returns a decimal value\n',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`math.convert(18, MM, PX)`**\n\n'
                                                                                 'Will convert value of 18 millimeters in pixels')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:minimum|maximum|average|sum|product)\b",
                                                                     'Functions/Math/List',
                                                                     [('math.minimum(\x01<VALUE1>[, <VALUEN>]\x01)',
@@ -2169,7 +2335,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.product([10, 5], [25, -4])`**\n\n'
                                                                                 'Will return product value `-5000`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:ceil|floor|round)\b",
                                                                     'Functions/Math/Rounding',
                                                                     [('math.ceil(\x01<VALUE>\x01)',
@@ -2196,7 +2363,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.floor(1.11)`**\n'
                                                                                 '**`math.floor(1.99)`**\n\n'
                                                                                 'Will both return value **`1`**')),
-                                                                    ('math.round(\x01<VALUE>, <DECIMALS>\x01)',
+                                                                    ('math.round(\x01<VALUE>[, <DECIMALS>]\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *round* value for a given number]',
                                                                                 # description
@@ -2211,7 +2378,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`math.round(1.494, 2)`**\n\n'
                                                                                 'Will return value **`1.49`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:a?cos|a?sin|a?tan)\b",
                                                                     'Functions/Math/Trigonometric',
                                                                     [('math.cos(\x01<VALUE> [, <UNIT>]\x01)',
@@ -2330,7 +2498,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will calculate value of arc tangent of 0.78 radians whatever is default rotation unit')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:a?cosh|a?sinh|a?tanh)\b",
                                                                     'Functions/Math/Hyperbolic',
                                                                     [('math.cosh(\x01<VALUE> [, <UNIT>]\x01)',
@@ -2449,7 +2618,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will calculate value of inverse hyperbolic tangent of 0.78 radians whatever is default rotation unit')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             # TODO: |format|parseInt|parseFloat|parseColor
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bstring\.(?:length)\b",
@@ -2465,7 +2635,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`string.length("Hello!")`**\n\n'
                                                                                 'Will return value **`6`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\bstring\.(?:upper|lower|substring)\b",
                                                                     'Functions/String',
@@ -2520,9 +2691,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will return value **`LLO!`**')),
 
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgb|rgba|hsla?|hsva?|cmyka?)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgba?|hsla?|hsva?|cmyka?)\b",
                                                                     'Functions/Color',
                                                                     [('color.rgb(\x01<R-VALUE>, <G-VALUE>, <B-VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2558,7 +2730,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <L-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<L-VALUE>* for Lightness can be can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2573,7 +2745,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <L-VALUE>, <O-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<L-VALUE>* for Lightness, *<O-VALUE>* for Opacity can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2588,7 +2760,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <V-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<V-VALUE>* for Value can be can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2603,7 +2775,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Calculate a color for given <H-VALUE>, <S-VALUE>, <V-VALUE>, <O-VALUE>\n'
                                                                                 'Returns a color value\n\n'
-                                                                                'Given *<H-VALUE>* for Hue is a decimal value from 0 to 360\n\n'
+                                                                                'Given *<H-VALUE>* for Hue is an integer value from 0 to 359 or a decimal value from 0.0 to 1.0\n\n'
                                                                                 'Given *<S-VALUE>* for Saturation, *<V-VALUE>* for Value, *<O-VALUE>* for Opacity can be:\n'
                                                                                 ' - **`int`**: an integer value from 0 to 255\n'
                                                                                 ' - **`dec`**: a decimal value from 0.0 to 1.0',
@@ -2641,7 +2813,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`color.hsv(1.0, 0.0, 1.0, 0.75, 0.5)`**\n\n'
                                                                                 'Will both return a green color equivalent to rgb(0,64,0), with 50% opacity')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\blist\.(?:length)\b",
@@ -2657,7 +2830,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`list.length([2,4,6])`**\n\n'
                                                                                 'Will return value **`3`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\blist\.(?:join)\b",
                                                                     'Functions/List',
@@ -2674,7 +2848,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`list.join(["a", "b", "c"], ";")n\n'
                                                                                 'Will return value **`a;b;c`**')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
 
@@ -2695,10 +2870,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`string.splir("aa;bb;cc", ";")`**\n\n'
                                                                                 'Will both return a list `["aa", "bb", "cc"]`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_LIST, r"\blist\.(?:rotate|sort|unique|shuffle)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_LIST, r"\blist\.(?:rotate|sort|unique|shuffle|revert)\b",
                                                                     'Functions/List',
                                                                     [('list.rotate(\x01<LIST>[, <VALUE>]\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2756,45 +2932,47 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`list.shuffle([1,2,3,4])`**\n\n'
                                                                                 'Will return *(for example)* list `[4,1,3,2]`')),
+                                                                    ('list.revert(\x01<LIST>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return a list for which items order have been *reverted*]',
+                                                                                # description
+                                                                                'Revert items order from given <LIST>\n'
+                                                                                'Returns a list value\n\n'
+                                                                                'Given *<LIST>* is a list',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`list.revert([1,2,3,4])`**\n\n'
+                                                                                'Will return list `[4,3,2,1]`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_VARIANT, r"\blist\.(?:push|pop)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_VARIANT, r"\blist\.(?:index)\b",
                                                                     'Functions/List',
-                                                                    [('list.push(\x01<LIST>, <VARIABLE>\x01)',
+                                                                    [('list.index(\x01<LIST>, <INDEX>[, <DEFAULT>]\x01)',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Function [*Push* a given value into a list]',
+                                                                                'Function [Return value for given index from a given list]',
                                                                                 # description
-                                                                                'Push given <VALUE> to last item from given <LIST> into <VALUE>\n'
-                                                                                'Update given <LIST> and returns pushed value\n\n'
-                                                                                'Given *<LIST>* is a list\n\n'
-                                                                                'Given *<VALUE>* can be of any type')),
-
-                                                                    ('list.pop(\x01<LIST>[, <INDEX>]\x01)',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Function [*Pop* a value from a given list]',
-                                                                                # description
-                                                                                'Pop item designed by <INDEX> from given <LIST>\n'
-                                                                                'Update given <LIST> and returns popped value\n\n'
+                                                                                'Return item designed by <INDEX> from given <LIST>\n\n'
                                                                                 'Given *<LIST>* is a list\n\n'
                                                                                 'Given *<INDEX>*, if provided, is an integer:\n'
-                                                                                ' - A positive value will pop value from start\n'
-                                                                                ' - A negative value will pop value from end\n'
-                                                                                ' - A zero value will pop nothing\n'
-                                                                                ' - Default index, if not provided, is `-1`\n',
+                                                                                ' - A positive value will return value from start (first index in list=1)\n'
+                                                                                ' - A negative value will return value from end\n'
+                                                                                ' - Any invalid index value will return <DEFAULT>\n\n'
+                                                                                'Given optional *<DEFAULT>* can be of any type, and is returned if an invalid index been given; if not provided, value is `0`',
                                                                                 # example
                                                                                 'Assumining variable `:myList` is a list `[1,2,3,4,5]`\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`list.pop(:myList)`**\n'
-                                                                                'Will update `:myList` to `[1,2,3,4]` and return `5`\n\n'
+                                                                                '**`list.index(:myList, 1)`**\n'
+                                                                                'Will return `1`\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`list.pop(:myList, 1)`**\n'
-                                                                                'Will update `:myList` to `[2,3,4,5]` and return `1`\n\n'
-                                                                                'Following instruction:\n'
-                                                                                '**`list.pop(:myList, 2)`**\n'
-                                                                                'Will update `:myList` to `[1,3,4,5]` and return `2`')),
+                                                                                '**`list.index(:myList, -2)`**\n'
+                                                                                'Will return `4`\n\n'
+                                                                                '**`list.index(:myList, 25, 0)`**\n'
+                                                                                'Will return `0`')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_BOOLEAN, r"\bboolean\.(?:isString|isNumber|isInteger|isDecimal|isBoolean|isColor|isList)\b",
                                                                     'Functions/Boolean',
@@ -2841,7 +3019,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Check if given <VALUE> is a list\n'
                                                                                 'Returns a boolean value')),
                                                                     ],
-                                                                    'f'),
+                                                                    'f',
+                                                                    onInitValue=self.__initTokenLower),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_UNCOMPLETE, r"^\x20*\b"
@@ -2857,7 +3036,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Constant [None value]',
                                                                                 # description
                                                                                 'Define an undefined value'))],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_ONOFF, r"\b(?:ON|OFF)\b",
                                                                     'Constants/Switch',
@@ -2871,7 +3051,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Constant [Boolean/Switch value]',
                                                                                 # description
                                                                                 'Define a False/Inactive state'))],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenBoolean
+                                                                    ),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_M, r"\b(?:PX|PCT|MM|INCH)\b",
                                                                     'Constants/Units/Measure',
                                                                     [('PX',
@@ -2895,7 +3077,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Unit in inches')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_M_RPCT, r"\b(?:RPCT)\b",
                                                                     'Constants/Units/Measure',
                                                                     [('RPCT',
@@ -2905,7 +3088,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Unit in relative percentage\n'
                                                                                 'Relative percentage can only be used for some actions')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_UNITS_R, r"\b(?:RADIAN|DEGREE)\b",
                                                                     'Constants/Units/Angle',
                                                                     [('RADIAN',
@@ -2919,7 +3103,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Unit in degrees')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENSTYLE, r"\b(?:SOLID|DASHDOT|DASH|DOT)\b",
                                                                     'Constants/Pen/Style|Constants/Canvas/Grid/Style|Constants/Canvas/Origin/Style',
@@ -2944,7 +3129,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Dash-Dot stroke')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENCAP, r"\b(?:SQUARE|FLAT|ROUNDCAP)\b",
                                                                     'Constants/Pen/Cap',
                                                                     [('SQUARE',
@@ -2963,7 +3149,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Round pen stroke cap')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENJOIN, r"\b(?:BEVEL|MITTER|ROUNDJOIN)\b",
                                                                     'Constants/Pen/Join',
                                                                     [('BEVEL',
@@ -2982,7 +3169,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Round pen stroke join')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_FILLRULE, r"\b(?:EVEN|WINDING)\b",
                                                                     'Constants/Fill',
                                                                     [('EVEN',
@@ -2996,8 +3184,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Fill rule winding')),
                                                                     ],
-                                                                    'c'),
-            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, r"\b(?:LEFT|CENTER|RIGHT)\b",
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
+            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSHALIGN, r"\b(?:LEFT|CENTER|RIGHT)\b",
                                                                     'Constants/Text/Alignment/Horizontal',
                                                                     [('LEFT',
                                                                             TokenizerRule.formatDescription(
@@ -3015,8 +3204,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Right horizontal text alignment')),
                                                                     ],
-                                                                    'c'),
-            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, r"\b(?:TOP|MIDDLE|BOTTOM)\b",
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
+            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN, r"\b(?:TOP|MIDDLE|BOTTOM)\b",
                                                                     'Constants/Text/Alignment/Vertical',
                                                                     [('TOP',
                                                                             TokenizerRule.formatDescription(
@@ -3034,7 +3224,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Bottom vertical text alignment')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, r"\b(?:NORMAL|SOURCE_OVER|DESTINATION_OVER|DESTINATION_CLEAR|SOURCE_IN|SOURCE_OUT|DESTINATION_IN|DESTINATION_OUT|SOURCE_ATOP|DESTINATION_ATOP|EXCLUSIVE_OR|PLUS|MULTIPLY|SCREEN|OVERLAY|DARKEN|LIGHTEN|COLORDODGE|COLORBURN|HARD_LIGHT|SOFT_LIGHT|DIFFERENCE|EXCLUSION)\b",
                                                                     'Constants/Draw/Blending modes/Pixels',
                                                                     [('NORMAL',
@@ -3168,7 +3359,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Similar to CompositionMode_Difference, but with a lower contrast\n'
                                                                                 'Painting with white inverts the destination color, whereas painting with black leaves the destination color unchanged')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, r"\b(?:BITWISE_S_OR_D|BITWISE_S_AND_D|BITWISE_S_XOR_D|BITWISE_S_NOR_D|BITWISE_S_NAND_D|BITWISE_NS_XOR_D|BITWISE_S_NOT|BITWISE_NS_AND_D|BITWISE_S_AND_ND|BITWISE_NS_OR_D|BITWISE_CLEAR|BITWISE_SET|BITWISE_NOT_D|BITWISE_S_OR_ND)\b",
                                                                     'Constants/Draw/Blending modes/Bits level',
                                                                     [('BITWISE_S_OR_D',
@@ -3242,7 +3434,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Does a bitwise operation where the Source is OR operation with the inverted Destination pixels')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, r"\b(?:ADD|SUBSTRACT|REPLACE)\b",
                                                                     'Constants/Selection/Mode',
@@ -3262,10 +3455,13 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Replace current selection')),
                                                                     ],
-                                                                    'c'),
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, r"\b(?:BLUE|GREEN|YELLOW|ORANGE|BROWN|RED|PURPLE|GREY)\b",
-                                                                    'Constants/Layer/Color label',['BLUE','GREEN','YELLOW','ORANGE','BROWN','RED','PURPLE','GREY'],'c'),
+                                                                    'Constants/Layer/Color label',['BLUE','GREEN','YELLOW','ORANGE','BROWN','RED','PURPLE','GREY'],
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
 
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bposition\.(?:x|y)\b",
@@ -3283,7 +3479,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current position ordinate, from origin, in current canvas unit\n'
                                                                                 'Returned as decimal value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bangle\b",
                                                                     'Variables/Rotation',
@@ -3294,8 +3491,9 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current rotation, in current rotation unit\n'
                                                                                 'Returned as decimal value')),
                                                                     ],
-                                                                    'v'),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bunit\.(?:rotation|coordinates)\b",
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bunit\.(?:rotation|canvas)\b",
                                                                     'Variables/Units',
                                                                     [(':unit.rotation',
                                                                             TokenizerRule.formatDescription(
@@ -3303,16 +3501,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current rotation unit\n'
                                                                                 'Returned as string value')),
-                                                                     (':unit.coordinates',
+                                                                     (':unit.canvas',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current used measure unit]',
+                                                                                'Reserved variable [Current used coordinates & measures unit]',
                                                                                 # description
                                                                                 'Current canvas unit\n'
                                                                                 'Returned as string value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             # todo: add |brush
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|opacity|status)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|status)\b",
                                                                     'Variables/Pen',
                                                                     [(':pen.color',
                                                                             TokenizerRule.formatDescription(
@@ -3344,12 +3543,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current pen join\n'
                                                                                 'Returned as string value')),
-                                                                     (':pen.opacity',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current pen opacity]',
-                                                                                # description
-                                                                                'Current pen opacity\n'
-                                                                                'Returned as decimal value from 0.0 to 1.0')),
                                                                      (':pen.status',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current pen status]',
@@ -3357,7 +3550,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Current pen status\n'
                                                                                 'Returned as string value (UP=OFF, DOWN=ON)')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             # todo: add |brush
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bfill\.(?:color|rule|status)\b",
                                                                     'Variables/Fill',
@@ -3378,10 +3572,34 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current fill status]',
                                                                                 # description
                                                                                 'Current fill status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                     ],
-                                                                    'v'),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letter_spacing|stretch|color|align|position)\b",
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape])\b",
+                                                                    'Variables/Draw',
+                                                                    [(':draw.antialiasing',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current antialiasing status]',
+                                                                                # description
+                                                                                'Current antialiasing status applied when drawing\n'
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                     (':draw.blendingMode',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current blending mode]',
+                                                                                # description
+                                                                                'Current blending mode applied when drawing\n'
+                                                                                'Returned as string value')),
+                                                                     (':draw.shape.status',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current shape mode status]',
+                                                                                # description
+                                                                                'Current shape mode active or not\n'
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letterspacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
                                                                     'Variables/Text',
                                                                     [(':text.color',
                                                                             TokenizerRule.formatDescription(
@@ -3406,45 +3624,52 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current text style: bold status]',
                                                                                 # description
                                                                                 'Current bold status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.italic',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text style: italic status]',
                                                                                 # description
                                                                                 'Current italic status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.outline',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text style: outline status]',
                                                                                 # description
                                                                                 'Current outline status\n'
-                                                                                'Returned as string value (ACTIVE=ON, INACTIVE=OFF)')),
-                                                                     (':text.letter_spacing',
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                     (':text.letterSpacing.spacing',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text letter spacing value]',
                                                                                 # description
                                                                                 'Current letter spacing value\n'
-                                                                                'Returned as ???????????????? unit?????')),
+                                                                                'Returned as number value, using `:text.letterSpacing.unit` unit')),
+                                                                     (':text.letterSpacing.unit',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current text letter spacing value]',
+                                                                                # description
+                                                                                'Current letter spacing value\n'
+                                                                                'Returned as string')),
                                                                      (':text.stretch',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text stretch value]',
                                                                                 # description
                                                                                 'Current stretch value\n'
-                                                                                'Returned as decimal value unit????????????')),
-                                                                     (':text.align',
+                                                                                'Returned as an integer value (100=no strech)')),
+                                                                     (':text.alignment.horizontal',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text horizontal alignment]',
                                                                                 # description
                                                                                 'Current horizontal alignment\n'
                                                                                 'Returned as string value')),
-                                                                     (':text.position',
+                                                                     (':text.alignment.vertical',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current text vertical alignment]',
                                                                                 # description
                                                                                 'Current vertical alignment\n'
                                                                                 'Returned as string value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|size\.major|size\.minor|style|opacity)\b",
                                                                     'Variables/Canvas/Grid',
@@ -3472,6 +3697,12 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas minor grid size\n'
                                                                                  'Returned in current unit')),
+                                                                     (':canvas.grid.size.unit',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas grid unit]',
+                                                                                 # description
+                                                                                 'Current canvas grid unit\n'
+                                                                                 'Returned as string')),
                                                                      (':canvas.grid.style',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas grid style]',
@@ -3484,7 +3715,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas grid opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:status|color|size|style|opacity)\b",
                                                                     'Variables/Canvas/Origin',
                                                                     [(':canvas.origin.color',
@@ -3516,8 +3748,21 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas origin opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
+                                                                     (':canvas.origin.position.absissa',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas origin absissa]',
+                                                                                 # description
+                                                                                 'Current canvas origin absissa\n'
+                                                                                 'Returned as a string')),
+                                                                     (':canvas.origin.position.ordinate',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas origin ordinate]',
+                                                                                 # description
+                                                                                 'Current canvas origin ordinate\n'
+                                                                                 'Returned as a string')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:status|color|size|style|opacity)\b",
                                                                     'Variables/Canvas/Position',
                                                                     [(':canvas.position.color',
@@ -3556,7 +3801,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas position fulfill status (is empty or fulfilled)\n'
                                                                                  'Returned as boolean value')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:status|opacity)\b",
                                                                     'Variables/Canvas/Background',
                                                                     [(':canvas.background.status',
@@ -3572,7 +3818,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas background opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.geometry\.(?:width|height|top|bottom|left|right)\b",
                                                                     'Variables/Canvas/Geometry',
                                                                     [(':canvas.geometry.width',
@@ -3612,7 +3859,21 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Current canvas bottom position, relative to origin\n'
                                                                                  'Returned in current unit')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+
+
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\script\.bexecution\.(?:verbose)\b",
+                                                                    'Variables/Script/Execution',
+                                                                    [(':script.execution.verbose',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current verbose status]',
+                                                                                # description
+                                                                                'Current verbose status for script execution\n'
+                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brepeat\.(?:current|total|incAngle|currentAngle|first|last)\b",
                                                                     'Variables/Flow/Loops/Repeat',
@@ -3653,7 +3914,8 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Define the rotation angle for current iteration\n'
                                                                                  'Returned as decimal value, in current rotation unit')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bforeach\.(?:current|total|incAngle|currentAngle|first|last)\b",
                                                                     'Variables/Flow/Loops/For each',
                                                                     [(':foreach.current',
@@ -3693,13 +3955,14 @@ class BSLanguageDef(LanguageDef):
                                                                                  'Define the rotation angle for current iteration\n'
                                                                                  'Returned as decimal value, in current rotation unit')),
                                                                     ],
-                                                                    'v'),
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b"),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b", onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True),
-            TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True),
+            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.DUAL_OPERATOR, r"-", ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.SEPARATOR, r","),
             TokenizerRule(BSLanguageDef.ITokenType.PARENTHESIS_OPEN, r"\("),
@@ -3804,8 +4067,8 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_PENCAP, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_PENJOIN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_FILLRULE, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSHALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSVALIGN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
@@ -3895,8 +4158,8 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_PENCAP, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_PENJOIN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_FILLRULE, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN, '#24ff8d', True, False),
-            (BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSHALIGN, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSVALIGN, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
@@ -3918,15 +4181,16 @@ class BSLanguageDef(LanguageDef):
 
         """
         self.__grammarRules.setOperatorPrecedence(
-                GROperatorPrecedence(90, BSLanguageDef.ITokenType.UNARY_OPERATOR, False, 'not'),
-                GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR, False, '-'),
+                GROperatorPrecedence(90, BSLanguageDef.ITokenType.UNARY_OPERATOR,  False, 'not'),
+                GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR,   False, '-'),
                 GROperatorPrecedence(80, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '*', '/', '//', '%'),
-                GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+', '-'),
-                GROperatorPrecedence(60,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
-                GROperatorPrecedence(50,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '!='),
-                GROperatorPrecedence(40,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
-                GROperatorPrecedence(30,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
-                GROperatorPrecedence(20,  BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
+                GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+'),
+                GROperatorPrecedence(70, BSLanguageDef.ITokenType.DUAL_OPERATOR,   True, '-'),
+                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
+                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '<>'),
+                GROperatorPrecedence(40, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
+                GROperatorPrecedence(30, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
+                GROperatorPrecedence(20, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
             )
 
 
@@ -3989,6 +4253,7 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Origin_Style',
                       'Action_Set_Canvas_Origin_Size',
                       'Action_Set_Canvas_Origin_Opacity',
+                      'Action_Set_Canvas_Origin_Position',
                       'Action_Set_Canvas_Position_Color',
                       'Action_Set_Canvas_Position_Size',
                       'Action_Set_Canvas_Position_Opacity',
@@ -3997,7 +4262,7 @@ class BSLanguageDef(LanguageDef):
                       # TODO
                       #'Action_Set_Layer',
                       #'Action_Set_Selection',
-                      'Action_Set_Execution_Verbose',
+                      'Action_Set_Script_Execution_Verbose',
                       'Action_Draw_Shape_Square',
                       'Action_Draw_Shape_Round_Square',
                       'Action_Draw_Shape_Rect',
@@ -4013,8 +4278,10 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Misc_Clear_Canvas',
                       # TODO
                       #'Action_Draw_Misc_Apply_To_Layer',
-                      'Action_Draw_Fill_Begin',
-                      'Action_Draw_Fill_End',
+                      'Action_Draw_Shape_Start',
+                      'Action_Draw_Shape_Stop',
+                      'Action_Draw_Fill_Activate',
+                      'Action_Draw_Fill_Deactivate',
                       'Action_Draw_Pen_Up',
                       'Action_Draw_Pen_Down',
                       'Action_Draw_Move_Home',
@@ -4042,7 +4309,9 @@ class BSLanguageDef(LanguageDef):
                       'Action_UIDialog_Integer_Input',
                       'Action_UIDialog_Decimal_Input',
                       'Action_UIDialog_Color_Input',
-                      'Action_UIDialog_String_Input'                    # TODO
+                      'Action_UIDialog_String_Input',
+                      'Action_UIDialog_Single_Choice_Input',
+                      'Action_UIDialog_Multiple_Choice_Input'
 
                 )
             )
@@ -4237,7 +4506,7 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Action_Set_Draw_Blending',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw blending', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw blending mode', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -4302,6 +4571,15 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
+        GrammarRule('Action_Set_Canvas_Origin_Position',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin position', False),
+                'Any_Expression',
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
         GrammarRule('Action_Set_Canvas_Origin_Opacity',
                 GrammarRule.OPTION_AST,
                 # --
@@ -4352,10 +4630,10 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Execution_Verbose',
+        GrammarRule('Action_Set_Script_Execution_Verbose',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, 'set execution verbose', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, 'set script execution verbose', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -4481,17 +4759,31 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Draw_Fill_Begin',
+        GrammarRule('Action_Draw_Shape_Start',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'fill begin', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'start to draw shape', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Draw_Fill_End',
+        GrammarRule('Action_Draw_Shape_Stop',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'fill end', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'stop to draw shape', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Fill_Activate',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'activate fill', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Fill_Deactivate',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_FILL, 'deactivate fill', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -4734,6 +5026,32 @@ class BSLanguageDef(LanguageDef):
                             'Action_UIDialog_Option_With_Message')
             )
 
+        GrammarRule('Action_UIDialog_Single_Choice_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for single choice input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Index',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Combobox_Choices',
+                            'Action_UIDialog_Option_With_RadioButton_Choices',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
+        GrammarRule('Action_UIDialog_Multiple_Choice_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for multiple choice input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Index',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Choices',
+                            'Action_UIDialog_Option_With_Minimum_Choices',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
         GrammarRule('Action_UIDialog_Option_With_Title',
                 GrammarRule.OPTION_AST,
                 # --
@@ -4770,6 +5088,46 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with default value', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Default_Index',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with default index', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Combobox_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with combobox choices', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_RadioButton_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with radio button choices', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with choices', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_UIDialog_Option_With_Minimum_Choices',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, 'with minimum choices', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
@@ -4945,8 +5303,8 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_PENCAP),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_PENJOIN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_FILLRULE),
-                      GRToken(BSLanguageDef.ITokenType.CONSTANT_TEXTHALIGN),
-                      GRToken(BSLanguageDef.ITokenType.CONSTANT_TEXTVALIGN),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_POSHALIGN),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
                       'List_Value',
                     )
@@ -4963,7 +5321,19 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GROne('Evaluation_Expression_Unary_Operator',
                       'Evaluation_Expression_Parenthesis',
-                      #'Evaluation_Expression_Comparison',
+                      'Any_Value'),
+                GROptional('Evaluation_Expression_Binary_Operator')
+            )
+
+        # When an evaluation expression start, only the first one need to manage operator precedence
+        # for this, grammar rules are built:
+        # - first evaluation expression manage OPTION_OPERATOR_PRECEDENCE
+        # - following evaluation expression do not manage OPTION_OPERATOR_PRECEDENCE
+        # for this, create a second Evaluation_Expression rule, without option, that is called for binary operators
+        GrammarRule('Evaluation_Expression__noop',
+                # --
+                GROne('Evaluation_Expression_Unary_Operator',
+                      'Evaluation_Expression_Parenthesis',
                       'Any_Value'),
                 GROptional('Evaluation_Expression_Binary_Operator')
             )
@@ -4972,6 +5342,7 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.PARENTHESIS_OPEN, False),
+                # use the evaluation expression with OPTION_OPERATOR_PRECEDENCE here as we're in an another level of evaluation
                 'Evaluation_Expression',
                 GRToken(BSLanguageDef.ITokenType.PARENTHESIS_CLOSE, False),
             )
@@ -4979,16 +5350,7 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Evaluation_Expression_Binary_Operator',
                 GROne(GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '+', '*', '/', '//', '%', 'and', 'or', 'xor', '<=', '<>', '<', '>', '>=', '='),
                       GRToken(BSLanguageDef.ITokenType.DUAL_OPERATOR, '-')),
-                'Evaluation_Expression',
-                GROptional('Evaluation_Expression_Binary_Operator')
-            )
-
-        GrammarRule('Evaluation_Expression__noComparison',
-                GrammarRule.OPTION_AST|GrammarRule.OPTION_OPERATOR_PRECEDENCE,
-                # --
-                GROne('Evaluation_Expression_Unary_Operator',
-                      'Evaluation_Expression_Parenthesis',
-                      'Any_Value'),
+                'Evaluation_Expression__noop',
                 GROptional('Evaluation_Expression_Binary_Operator')
             )
 
@@ -4999,7 +5361,6 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.DUAL_OPERATOR, '-')),
                 GROne('Evaluation_Expression_Unary_Operator',
                       'Evaluation_Expression_Parenthesis',
-                      'Evaluation_Expression_Comparison',
                       'Any_Value'),
                 GROptional('Evaluation_Expression_Binary_Operator')
             )
@@ -5090,6 +5451,34 @@ class BSLanguageDef(LanguageDef):
         if len(value)>1:
             return value[1:-1]
 
+        return value
+
+    def __initTokenBoolean(self, tokenType, value):
+        """Convert value for BOOLEAN"""
+
+        return (value.upper()=='ON')
+
+    def __initTokenLower(self, tokenType, value):
+        """Convert value for lower case"""
+
+        return value.lower()
+
+    def __initTokenUpper(self, tokenType, value):
+        """Convert value for upper case"""
+
+        return value.upper()
+
+    def __initTokenColor(self, tokenType, value):
+        """Convert value for QColor"""
+
+        try:
+            return QColor(value)
+        except:
+            # not a valid color?
+            pass
+
+        # normally shouln't occurs... return initial value
+        print('__initTokenColor ERROR??', tokenType, value)
         return value
 
     def grammarRules(self):

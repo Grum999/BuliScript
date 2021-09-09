@@ -101,7 +101,7 @@ Action  ::= (
                 Action_Set_Layer |
                 Action_Set_Selection |
                 */
-                Action_Set_Execution |
+                Action_Set_Script_Execution |
                 Action_Draw_Shape |
                 Action_Draw_Misc |
                 Action_Draw_Fill |
@@ -154,17 +154,17 @@ Action_Set_Text
                 ( 'letter' 'spacing'    Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'stretch'             Evaluate_Number_Expression ) |
                 ( 'horizontal' 'alignment'
-                                        AlignH_Expression ) |
+                                        PositionH_Expression ) |
                 ( 'vertical' 'alignment'
-                                        AlignV_Expression )
+                                        PositionV_Expression )
             )
 
 
 /* Settings: Drawings */
 Action_Set_Draw
         ::= 'set' 'draw' (
-                ( 'antialiasing'   Evaluate_Boolean_Expression ) |
-                ( 'blending'       BlendingMode_Expression )
+                ( 'antialiasing'        Evaluate_Boolean_Expression ) |
+                ( 'blending' 'mode'     BlendingMode_Expression )
             )
 
 
@@ -173,9 +173,15 @@ Action_Set_Canvas
         ::= 'set' 'canvas' (
                 ( 'grid' | 'origin' | 'position' ) (
                     ( 'color'   Color_Expression ) |
-                    ( 'style'   PenStyle_Expression ) |
-                    ( 'size'    Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? )
+                    ( 'style'   PenStyle_Expression )
                 ) |
+
+                ( 'grid' 'size'  Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? ) |
+                ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
+
+
+                ( )
+                ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
                 'position' ( 'fulfilled' Evaluate_Boolean_Expression )
             )
@@ -189,8 +195,8 @@ Action_Set_Selection
         ::= 'TODO: define Set selection'
 */
 
-Action_Set_Execution
-        ::= 'set' 'execution' 'verbose' Evaluate_Boolean_Expression
+Action_Set_Script_Execution
+        ::= 'set' 'script' 'execution' 'verbose' Evaluate_Boolean_Expression
 
 
 Action_Draw_Shape
@@ -210,7 +216,8 @@ Action_Draw_Shape
                 ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Evaluate_Number_Expression Unit_RM_Expression? ) |
                 ( 'text' Evaluate_String_Expression ) |
                 ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
-            )
+            ) |
+            ('start' | 'stop' ) 'to' 'draw' 'shape'
 
 
 Action_Draw_Misc
@@ -224,7 +231,7 @@ Action_Draw_Misc
 
 
 Action_Draw_Fill
-        ::= 'fill' ('begin' | 'end' )
+        ::= ('activate' | 'deactivate') 'fill'
 
 
 Action_Draw_Pen
@@ -288,6 +295,27 @@ Action_UIDialog
                         (
                             'with' ( 'default' 'value' Evaluate_String_Expression )
                         )?
+                    ) |
+                    /* SINGLE CHOICE INPUT */
+                    (
+                        'single' 'choice' 'input' Variable
+                        (
+                            'with' ( ('combobox'|'radio button') 'choices' List_Expression  )
+                        )
+                        (
+                            'with' ( 'default' 'index' Evaluate_Number_Expression )
+                        )?
+                    ) |
+                    /* MULTIPLE CHOICE INPUT */
+                    (
+                        'multiple' 'choice' 'input' Variable
+                        (
+                            'with' ( 'choices' List_Expression  )
+                        )
+                        (
+                            'with' ( 'default' 'index' (List_Expression|Evaluate_Number_Expression) ) |
+                                   ( 'minimum' 'choices' Evaluate_Number_Expression)
+                        )*
                     )
                 )
             )
@@ -402,12 +430,12 @@ Any_Expression
             PenCap_Expression |
             PenJoin_Expression |
             FillRule_Expression |
-            AlignH_Expression |
-            AlignV_Expression |
+            PositionH_Expression |
+            PositionV_Expression |
             BlendingMode_Expression
 
 Color_Expression
-        ::= ('#' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit (HexDigit HexDigit)?) |
+        ::= ('#' (HexDigit HexDigit)? HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit ) |
             Function |
             Variable
 
@@ -452,10 +480,10 @@ PenJoin_Expression
 FillRule_Expression
         ::= ( 'EVEN' | 'WINDING' ) | Function | Variable
 
-AlignH_Expression
+PositionH_Expression
         ::= ( 'LEFT' | 'CENTER' | 'RIGHT' ) | Function | Variable
 
-AlignV_Expression
+PositionV_Expression
         ::= ( 'TOP' | 'MIDDLE' | 'CENTER' ) | Function | Variable
 
 BlendingMode_Expression
@@ -469,15 +497,15 @@ BlendingMode_Expression
               'DESTINATION_OUT' |
               'DESTINATION_ATOP' |
               'SOURCE_ATOP' |
-              'XOR' |
+              'EXCLUSIVE_OR' |
               'PLUS' |
               'MULTIPLY' |
               'SCREEN' |
               'OVERLAY' |
               'DARKEN' |
               'LIGHTEN' |
-              'ColorDODGE' |
-              'ColorBURN' |
+              'COLORDODGE' |
+              'COLORBURN' |
               'HARD_LIGHT' |
               'SOFT_LIGHT' |
               'DIFFERENCE' |
@@ -567,9 +595,9 @@ Function
                 ( 'rotate' '(' Evaluation_List_Expression (',' Evaluation_Number_Expression)? ')' ) |
                 ( 'sort' '(' Evaluation_List_Expression (',' Evaluation_Boolean_Expression)? ')' ) |
                 ( 'unique' '(' Evaluation_List_Expression ')' ) |
+                ( 'revert' '(' Evaluation_List_Expression ')' ) |
                 ( 'shuffle' '(' Evaluation_List_Expression ')' ) |
-                ( 'pop' '(' Evaluation_List_Expression (',' Evaluation_Number_Expression)? ')' ) |
-                ( 'push' '(' Evaluation_List_Expression ',' Any_Expression ')' )
+                ( 'index' '(' Evaluation_List_Expression ',' Evaluation_Number_Expression (',' Any_Expression)? ')' )
             )
             |
             'math' '.' (
@@ -577,6 +605,7 @@ Function
                 ( 'abs' '(' Evaluation_Number_Expression ')' ) |
                 ( 'sign' '(' Evaluation_Number_Expression ')' ) |
                 ( 'even' '(' Evaluation_Number_Expression ')' ) |
+                ( 'odd' '(' Evaluation_Number_Expression ')' ) |
                 ( 'exp' '(' Evaluation_Number_Expression ')' ) |
                 ( 'square_root' '(' Evaluation_Number_Expression ')' ) |
                 ( 'power' '(' Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
@@ -646,17 +675,19 @@ Reserved_Variable
         ::= ':' (
             ( 'position' '.' ( 'x' | 'y' ) ) |
             'angle' |
-            ( 'unit' '.' ( 'rotation' | 'coordinates' ) ) |
-            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'opacity' | 'status' ) ) |
+            ( 'unit' '.' ( 'rotation' | 'canvas' ) ) |
+            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
-            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letter_spacing' | 'stretch' | 'align' | 'position' ) ) |
+            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
+            ( 'draw' '.' ( 'antialiasing' | 'blendingMode' | 'shape' '.' 'status') ) |
             ( 'canvas' '.'
-                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' ) | 'style' | 'opacity' ) ) |
-                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' ) ) |
+                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
+                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
                 ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
             ) |
+            ( 'script' '.' 'execution' '.' 'verbose' ) |
             ( 'repeat' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) ) |
             ( 'foreach' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) )
         )

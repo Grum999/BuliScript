@@ -28,6 +28,7 @@ import base64
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
+        pyqtSignal as Signal,
         QDir,
         QRect
     )
@@ -43,6 +44,7 @@ from .bsdwlanguage import (
         BSDockWidgetLangageReference
     )
 from .bshistory import BSHistory
+from .bsinterpreter import BSInterpreter
 from .bslanguagedef import BSLanguageDef
 from .bsmainwindow import BSMainWindow
 from .bssystray import BSSysTray
@@ -75,8 +77,8 @@ from buliscript.pktk.modules.ekrita import (
 class BSUIController(QObject):
     """The controller provide an access to all BuliScript functions
     """
-    bsWindowShown = pyqtSignal()
-    bsWindowClosed = pyqtSignal()
+    bsWindowShown = Signal()
+    bsWindowClosed = Signal()
 
     def __init__(self, bsName="Buli Script", bsVersion="testing", kritaIsStarting=False):
         super(BSUIController, self).__init__(None)
@@ -136,6 +138,8 @@ class BSUIController(QObject):
 
         self.__dwLangageQuickHelpAction=None
         self.__dwLangageReferenceAction=None
+
+        self.__interpreter=BSInterpreter(self.__languageDef)
 
         if kritaIsStarting and BSSettings.get(BSSettingsKey.CONFIG_OPEN_ATSTARTUP):
             self.start()
@@ -794,13 +798,23 @@ class BSUIController(QObject):
 
     def commandScriptExecute(self):
         """Execute script"""
-        #text=self.plainTextEdit.toPlainText()
-        #p=Parser(self.__uiController.languageDef().tokenizer(), self.__uiController.languageDef().grammarRules())
-        #p.setIgnoredTokens([BSLanguageDef.ITokenType.SPACE, BSLanguageDef.ITokenType.NEWLINE, BSLanguageDef.ITokenType.COMMENT])
-        ##print(text)
-        ##print(p)
-        #p.parse(text+"\n\n#<EOT>")
-        print("TODO: implement commandScriptExecute")
+        if self.__currentDocument:
+            self.__interpreter.setOptionVerboseMode(True)
+
+            try:
+                returned=self.__interpreter.setScript(self.__currentDocument.codeEditor().toPlainText())
+            except Exception as e:
+                print("commandScriptExecute/Error", str(e))
+                return
+
+            try:
+                returned=self.__interpreter.execute()
+            except Exception as e:
+                print("commandScriptExecute/Error", str(e))
+                return
+
+            print('commandScriptExecute', returned)
+
 
     def commandScriptBreakPause(self):
         """Made Break/Pause in script execution"""
