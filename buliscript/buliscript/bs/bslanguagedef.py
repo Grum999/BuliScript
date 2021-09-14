@@ -64,7 +64,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_SET_CANVAS_BACKGROUND = ('setCanvasBackground', 'A <SET CANVAS POSITION> action')
         ACTION_SET_LAYER = ('setLayer', 'A <SET LAYER> action')
         ACTION_SET_SELECTION = ('setSelection', 'A <SET SELECTION> action')
-        ACTION_SET_EXECUTION = ('setExecution', 'A <SET EXECUTION> action')
+        ACTION_SET_SCRIPT = ('setExecution', 'A <SET EXECUTION> action')
 
         ACTION_DRAW_SHAPE = ('drawShape', 'A <DRAW shape> action')
         ACTION_DRAW_MISC = ('drawMisc', 'A draw <misc> action')
@@ -908,7 +908,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+script\s+execution\s+(?:verbose)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, r"^\x20*\bset\s+script\s+(?:execution\s+(?:verbose)|randomize\s+(?:seed))\b",
                                                                     'Settings/Script',
                                                                     [('set script execution verbose \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -924,6 +924,18 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text italic ON`**\n\n'
                                                                                 'Will define text as italic')),
+                                                                    ('set script randomize seed \x01<SEED>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define execution randomize seed for random numbers]',
+                                                                                # description
+                                                                                'Set seed used to generate randomized numbers\n'
+                                                                                'Given *<SEED>* can be:\n'
+                                                                                ' - **`int`**: any integer number; if negative, a random number will be used as seed\n'
+                                                                                ' - **`string`**: any string value',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set script randomize seed 999`**\n\n'
+                                                                                'Will define value `999` as seed used to generate random numbers')),
                                                                     ],
                                                                     'A'),
 
@@ -2100,7 +2112,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script)))"
+                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script\s+randomize|script)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
                                                                        r"|(?:clear|apply(?:\s+to)?)"
@@ -3582,6 +3594,30 @@ class BSLanguageDef(LanguageDef):
                                                                     onInitValue=self.__initTokenUpper),
 
 
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bmath\.(?:pi|e|phi)\b",
+                                                                    'Variables/Math',
+                                                                    [(':math.pi',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Mathematical constant: Pi]',
+                                                                                # description
+                                                                                'The mathematical constant *π*=3.141592…\n'
+                                                                                'See (Pi)[https://en.wikipedia.org/wiki/Pi]')),
+                                                                    (':math.e',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Mathematical constant: e]',
+                                                                                # description
+                                                                                'The mathematical constant *e*=2.718281…\n'
+                                                                                'See (Euler\'s number)[https://en.wikipedia.org/wiki/E_(mathematical_constant)]')),
+                                                                    (':math.phi',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Mathematical constant: Phi]',
+                                                                                # description
+                                                                                'The mathematical constant *phi*=1.618033…\n'
+                                                                                'See (Euler\'s number)[https://en.wikipedia.org/wiki/E_(mathematical_constant)]')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bposition\.(?:x|y)\b",
                                                                     'Variables/Position',
                                                                     [(':position.x',
@@ -3981,39 +4017,44 @@ class BSLanguageDef(LanguageDef):
                                                                     onInitValue=self.__initTokenLower),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\script\.bexecution\.(?:verbose)\b",
-                                                                    'Variables/Script/Execution',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bscript\.(?:execution\.(?:verbose)|randomize\.(?:seed))\b",
+                                                                    'Variables/Script',
                                                                     [(':script.execution.verbose',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current verbose status]',
                                                                                 # description
                                                                                 'Current verbose status for script execution\n'
                                                                                 'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                    (':script.randomize.seed',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Randomize seed]',
+                                                                                # description
+                                                                                'Seed used to generate randomized number')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brepeat\.(?:current|total|incAngle|currentAngle|first|last)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brepeat\.(?:currentIteration|totalIteration|incAngle|currentAngle|isFirstIteration|isLastIteration)\b",
                                                                     'Variables/Flow/Loops/Repeat',
-                                                                    [(':repeat.current',
+                                                                    [(':repeat.currentIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration number in *`repeat`* loop]',
                                                                                  # description
                                                                                  'Current iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':repeat.total',
+                                                                    (':repeat.totalIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Total iteration number in *`repeat`* loop]',
                                                                                  # description
                                                                                  'Total iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':repeat.first',
+                                                                    (':repeat.isFirstIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is first iteration in *`repeat`* loop]',
                                                                                  # description
                                                                                  'Define if current iteration is first iteration in loop\n'
                                                                                  'Returned as boolean value')),
-                                                                    (':repeat.last',
+                                                                    (':repeat.isLastIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is last iteration in *`repeat`* loop]',
                                                                                  # description
@@ -4034,27 +4075,27 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bforeach\.(?:current|total|incAngle|currentAngle|first|last)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bforeach\.(?:currentIteration|totalIteration|incAngle|currentAngle|isFirstIteration|isLastIteration)\b",
                                                                     'Variables/Flow/Loops/For each',
-                                                                    [(':foreach.current',
+                                                                    [(':foreach.currentIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration number in *`for each`* loop]',
                                                                                  # description
                                                                                  'Current iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':foreach.total',
+                                                                    (':foreach.totalIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Total iteration number in *`for each`* loop]',
                                                                                  # description
                                                                                  'Total iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':foreach.first',
+                                                                    (':foreach.isFirstIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is first iteration in *`for each`* loop]',
                                                                                  # description
                                                                                  'Define if current iteration is first iteration in loop\n'
                                                                                  'Returned as boolean value')),
-                                                                    (':foreach.last',
+                                                                    (':foreach.isLastIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is last iteration in *`for each`* loop]',
                                                                                  # description
@@ -4138,7 +4179,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#e5dd82', True, False),
@@ -4233,7 +4274,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#c278da', True, False),
@@ -4381,6 +4422,7 @@ class BSLanguageDef(LanguageDef):
                       #'Action_Set_Layer',
                       #'Action_Set_Selection',
                       'Action_Set_Script_Execution_Verbose',
+                      'Action_Set_Script_Randomize_Seed',
                       'Action_Draw_Shape_Square',
                       'Action_Draw_Shape_Round_Square',
                       'Action_Draw_Shape_Rect',
@@ -4751,7 +4793,15 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Action_Set_Script_Execution_Verbose',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, 'set script execution verbose', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, 'set script execution verbose', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Script_Randomize_Seed',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, 'set script randomize seed', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )

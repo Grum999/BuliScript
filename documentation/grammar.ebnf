@@ -196,7 +196,10 @@ Action_Set_Selection
 */
 
 Action_Set_Script_Execution
-        ::= 'set' 'script' 'execution' 'verbose' Evaluate_Boolean_Expression
+        ::= 'set' 'script' (
+                ('execution' 'verbose' Evaluate_Boolean_Expression) |
+                ('randomize' 'seed' (Evaluate_String_Expression | Evaluate_Number_Expression) )
+            )
 
 
 Action_Draw_Shape
@@ -700,9 +703,10 @@ Reserved_Variable
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
             ) |
-            ( 'script' '.' 'execution' '.' 'verbose' ) |
-            ( 'repeat' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) ) |
-            ( 'foreach' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) )
+            ( 'script' '.' ('execution' '.' 'verbose' | 'randomize' '.' 'seed' ) ) |
+            ( 'repeat' '.' ( 'currentIteration' | 'totalIteration' | 'isFirstIteration' | 'isLastIteration' | 'incAngle' | 'currentAngle' ) ) |
+            ( 'foreach' '.' ( 'currentIteration' | 'totalIteration' | 'isFirstIteration' | 'isLastIteration' | 'incAngle' | 'currentAngle' ) ) |
+            ( 'math' '.' ( 'pi' | 'e' | 'phi' ) )
         )
 
 /*

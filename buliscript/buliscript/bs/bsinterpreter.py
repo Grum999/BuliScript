@@ -348,7 +348,18 @@ class BSInterpreter(QObject):
         # ----
         if currentAst.id() == ASTSpecialItemType.ROOT:
             # given AST is the main block of instructions
-            return self.__executeScriptBlock(currentAst, True, "Main script")
+            random.seed()
+            randSeed=random.randint(0,999999999)
+            random.seed(randSeed)
+
+            predefinedVariables={
+                    ':math.pi': math.pi,
+                    ':math.e': math.e,
+                    ':math.phi': 1.618033988749895,
+                    ':script.randomize.seed': randSeed,
+                    ':script.execution.verbose': self.__optionVerboseMode
+                }
+            return self.__executeScriptBlock(currentAst, True, "Main script", predefinedVariables)
 
         # ----------------------------------------------------------------------
         # Flows
@@ -459,6 +470,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Execution_Verbose':
             return self.__executeActionSetExecutionVerbose(currentAst)
+        elif currentAst.id() == 'Action_Set_Script_Randomize_Seed':
+            return self.__executeActionSetRandomizeSeed(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Square':
             return self.__executeActionDrawShapeSquare(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Round_Square':
@@ -884,10 +897,10 @@ class BSInterpreter(QObject):
         repeatCurrentAngle=0
         for repeatCurrent in range(repeatTotal):
             loopVariables={
-                    ':repeat.total': repeatTotal,
-                    ':repeat.current': repeatCurrent+1,
-                    ':repeat.first': (repeatCurrent==0),
-                    ':repeat.last': (repeatCurrent==repeatTotal-1),
+                    ':repeat.totalIteration': repeatTotal,
+                    ':repeat.currentIteration': repeatCurrent+1,
+                    ':repeat.isFirstIteration': (repeatCurrent==0),
+                    ':repeat.isLastIteration': (repeatCurrent==repeatTotal-1),
                     ':repeat.incAngle': repeatIncAngle,
                     ':repeat.currentAngle': repeatCurrentAngle
                 }
@@ -935,10 +948,10 @@ class BSInterpreter(QObject):
         forEachCurrentAngle=0
         for index, forEachCurrentValue in enumerate(forEachList):
             loopVariables={
-                    ':foreach.total': forEachTotal,
-                    ':foreach.current': index+1,
-                    ':foreach.first': (index==0),
-                    ':foreach.last': (index==forEachTotal-1),
+                    ':foreach.totalIteration': forEachTotal,
+                    ':foreach.currentIteration': index+1,
+                    ':foreach.isFirstIteration': (index==0),
+                    ':foreach.isLastIteration': (index==forEachTotal-1),
                     ':foreach.incAngle': forEachIncAngle,
                     ':foreach.currentAngle': forEachCurrentAngle,
                     forVarName: forEachCurrentValue
@@ -949,7 +962,6 @@ class BSInterpreter(QObject):
             forEachCurrentAngle+=forEachIncAngle
 
         return None
-
 
 
     # --------------------------------------------------------------------------
@@ -1841,20 +1853,46 @@ class BSInterpreter(QObject):
         return None
 
     def __executeActionSetExecutionVerbose(self, currentAst):
-        """Set execution verbose
+        """Set script execution verbose
 
         :script.execution.verbose
         """
-        fctLabel='Action `set execution verbose`'
+        fctLabel='Action `set script execution verbose`'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
 
-        self.__verbose(f"set execution verbose {self.__strValue(value)}      => :script.execution.verbose", currentAst)
+        self.__verbose(f"set script execution verbose {self.__strValue(value)}      => :script.execution.verbose", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':script.execution.verbose', value, True)
+        self.__scriptBlockStack.current().setVariable(':script.execution.verbose', value, False)
         self.__optionVerboseMode=value
+
+        self.__delay()
+        return None
+
+    def __executeActionSetRandomizeSeed(self, currentAst):
+        """Set script randomize seed
+
+        :script.randomize.seed
+        """
+        fctLabel='Action `set script randomize seed`'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, '<SEED>', value, int, str)
+
+        self.__verbose(f"set script randomize seed {self.__strValue(value)}      => :script.randomize.seed", currentAst)
+
+        if isinstance(value, int) and value<0:
+            random.seed()
+            randSeed=random.randint(0,999999999)
+        else:
+            randSeed=value
+        random.seed(randSeed)
+
+        self.__scriptBlockStack.current().setVariable(':script.randomize.seed', randSeed, False)
+
 
         self.__delay()
         return None
@@ -3256,9 +3294,6 @@ class BSInterpreter(QObject):
         return None
 
 
-
-
-
     # --------------------------------------------------------------------------
     # Functions & Evaluation
     # --------------------------------------------------------------------------
@@ -4285,6 +4320,9 @@ class BSInterpreter(QObject):
 
         return returned
 
+    def __executeListIndexExpression(self, currentAst):
+        """return index value"""
+        return self.__evaluate(currentAst.node(0))
 
     # --------------------------------------------------------------------------
     # Operators
@@ -4319,19 +4357,31 @@ class BSInterpreter(QObject):
 
     def __executeBinaryOperator(self, currentAst):
         """return binary operation result"""
-        # Defined by 3 nodes:
-        #   0: operator (<Token>)
-        #   1: left value (<Token> or <ASTItem>)
-        #   2: right value (<Token> or <ASTItem>)
 
-        # get opertor
-        operator=currentAst.node(0).value()
+        def raiseException(e, operator):
+            """Reformat operator/operand exception for interpeter"""
+            if isinstance(e, TypeError):
+                result=re.search("'([^']+)'\sand\s'([^']+)'", str(e))
+                if not result is None:
+                    raise EInterpreter(f"Unsupported operand types '{self.__valueTypeFromName(result.groups()[0])}' and '{self.__valueTypeFromName(result.groups()[1])}' for {operator}", currentAst)
+            raise EInterpreter(str(e), currentAst)
 
-        # evaluate values
-        leftValue=self.__evaluate(currentAst.node(1))
-        rightValue=self.__evaluate(currentAst.node(2))
+        def applyAnd(leftValue, rightValue):
+            # Logical operator can be applied
+            # - between 2 boolean values
+            # - between 2 integer values
+            # - between boolean value and List
+            # - between integer value and List
+            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
+                return leftValue and rightValue
+            elif isinstance(rightValue, list):
+                return [applyAnd(leftValue, x) for x in rightValue]
+            elif isinstance(leftValue, list):
+                return [applyAnd(x, rightValue) for x in leftValue]
+            else:
+                return leftValue & rightValue
 
-        if operator=='*':
+        def applyOr(leftValue, rightValue):
             # product operator can be applied
             # - between 2 numeric values
             # - between 1 numeric value and 1 string
