@@ -312,6 +312,43 @@ class BSInterpreter(QObject):
         else:
             return variableValue
 
+    def __valueTypeFromName(self, name):
+        """Return value type"""
+        if name=='str':
+            return "STRING"
+        elif name=='int':
+            return "INTEGER"
+        elif name=='float':
+            return "DECIMAL"
+        elif name=='list':
+            return "LIST"
+        elif name=='bool':
+            return "SWITCH"
+        elif name=='QColor':
+            return "COLOR"
+        elif name is None or name=='NoneType':
+            return "NONE"
+        else:
+            return "UNKNOWN"
+
+    def __valueType(self, value):
+        """Return value type"""
+        if isinstance(value, str):
+            return "STRING"
+        elif isinstance(value, int):
+            return "INTEGER"
+        elif isinstance(value, float):
+            return "DECIMAL"
+        elif isinstance(value, list):
+            return "LIST"
+        elif isinstance(value, bool):
+            return "SWITCH"
+        elif isinstance(value, QColor):
+            return "COLOR"
+        elif value is None:
+            return "NONE"
+        else:
+            return "UNKNOWN"
 
     # --------------------------------------------------------------------------
     # Script execution methods
@@ -580,6 +617,8 @@ class BSInterpreter(QObject):
             return self.__executeStringValue(currentAst)
         elif currentAst.id() == 'List_Value':
             return self.__executeListValue(currentAst)
+        elif currentAst.id() == 'List_Index_Expression':
+            return self.__executeListIndexExpression(currentAst)
 
         # ----------------------------------------------------------------------
         # Operators
@@ -588,6 +627,8 @@ class BSInterpreter(QObject):
             return self.__executeUnaryOperator(currentAst)
         elif currentAst.id() == ASTSpecialItemType.BINARY_OPERATOR:
             return self.__executeBinaryOperator(currentAst)
+        elif currentAst.id() == ASTSpecialItemType.INDEX_OPERATOR:
+            return self.__executeIndexOperator(currentAst)
 
         # ----------------------------------------------------------------------
         # Forgotten to implement something?
@@ -4382,162 +4423,325 @@ class BSInterpreter(QObject):
                 return leftValue & rightValue
 
         def applyOr(leftValue, rightValue):
+            # Logical operator can be applied
+            # - between 2 boolean values
+            # - between 2 integer values
+            # - between boolean value and List
+            # - between integer value and List
+            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
+                return leftValue or rightValue
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyOr(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyOr(x, rightValue) for x in leftValue]
+            else:
+                return leftValue | rightValue
+
+        def applyXOr(leftValue, rightValue):
+            # Logical operator can be applied
+            # - between 2 boolean values
+            # - between 2 integer values
+            # - between boolean value and List
+            # - between integer value and List
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyXOr(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyXOr(x, rightValue) for x in leftValue]
+            else:
+                return leftValue ^ rightValue
+
+        def applyMultiply(leftValue, rightValue):
             # product operator can be applied
             # - between 2 numeric values
             # - between 1 numeric value and 1 string
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float, str)) or
-                isinstance(leftValue, str) and isinstance(rightValue, (int, float))):
+            # - between 1 numeric value and 1 list of (int, float)
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyMultiply(x, leftValue) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyMultiply(x, rightValue) for x in leftValue]
+            else:
                 return leftValue * rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Multiply operator '*' can only be applied between:\n- 2 numeric values\n- 1 numeric value and 1 string value", currentAst)
-        elif operator=='/':
+        def applyDivide(leftValue, rightValue):
             # divide operator can be applied
             # - between 2 numeric values
             if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
                 if rightValue!=0:
                     return leftValue / rightValue
                 raise EInterpreter(f"Division by zero", currentAst)
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyDivide(leftValue, x) for x in rightValue ]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyDivide(x, rightValue) for x in leftValue]
+            else:
+                return leftValue / rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Divide operator '/' can only be applied between 2 numeric values", currentAst)
-        elif operator=='//':
+        def applyFloorDivide(leftValue, rightValue):
             # Floor division operator can be applied
             # - between 2 numeric values
             if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
                 if rightValue!=0:
                     return leftValue // rightValue
                 raise EInterpreter(f"Division by zero", currentAst)
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyFloorDivide(leftValue, x) for x in rightValue ]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyFloorDivide(x, rightValue) for x in leftValue]
+            else:
+                return leftValue // rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Floor division operator '//' can only be applied between 2 numeric values", currentAst)
-        elif operator=='%':
+        def applyModulus(leftValue, rightValue):
             # Modulus operator can be applied
             # - between 2 numeric values
             if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
                 if rightValue!=0:
                     return leftValue % rightValue
                 raise EInterpreter(f"Division by zero", currentAst)
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyModulus(leftValue, x) for x in rightValue ]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyModulus(x, rightValue) for x in leftValue]
+            else:
+                return leftValue % rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Modulus operator '%' can only be applied between 2 numeric values", currentAst)
-        elif operator=='+':
+        def applyAddition(leftValue, rightValue):
             # addition operator can be applied
             # - between 2 numeric values
             # - between 2 string values
+            # - between a string and a numeric value
+            # - between a string and a color value
             if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
                 isinstance(leftValue, str) and isinstance(rightValue, str)):
                 return leftValue + rightValue
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyAddition(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyAddition(x, rightValue) for x in leftValue]
+            elif isinstance(leftValue, str) and isinstance(rightValue, list):
+                return [applyAddition(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, str) and isinstance(leftValue, list):
+                return [applyAddition(x, rightValue) for x in leftValue]
+            elif (isinstance(leftValue, str) and isinstance(rightValue, (int, float)) or
+                  isinstance(leftValue, (int, float)) and isinstance(rightValue, str)):
+                return f"{leftValue}{rightValue}"
+            elif isinstance(leftValue, str) and isinstance(rightValue, QColor):
+                return leftValue+self.__strValue(rightValue)
+            elif isinstance(leftValue, QColor) and isinstance(rightValue, str):
+                return self.__strValue(leftValue)+rightValue
+            else:
+                return leftValue+rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Addition operator '+' can only be applied between\n- 2 numeric values\n- 2 string values", currentAst)
-        elif operator=='-':
+        def applySubstraction(leftValue, rightValue):
             # Subtraction operator can be applied
             # - between 2 numeric values
-            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applySubstraction(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applySubstraction(x, rightValue) for x in leftValue]
+            else:
                 return leftValue - rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Subtraction operator '-' can only be applied between 2 numeric values", currentAst)
-        elif operator=='<':
+        def applyCmpGT(leftValue, rightValue):
             # Comparison operator can be applied
             # - between 2 numeric values
             # - between 2 string values
             # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue < rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Lower than comparison operator '<' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
-        elif operator=='<=':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue <= rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Lower or equal than operator '<=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
-        elif operator=='>':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpGT(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpGT(x, rightValue) for x in leftValue]
+            else:
                 return leftValue > rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Greater than operator '>' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
-        elif operator=='>=':
+        def applyCmpGE(leftValue, rightValue):
             # Comparison operator can be applied
             # - between 2 numeric values
             # - between 2 string values
             # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpGE(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpGE(x, rightValue) for x in leftValue]
+            else:
                 return leftValue >= rightValue
 
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Greater or equal than operator '>=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+        def applyCmpLT(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpLT(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpLT(x, rightValue) for x in leftValue]
+            else:
+                return leftValue < rightValue
+
+        def applyCmpLE(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpLE(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpLE(x, rightValue) for x in leftValue]
+            else:
+                return leftValue <= rightValue
+
+        def applyCmpEQ(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpEQ(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpEQ(x, rightValue) for x in leftValue]
+            else:
+                return leftValue==rightValue
+
+        def applyCmpNE(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpNE(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpNE(x, rightValue) for x in leftValue]
+            else:
+                return leftValue!=rightValue
+
+        # Defined by 3 nodes:
+        #   0: operator (<Token>)
+        #   1: left value (<Token> or <ASTItem>)
+        #   2: right value (<Token> or <ASTItem>)
+
+        # get opertor
+        operator=currentAst.node(0).value()
+
+        # evaluate values
+        leftValue=self.__evaluate(currentAst.node(1))
+        rightValue=self.__evaluate(currentAst.node(2))
+
+        if operator=='*':
+            try:
+                return applyMultiply(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "multiply operator '*'")
+        elif operator=='/':
+            try:
+                return applyDivide(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "divide operator '/'")
+        elif operator=='//':
+            try:
+                return applyFloorDivide(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "floor division operator '//'")
+        elif operator=='%':
+            try:
+                return applyModulus(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "modulus operator '%'")
+        elif operator=='+':
+            try:
+                return applyAddition(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "addition operator '+'")
+        elif operator=='-':
+            try:
+                return applySubstraction(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "substraction operator '-'")
+        elif operator=='<':
+            try:
+                return applyCmpLT(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '<'")
+        elif operator=='<=':
+            try:
+                return applyCmpLE(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '<='")
+        elif operator=='>':
+            try:
+                return applyCmpGT(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '>'")
+        elif operator=='>=':
+            try:
+                return applyCmpGE(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '>='")
         elif operator=='=':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue == rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Equal comparison operator '=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            try:
+                return applyCmpEQ(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '='")
         elif operator=='<>':
+            try:
+                return applyCmpNE(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '<>'")
+        elif operator=='in':
             # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue != rightValue
+            # - between any value and a list
+            if isinstance(rightValue, list):
+                return leftValue in rightValue
 
             # not a valid operation, raise an error
-            raise EInterpreter(f"Not equal comparison operator '!=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            raise EInterpreter(f"In list operator 'in' can only be applied to a list", currentAst)
         elif operator=='and':
-            # Logical operator can be applied
-            # - between 2 boolean values
-            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
-                return leftValue and rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Logical operator 'AND' can only be applied between 2 boolean values", currentAst)
+            try:
+                return applyAnd(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "logical operator 'AND'")
         elif operator=='or':
-            # Logical operator can be applied
-            # - between 2 boolean values
-            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
-                return leftValue or rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Logical operator 'OR' can only be applied between 2 boolean values", currentAst)
+            try:
+                return applyOr(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "logical operator 'OR'")
         elif operator=='xor':
-            # Logical operator can be applied
-            # - between 2 boolean values
-            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
-                return leftValue ^ rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Logical operator 'XOR' can only be applied between 2 boolean values", currentAst)
+            try:
+                return applyXOr(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "logical operator 'XOR'")
 
         # should not occurs
         raise EInterpreter(f"Unknown operator: {operator}", currentAst)
+
+    def __executeIndexOperator(self, currentAst):
+        """return unary operation result"""
+        fctLabel='list[index]'
+        # defined by 2 nodes (ASTItem)
+        # - 1st node= index value
+        # - 2nd node = list or string
+
+        indexValue=self.__evaluate(currentAst.node(0))
+        listValue=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, '<INDEX>', indexValue, int)
+        self.__checkParamType(currentAst, fctLabel, '<LIST>', listValue, list, str)
+
+        if isinstance(listValue, str):
+            lenOf='string'
+        else:
+            lenOf='list'
+
+        if not self.__checkParamDomain(currentAst, fctLabel, '<INDEX>', abs(indexValue)>=1 and abs(indexValue)<=len(listValue), f"given index must be in range [1; length of {lenOf}] (current={indexValue})", False):
+            # if value<=0, exit
+            return None
+
+        if indexValue>0:
+            returned=listValue[indexValue - 1]
+        else:
+            returned=listValue[indexValue]
+
+        return returned
+
+
 
 
     # --------------------------------------------------------------------------

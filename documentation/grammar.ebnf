@@ -418,9 +418,9 @@ Flow_ForEach
 */
 Any_Expression
         ::= Evaluation_Number_Expression |
-            Evaluation_String_Expression |
+            Evaluation_String_Expression ListIndex_Expression? |
             Evaluation_Boolean_Expression |
-            Evaluation_List_Expression |
+            Evaluation_List_Expression ListIndex_Expression? |
             Color_Expression |
             Number_Expression |
             String_Expression |
@@ -444,7 +444,8 @@ Color_Expression
 
 Number_Expression
         ::= ([0-9]+ | [0-9]* '.' [0-9]+) |
-            Function | Variable
+            Function |
+            Variable
 
 String_Expression
         ::= (String_Value (String_Value)* ) |
@@ -460,6 +461,10 @@ List_Expression
         ::= ('[' ( Any_Expression (',' Any_Expression )* )? ']') |
             Function |
             Variable
+
+
+ListIndex_Expression
+        ::= '[' Number_Expression ']'
 
 
 Unit_M_Expression
@@ -553,6 +558,8 @@ Evaluation_Boolean_Expression
             )
             |
             ( Any_Expression ( '<' | '<=' | '>' | '>=' | '=' | '<>' ) Any_Expression )
+            |
+            ( Any_Expression 'in' Evaluation_List_Expression )
             )
             ( ( 'and' | 'or' | 'xor' ) Evaluation_Boolean_Expression )?
 
@@ -663,10 +670,6 @@ Function
                 ('isColor' '(' Any_Expression  ')') |
                 ('isList' '(' Any_Expression  ')')
             )
-
-
-
-
 
 
 

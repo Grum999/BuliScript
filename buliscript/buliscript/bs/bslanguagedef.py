@@ -29,6 +29,7 @@ import re
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.languagedef import LanguageDef
 from buliscript.pktk.modules.parser import (
+        GrammarRules,
         GrammarRule,
         GROne,
         GROptional,
@@ -36,10 +37,12 @@ from buliscript.pktk.modules.parser import (
         GROneOrMore,
         GRToken,
         GRRule,
-        GROperatorPrecedence
+        GROperatorPrecedence,
+        ASTItem
     )
 
 from buliscript.pktk.modules.tokenizer import (
+        Token,
         Tokenizer,
         TokenizerRule,
         TokenType
@@ -92,7 +95,6 @@ class BSLanguageDef(LanguageDef):
         FLOW_WITH_PARAMETERS = ('flowWithParameters', 'A <WITH PARAMETER> flow')
         FLOW_DO = ('flowDo', 'A <DO> flow')
         FLOW_AS = ('flowAs', 'A <AS> flow')
-        FLOW_IN = ('flowin', 'A <IN> flow')
         FLOW_FOREACH = ('flowForEach', 'A <FOREACH> flow')
         FLOW_CALL = ('flowCall', 'A <CALL> flow')
         FLOW_DEFMACRO = ('flowDefMacro', 'A <DEFINE MACRO> flow')
@@ -2040,11 +2042,6 @@ class BSLanguageDef(LanguageDef):
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_AS, r"\x20*\bas\b",
                                                                     None,
                                                                     ['as'],
-                                                                    'F',
-                                                                    ignoreIndent=True),
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IN, r"\x20*\bin\b",
-                                                                    None,
-                                                                    ['in'],
                                                                     'F',
                                                                     ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_DO, r"\x20*\bdo\b",
@@ -4120,7 +4117,7 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b", onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\bin\b|\band\b|\bor\b|\bxor\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.DUAL_OPERATOR, r"-", ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.SEPARATOR, r","),
@@ -4153,7 +4150,6 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_AS, '#ffffff', True, False),
-            (BSLanguageDef.ITokenType.FLOW_IN, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_DO, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_FOREACH, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_CALL, '#ffffff', True, False),
@@ -4249,7 +4245,6 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_AS, '#000044', True, False),
-            (BSLanguageDef.ITokenType.FLOW_IN, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_DO, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_FOREACH, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_CALL, '#000044', True, False),
@@ -4340,16 +4335,16 @@ class BSLanguageDef(LanguageDef):
 
         """
         self.__grammarRules.setOperatorPrecedence(
-                GROperatorPrecedence(90, BSLanguageDef.ITokenType.UNARY_OPERATOR,  False, 'not'),
-                GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR,   False, '-'),
-                GROperatorPrecedence(80, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '*', '/', '//', '%'),
-                GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+'),
-                GROperatorPrecedence(70, BSLanguageDef.ITokenType.DUAL_OPERATOR,   True, '-'),
-                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
-                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '<>'),
-                GROperatorPrecedence(40, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
-                GROperatorPrecedence(30, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
-                GROperatorPrecedence(20, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
+                GROperatorPrecedence(95, ASTItem,  GrammarRules.OPERATOR_INDEX,  'List_Index_Expression'),
+                GROperatorPrecedence(90, Token,    GrammarRules.OPERATOR_UNARY,  'not'),
+                GROperatorPrecedence(89, Token,    GrammarRules.OPERATOR_UNARY,  '-'),
+                GROperatorPrecedence(80, Token,    GrammarRules.OPERATOR_BINARY, '*', '/', '//', '%'),
+                GROperatorPrecedence(70, Token,    GrammarRules.OPERATOR_BINARY, '+'),
+                GROperatorPrecedence(70, Token,    GrammarRules.OPERATOR_BINARY, '-'),
+                GROperatorPrecedence(60, Token,    GrammarRules.OPERATOR_BINARY, '<', '>', '<=', '>=', '=', '<>', 'in'),
+                GROperatorPrecedence(40, Token,    GrammarRules.OPERATOR_BINARY, 'and'),
+                GROperatorPrecedence(30, Token,    GrammarRules.OPERATOR_BINARY, 'xor'),
+                GROperatorPrecedence(20, Token,    GrammarRules.OPERATOR_BINARY, 'or')
             )
 
 
@@ -5475,7 +5470,8 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
                       'List_Value',
-                    )
+                    ),
+                GRNoneOrMore('List_Index_Expression')
             )
 
         GrammarRule('String_Value',
@@ -5513,10 +5509,11 @@ class BSLanguageDef(LanguageDef):
                 # use the evaluation expression with OPTION_OPERATOR_PRECEDENCE here as we're in an another level of evaluation
                 'Evaluation_Expression',
                 GRToken(BSLanguageDef.ITokenType.PARENTHESIS_CLOSE, False),
+                GROptional('List_Index_Expression')
             )
 
         GrammarRule('Evaluation_Expression_Binary_Operator',
-                GROne(GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '+', '*', '/', '//', '%', 'and', 'or', 'xor', '<=', '<>', '<', '>', '>=', '='),
+                GROne(GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '+', '*', '/', '//', '%', 'and', 'or', 'xor', '<=', '<>', '<', '>', '>=', '=', 'in'),
                       GRToken(BSLanguageDef.ITokenType.DUAL_OPERATOR, '-')),
                 'Evaluation_Expression__noop',
                 GROptional('Evaluation_Expression_Binary_Operator')
@@ -5531,14 +5528,6 @@ class BSLanguageDef(LanguageDef):
                       'Evaluation_Expression_Parenthesis',
                       'Any_Value'),
                 GROptional('Evaluation_Expression_Binary_Operator')
-            )
-
-        GrammarRule('Evaluation_Expression_Comparison',
-                #GrammarRule.OPTION_AST|GrammarRule.OPTION_OPERATOR_PRECEDENCE,
-                # --
-                #'Any_Expression',
-                GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '<=', '<>', '<', '>', '>=', '='),
-                'Any_Expression',
             )
 
         GrammarRule('List_Value',
@@ -5557,6 +5546,14 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('List_Value_Next_Item',
                 GRToken(BSLanguageDef.ITokenType.SEPARATOR, False),
                 'Any_Expression',
+            )
+
+        GrammarRule('List_Index_Expression',
+                GrammarRule.OPTION_AST | GrammarRule.OPTION_NOT_PRECEDED_BY_SPACE,
+                # --
+                GRToken(BSLanguageDef.ITokenType.BRACKET_OPEN, False),
+                'Evaluation_Expression',
+                GRToken(BSLanguageDef.ITokenType.BRACKET_CLOSE, False)
             )
 
         GrammarRule('Variable',
