@@ -25,6 +25,7 @@ from pathlib import Path
 import sys
 import re
 import base64
+import traceback
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
@@ -805,12 +806,14 @@ class BSUIController(QObject):
                 returned=self.__interpreter.setScript(self.__currentDocument.codeEditor().toPlainText())
             except Exception as e:
                 print("commandScriptExecute/Error", str(e))
+                print('traceback:', traceback.format_exc())
                 return
 
             try:
                 returned=self.__interpreter.execute()
             except Exception as e:
                 print("commandScriptExecute/Error", str(e))
+                print('traceback:', traceback.format_exc())
                 return
 
             print('commandScriptExecute', returned)
