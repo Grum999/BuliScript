@@ -228,12 +228,11 @@ class ASTStatus(Enum):
     END=        3
 
 
-
 class ASTSpecialItemType(Enum):
     ROOT='<Root>'
     BINARY_OPERATOR='<BinaryOperator>'
     UNARY_OPERATOR='<UnaryOperator>'
-
+    INDEX_OPERATOR='<IndexOperator>'
 
 
 class ASTItem:
@@ -404,6 +403,17 @@ class ASTItem:
         else:
             return self.__grammarRule.optionOperatorPrecedence()
 
+    def optionNotPrecededBySpace(self):
+        """Return if current AST allows to be preceded by a space value
+
+        If AST item refers to a GrammarRule, use GrammarRule option value
+        Otherwise return False
+        """
+        if not isinstance(self.__grammarRule, GrammarRule):
+            return False
+        else:
+            return self.__grammarRule.optionNotPrecededBySpace()
+
     def checkOperatorPrecedence(self):
         """Check if current AST item is concerned by operator precedence rules
 
@@ -432,7 +442,7 @@ class ASTItem:
             # move to next one
             nodes.next()
 
-            if isinstance(node, Token) and self.__grammarRule.grammarRules().operatorType(node)==GrammarRules.OPERATOR_UNARY:
+            if isinstance(node, Token) and GrammarRules.OPERATOR_UNARY in self.__grammarRule.grammarRules().operatorType(node):
                 # current node is an unary operator
                 # create ASTItem for operator
                 operator=ASTItem(ASTSpecialItemType.UNARY_OPERATOR)
@@ -447,6 +457,22 @@ class ASTItem:
                 # note: it shouldn't be a binary operator too, but normaly this case is already blocked when parser
                 #       is build AST from grammar rules
                 returned=node
+
+                nodeNext=nodes.value()
+                while nodeNext and GrammarRules.OPERATOR_INDEX in self.__grammarRule.grammarRules().operatorType(nodeNext):
+                    # next
+                    operator=ASTItem(ASTSpecialItemType.INDEX_OPERATOR)
+                    operator.add(nodeNext)
+                    operator.add(node)
+                    # as it's an unary operator, there's only one branch child on which next operand is added
+                    operator.setStatus(ASTStatus.MATCH)
+
+                    node=operator
+                    returned=node
+
+                    nodes.next()
+                    nodeNext=nodes.value()
+
 
             return returned
 
@@ -468,7 +494,7 @@ class ASTItem:
             while node:=getOperator(nodes):
                 # get priority of current operator
                 # note: it could only be a binary operator, unray operator are managed through getOperand()
-                priority=self.__grammarRule.grammarRules().operatorPrecedence(node)
+                priority=self.__grammarRule.grammarRules().operatorPrecedence(node, GrammarRules.OPERATOR_BINARY)
 
                 # get default right value for operator
                 right=getOperand(nodes)
@@ -479,7 +505,7 @@ class ASTItem:
                     # got an operator
 
                     # get operator's priority
-                    priorityLA=self.__grammarRule.grammarRules().operatorPrecedence(nodeLA)
+                    priorityLA=self.__grammarRule.grammarRules().operatorPrecedence(nodeLA, GrammarRules.OPERATOR_BINARY)
 
                     # if priority==priorityLA:
                     #       same priority, then we don't care
@@ -579,37 +605,46 @@ class ASTItem:
 class GROperatorPrecedence:
     """Define a grammar rule for operator precedence"""
 
-    def __init__(self, priority, tokenType, binary, *values):
+    def __init__(self, priority, type, operatorType, *values):
         """Initialise rule according
 
         Given `priority` determine which operator has precedence over another operator
         The higher value gives a higer priority
 
-        Given `tokenType` is a TokenType, and define which token is considered to works as operator precedence
+        Given `type` define if operator is a <Token> or an <ASTItem>
 
-        Given `binary` is a boolean which define if operator is unary (False) or binary (True) operator
+        Given `operatorType` can be:
+        - GrammarRules.OPERATOR_UNARY
+        - GrammarRules.OPERATOR_BINARY
+        - GrammarRules.OPERATOR_INDEX
 
-        Given `*values` is optional list of values for token:
-        - if not provided, all values for given `token` are used to define rule
-        - if provided, only values for given `token` are used to define rule
+        If `type` is an instance of <Token>
+            Given `*values` is optional list of values for token:
+            - if not provided, all values for given `token` are used to define rule
+            - if provided, only values for given `token` are used to define rule
+
+        If `type` is an instance of <ASTItem>
+            Given `*values` is optional list of values for ASTItem:
+            - if not provided, all id() for given `ASTItem` are used to define rule
+            - if provided, only id() for given `ASTItem` are used to define rule
         """
         if not isinstance(priority, int):
             raise EInvalidType("Given `priority` must be <int>")
 
-        if not isinstance(tokenType, TokenType):
-            raise EInvalidType("Given `tokenType` must be <TokenType>")
+        if not type in (Token, ASTItem):
+            raise EInvalidValue("Given `type` must be 'Token' or 'ASTItem'")
 
-        if not isinstance(binary, bool):
-            raise EInvalidType("Given `binary` must be <boolean>")
+        if not operatorType in (GrammarRules.OPERATOR_BINARY, GrammarRules.OPERATOR_UNARY, GrammarRules.OPERATOR_INDEX):
+            raise EInvalidType("Given `operatorType` must be GrammarRules.OPERATOR_BINARY, GrammarRules.OPERATOR_UNARY or GrammarRules.OPERATOR_INDEX")
 
         self.__priority=priority
-        self.__binary=binary
-        self.__tokenType=tokenType
-        self.__tokenValues=[]
+        self.__operatorType=operatorType
+        self.__type=type
+        self.__values=[]
 
         for value in values:
             if isinstance(value, str):
-                self.__tokenValues.append(value)
+                self.__values.append(value)
             else:
                 raise EInvalidType('Optional arguments for GROperatorPrecedence must be <str>')
 
@@ -617,22 +652,23 @@ class GROperatorPrecedence:
         """Return priority for current token operator precedence definition"""
         return self.__priority
 
-    def tokenType(self):
-        """Return token type for current token operator precedence definition"""
-        return self.__tokenType
+    def type(self):
+        """Return type for current operator precedence definition"""
+        return self.__type
 
-    def tokenValues(self):
+    def values(self):
         """Return defined token values for current token operator precedence definition"""
-        return self.__tokenValues
+        return self.__values
 
-    def binary(self):
-        """Return if operator is a binary operator"""
-        return self.__binary
+    def operatorType(self):
+        """Return if operator is an unaray, binary or index operator"""
+        return self.__operatorType
 
 
 
 class GrammarRules:
     """A pool of grammar rules"""
+    OPERATOR_INDEX=3
     OPERATOR_BINARY=2
     OPERATOR_UNARY=1
     OPERATOR_NONE=0
@@ -715,10 +751,19 @@ class GrammarRules:
     def setOperatorPrecedence(self, *rules):
         """Define precedence for operators
 
+        Note: currently, for technical reason there's an hardcoded priority:
+        - OPERATOR_INDEX have priority on OPERATOR_UNARY
+        - between OPERATOR_INDEX, priority is given from left to right
+            x[0][1][2] => return index 0 from X, and then index 1 from returned list, and then index 2 from returned list
+        - OPERATOR_UNARY have priority on OPERATOR_BINARY
+        - between OPERATOR_UNARY, priority is given from left to right
+        - between OPERATOR_BINARY, priority is given according to priority level
+        - between OPERATOR_BINARY with same priority level, priority is given from left to right
+
         Example:
-            setOperatorPrecedence(  GROperatorPrecedence(20, BSLanguageDef.ITokenType.OPERATOR, '*', '/', '//', '%'),
-                                    GROperatorPrecedence(10, BSLanguageDef.ITokenType.OPERATOR, '+', '-'),
-                                    GROperatorPrecedence(5,  BSLanguageDef.ITokenType.OPERATOR, '<', '>', '<=', '>=', '=', '!=')
+            setOperatorPrecedence(  GROperatorPrecedence(20, Token, GrammarRules.OPERATOR_BINARY, '*', '/', '//', '%'),
+                                    GROperatorPrecedence(10, Token, GrammarRules.OPERATOR_BINARY, '+', '-'),
+                                    GROperatorPrecedence(5,  Token, GrammarRules.OPERATOR_BINARY, '<', '>', '<=', '>=', '=', '!=')
                                 )
         """
         self.__operatorPrecedence=[]
@@ -728,48 +773,64 @@ class GrammarRules:
                 raise EInvalidType("Given `rules` must be <GROperatorPrecedence>")
             self.__operatorPrecedence.append(rule)
 
-    def operatorPrecedence(self, token=None, binary=True):
+    def operatorPrecedence(self, item=None, operatorType=None):
         """Return defined operator precedence rules
 
-        If no `token` is provided, return all rules
-        If a `token` is provided, must be a <Token>
-            If a precedence rule is found for `token`, return priority value, otherwsise return 0 (lower priority)
+        If no `item` is provided, return all rules
+        If a `item` is provided, must be a <Token> or <ASTItem>
+            If a precedence rule is found for `item`, return priority value, otherwsise return 0 (lower priority)
         """
-        if token is None:
+        if item is None:
             return self.__operatorPrecedence
-        elif isinstance(token, Token):
+        elif isinstance(item, Token):
             for rule in self.__operatorPrecedence:
-                if rule.tokenType()==token.type() and rule.binary()==binary:
-                    values=rule.tokenValues()
+                if rule.type()==Token and rule.operatorType()==operatorType:
+                    values=rule.values()
                     if len(values)>0:
-                        if token.equal(values):
+                        if item.equal(values):
+                            return rule.priority()
+                    else:
+                        return rule.priority()
+            return 0
+        elif isinstance(item, ASTItem):
+            for rule in self.__operatorPrecedence:
+                if rule.type()==ASTItem and rule.operatorType()==operatorType:
+                    values=rule.values()
+                    if len(values)>0:
+                        if item.id() in values:
                             return rule.priority()
                     else:
                         return rule.priority()
             return 0
         else:
-            raise EInvalidType('When provided `token` must be a <Token>')
+            raise EInvalidType('When provided `item` must be a <Token> or <ASTItem>')
 
-    def operatorType(self, token):
-        """Return:
-            - 2 if token is a binary operator
-            - 1 if token is an unary operator
-            - 0 if token is not an operator
+    def operatorType(self, item):
+        """Return a list of possible operator types for given item; values can be:
+            - 3 if item is an index operator
+            - 2 if item is a binary operator
+            - 1 if item is an unary operator
+
+        Return an empty list if no operator type are available
         """
-        if isinstance(token, Token):
-            for rule in self.__operatorPrecedence:
-                if rule.tokenType()==token.type():
-                    values=rule.tokenValues()
-                    if len(values)>0:
-                        if token.equal(values):
-                            if rule.binary():
-                                return GrammarRules.OPERATOR_BINARY
-                            return GrammarRules.OPERATOR_UNARY
-                    else:
-                        if rule.binary():
-                            return GrammarRules.OPERATOR_BINARY
-                        return GrammarRules.OPERATOR_UNARY
-        return GrammarRules.OPERATOR_NONE
+        returned=[]
+        for rule in self.__operatorPrecedence:
+            values=rule.values()
+            if rule.type()==Token and isinstance(item, Token):
+                if len(values)>0:
+                    if item.equal(values):
+                        returned.append(rule.operatorType())
+                else:
+                    returned.append(rule.operatorType())
+            elif rule.type()==ASTItem and isinstance(item, ASTItem):
+                if len(values)>0:
+                    if item.id() in values:
+                        returned.append(rule.operatorType())
+                else:
+                        returned.append(rule.operatorType())
+
+        return returned
+
 
 
 
@@ -783,7 +844,7 @@ class GrammarRule:
     OPTION_AST   =                  0b00000010      # By default, Grammar Rules are not returned in AST, only nodes are returned
                                                     # When option is defined on Grammar Rule, AST is built with Grammar Rule instead of only nodes
     OPTION_OPERATOR_PRECEDENCE =    0b00000100      # If set, an operator precedence analysis is made for AST build (otherwise not)
-
+    OPTION_NOT_PRECEDED_BY_SPACE =  0b00001000      # If set, considerate grammar rule only if previous token is not a SPACE
 
     __GRAMMAR_RULES_OBJECT=None
 
@@ -841,6 +902,7 @@ class GrammarRule:
         isFirstId=False
         self.__optionAst=False
         self.__optionOperatorPrecedence=False
+        self.__optionNotPrecededBySpace=False
 
         for index, grObject in enumerate(grObjects):
             if index==0 and isinstance(grObject, int):
@@ -851,6 +913,8 @@ class GrammarRule:
                     self.__optionAst=True
                 if grObject&GrammarRule.OPTION_OPERATOR_PRECEDENCE==GrammarRule.OPTION_OPERATOR_PRECEDENCE:
                     self.__optionOperatorPrecedence=True
+                if grObject&GrammarRule.OPTION_NOT_PRECEDED_BY_SPACE==GrammarRule.OPTION_NOT_PRECEDED_BY_SPACE:
+                    self.__optionNotPrecededBySpace=True
             elif isinstance(grObject, str) or isinstance(grObject, GrammarRule):
                 self._grObjects.append(GRRule(grObject))
             elif isinstance(grObject, GRObject):
@@ -886,12 +950,14 @@ class GrammarRule:
         """Return if grammar rule use operator precedence in AST"""
         return self.__optionOperatorPrecedence
 
+    def optionNotPrecededBySpace(self):
+        """Return if grammar rule use operator precedence in AST"""
+        return self.__optionNotPrecededBySpace
 
 
 
 class GRObject:
     """Base class for GrammarRule objects"""
-
 
     def __init__(self):
         self._grObjects=[]
@@ -900,7 +966,7 @@ class GRObject:
         """Return list of GRObjects that define grammar for current rule"""
         return self._grObjects
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Virtual method, must be overrided"""
         raise EInvalidStatus("Method can't be called from GRObject and must be overrided")
 
@@ -926,7 +992,7 @@ class GROne(GRObject):
     def __repr__(self):
         return f"<GROne({len(self._grObjects)}, {self._grObjects})>"
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Check if One and only one grammar rule match current token"""
         # loop over GRObjects list
         # if one is matching expected value, exit and return True
@@ -940,7 +1006,7 @@ class GROne(GRObject):
 
         for grObject in self._grObjects:
             #print('Check GROne', grObject)
-            checked=grObject.check(tokens, ignoredTokens)
+            checked=grObject.check(tokens, ignoredTokens, grammarRule)
             if checked.status()==ASTStatus.END:
                 ast.add(checked)
                 return ast.setStatus(ASTStatus.END)
@@ -976,7 +1042,7 @@ class GROptional(GRObject):
     def __repr__(self):
         return f"<GROptional({len(self._grObjects)}, {self._grObjects})>"
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Check if Zero or One grammar rule match current token"""
         # loop over GRObjects list
         # if one is matching expected value, exit and return True
@@ -992,7 +1058,7 @@ class GROptional(GRObject):
         matchCount=0
         for grObject in self._grObjects:
             #print('Check GROptional', grObject)
-            checked=grObject.check(tokens, ignoredTokens)
+            checked=grObject.check(tokens, ignoredTokens, grammarRule)
 
             if checked.status()==ASTStatus.END:
                 ast.add(checked)
@@ -1029,7 +1095,7 @@ class GRNoneOrMore(GRObject):
     def __repr__(self):
         return f"<GRNoneOrMore({len(self._grObjects)}, {self._grObjects})>"
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Check if Zero or More grammar rules match current token"""
         # loop over GRObjects list
         # if one is matching expected value, exit and return True
@@ -1046,10 +1112,10 @@ class GRNoneOrMore(GRObject):
             matchCount=0
             for grObject in self._grObjects:
                 #print('Check GRNoneOrMore', grObject)
-                checked=grObject.check(tokens, ignoredTokens)
+                checked=grObject.check(tokens, ignoredTokens, grammarRule)
 
                 if checked.status()==ASTStatus.END:
-                    ast.add(checked)
+                    #ast.add(checked) -- No!!
                     return ast.setStatus(ASTStatus.MATCH)
                 elif checked.status()==ASTStatus.MATCH:
                     matchCount+=1
@@ -1086,7 +1152,7 @@ class GROneOrMore(GRObject):
     def __repr__(self):
         return f"<GROneOrMore({len(self._grObjects)}, {self._grObjects})>"
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Check if One or More grammar rules match current token"""
         # loop over GRObjects list
         # if one is matching expected value, exit and return True
@@ -1103,7 +1169,7 @@ class GROneOrMore(GRObject):
             matchCount=0
             for grObject in self._grObjects:
                 #print('Check GROneOrMore', grObject)
-                checked=grObject.check(tokens, ignoredTokens)
+                checked=grObject.check(tokens, ignoredTokens, grammarRule)
 
                 if checked.status()==ASTStatus.END:
                     ast.add(checked)
@@ -1157,8 +1223,12 @@ class GRToken(GRObject):
     def __repr__(self):
         return f"<GRToken({self.__tokenType}, {self.__possibleValues})>"
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Check if current token match expected token"""
+        def checkIfPreviousIsSpace():
+            prev=tokens.prev(False)
+            return prev and prev.type() in (TokenType.SPACE, TokenType.NEWLINE)
+
         ast=ASTItem(self.__class__)
 
         if tokens.eol():
@@ -1173,6 +1243,9 @@ class GRToken(GRObject):
 
         if token is None:
             return ast.setStatus(ASTStatus.END)
+
+        if grammarRule and grammarRule.optionNotPrecededBySpace() and checkIfPreviousIsSpace():
+            return ast.setStatus(ASTStatus.NOMATCH)
 
         if token.type()==self.__tokenType:
             #print('Check GRToken', self.__tokenType, self.__possibleValues, token)
@@ -1192,6 +1265,10 @@ class GRToken(GRObject):
                 # if there's token to ignore (like spaces, comments, ...)
                 # continue to next token
                 token=tokens.next()
+
+            #print('GRToken.check(B)', token, grammarRule.optionNotPrecededBySpace(), checkIfPreviousIsSpace())
+            #if grammarRule and grammarRule.optionNotPrecededBySpace() and checkIfPreviousIsSpace():
+            #    return ast.setStatus(ASTStatus.NOMATCH)
 
             #print('GRToken: Next ', token)
 
@@ -1236,7 +1313,7 @@ class GRRule(GRObject):
             if not object is None:
                 self.__grammarRule=object
 
-    def check(self, tokens, ignoredTokens=[]):
+    def check(self, tokens, ignoredTokens=[], grammarRule=None):
         """Check if One or More grammar rules match current token"""
         # loop over GRObjects list
         # if one is matching expected value, exit and return True
@@ -1250,7 +1327,7 @@ class GRRule(GRObject):
             return ast.setStatus(ASTStatus.END)
 
         for grObject in self.__grammarRule.grammarList():
-            checked=grObject.check(tokens, ignoredTokens)
+            checked=grObject.check(tokens, ignoredTokens, self.__grammarRule)
 
             if checked.status()==ASTStatus.END:
                 #print('Check GRRule: END', self.id(), checked)
