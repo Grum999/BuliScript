@@ -347,7 +347,7 @@ Flow    ::= (
 
 
 Flow_Set_Variable
-        ::= 'set' 'variable' User_Variable '=' Any_Expression
+        ::= 'set' 'global'? 'variable' User_Variable '=' Any_Expression
 
 
 Flow_Import

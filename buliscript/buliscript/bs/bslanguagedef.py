@@ -2066,17 +2066,26 @@ class BSLanguageDef(LanguageDef):
                                                                     ignoreIndent=True),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, r"^\x20*\bset\s+variable\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, r"^\x20*\bset(?:\s+global)?\s+variable\b",
                                                                     'Flow/Variables',
                                                                     [('set variable \x01:variable = <VALUE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set value for a variable]',
+                                                                                'Flow [Set value for a variable]',
                                                                                 # description
                                                                                 'Set value <VALUE> for given user defined `:variable`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set variable :test = 100`**\n\n'
                                                                                 'Will define user defined variable `:test` with integer value `100`')),
+                                                                    ('set global variable \x01:variable = <VALUE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Set value for a global variable]',
+                                                                                # description
+                                                                                'Set value <VALUE> for given user defined `:variable`, defined as a global variable: when used in a macro, variable will be available outside macro scope',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set global variable :test = 100`**\n\n'
+                                                                                'Will define user defined global variable `:test` with integer value `100`')),
                                                                     ],
                                                                     'F'),
 
@@ -2126,6 +2135,7 @@ class BSLanguageDef(LanguageDef):
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for(?:\s+(?:each(?:\s+(?:item))?))?)"
                                                                        r"|(?:import(?:\s+(?:macro|image))?)"
+                                                                       r"|(?:set\s+global)"
                                                                        r"|(?:and\s+store(?:\s+(?:result(?:\s+(?:into))?))?)"
                                                                        r")\b"
                                                                        ),
@@ -5308,7 +5318,7 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Flow_Set_Variable',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '=', False),
                 'Any_Expression',

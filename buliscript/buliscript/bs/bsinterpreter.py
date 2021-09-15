@@ -26,6 +26,8 @@ import uuid
 import random
 import math
 
+from enum import Enum
+
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
         pyqtSignal as Signal
@@ -655,12 +657,10 @@ class BSInterpreter(QObject):
         self.__verbose(f"Enter scriptblock: '{name}'", currentAst)
         self.__scriptBlockStack.push(currentAst, allowLocalVariable, name)
 
-        scriptBlock=self.__scriptBlockStack.current()
-
         if isinstance(createLocalVariables, dict):
             # create local variables if any provided before starting block execution
             for variableName in createLocalVariables:
-                scriptBlock.setVariable(variableName, createLocalVariables[variableName], True, True)
+                self.__scriptBlockStack.setVariable(variableName, createLocalVariables[variableName], BSVariableScope.LOCAL)
 
         for ast in currentAst.nodes():
             # execute all instructions from current script block
@@ -687,17 +687,26 @@ class BSInterpreter(QObject):
     # --------------------------------------------------------------------------
     def __executeFlowSetVariable(self, currentAst):
         """Set a variable in current script block"""
-        scriptBlock=self.__scriptBlockStack.current()
-
         # Defined by 2 nodes:
-        #   0: variable name (<Token>)
-        #   1: variable value (<Token> or <ASTItem>)
-        variableName=currentAst.node(0).value()
-        variableValue=self.__evaluate(currentAst.node(1))
+        #   0: global/local variable
+        #   1: variable name (<Token>)
+        #   2: variable value (<Token> or <ASTItem>)
+        variableLocalScope=(currentAst.node(0).value()=='set variable')
+        variableName=currentAst.node(1).value()
+        variableValue=self.__evaluate(currentAst.node(2))
 
-        self.__verbose(f"set variable {variableName}={self.__strValue(variableValue)}", currentAst)
+        if not variableLocalScope:
+            globalVar='global '
+            scope=BSVariableScope.GLOBAL
+        else:
+            globalVar=''
+            scope=BSVariableScope.CURRENT
 
-        scriptBlock.setVariable(variableName, variableValue, True)
+
+
+        self.__verbose(f"set {globalVar}variable {variableName}={self.__strValue(variableValue)}", currentAst)
+
+        self.__scriptBlockStack.setVariable(variableName, variableValue, scope)
 
         self.__delay()
         return None
@@ -799,7 +808,7 @@ class BSInterpreter(QObject):
         storeResultValue=self.__executeScriptBlock(macroDefinition.ast(), True, f"Macro: {macroName}", localVariables)
 
         if isinstance(storeResultName, str):
-            self.__scriptBlockStack.current().setVariable(storeResultName, storeResultValue, True)
+            self.__scriptBlockStack.setVariable(storeResultName, storeResultValue, BSVariableScope.CURRENT)
 
         return storeResultValue
 
@@ -1023,7 +1032,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set unit canvas {self.__strValue(value)}      => :unit.canvas", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':unit.canvas', value, True)
+        self.__scriptBlockStack.setVariable(':unit.canvas', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1041,7 +1050,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set unit rotation {self.__strValue(value)}      => :unit.rotation", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':unit.rotation', value, True)
+        self.__scriptBlockStack.setVariable(':unit.rotation', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1059,7 +1068,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set pen color {self.__strValue(value)}      => :pen.color", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.color', value, True)
+        self.__scriptBlockStack.setVariable(':pen.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1086,7 +1095,7 @@ class BSInterpreter(QObject):
         else:
             self.__verbose(f"set pen size {self.__strValue(value)}      => :pen.size", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.size', value, True)
+        self.__scriptBlockStack.setVariable(':pen.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1105,7 +1114,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set pen style {self.__strValue(value)}      => :pen.style", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.style', value, True)
+        self.__scriptBlockStack.setVariable(':pen.style', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1124,7 +1133,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set pen cap {self.__strValue(value)}      => :pen.cap", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.cap', value, True)
+        self.__scriptBlockStack.setVariable(':pen.cap', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1143,7 +1152,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set pen join {self.__strValue(value)}      => :pen.join", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.join', value, True)
+        self.__scriptBlockStack.setVariable(':pen.join', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1175,7 +1184,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':pen.color', color, True)
+        self.__scriptBlockStack.setVariable(':pen.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1193,7 +1202,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set fill color {self.__strValue(value)}      => :fill.color", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.color', value, True)
+        self.__scriptBlockStack.setVariable(':fill.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1212,7 +1221,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set fill rule {self.__strValue(value)}      => :fill.rule", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.rule', value, True)
+        self.__scriptBlockStack.setVariable(':fill.rule', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1244,7 +1253,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':fill.color', color, True)
+        self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1262,7 +1271,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text color {self.__strValue(value)}      => :text.color", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.color', value, True)
+        self.__scriptBlockStack.setVariable(':text.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1294,7 +1303,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':text.color', color, True)
+        self.__scriptBlockStack.setVariable(':text.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1312,7 +1321,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text font {self.__strValue(value)}      => :text.font", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.font', value, True)
+        self.__scriptBlockStack.setVariable(':text.font', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1339,7 +1348,7 @@ class BSInterpreter(QObject):
         else:
             self.__verbose(f"set text size {self.__strValue(value)}      => :text.size", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.size', value, True)
+        self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1357,7 +1366,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text bold {self.__strValue(value)}      => :text.bold", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.bold', value, True)
+        self.__scriptBlockStack.setVariable(':text.bold', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1375,7 +1384,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text italic {self.__strValue(value)}      => :text.italic", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.italic', value, True)
+        self.__scriptBlockStack.setVariable(':text.italic', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1393,7 +1402,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text outline {self.__strValue(value)}      => :text.outline", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.outline', value, True)
+        self.__scriptBlockStack.setVariable(':text.outline', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1421,8 +1430,8 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"letter spacing unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.__verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}     => :text.letterSpacing.spacing, text.letterSpacing.unit ", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.letterspacing.spacing', value, True)
-        self.__scriptBlockStack.current().setVariable(':text.letterspacing.unit', unit, True)
+        self.__scriptBlockStack.setVariable(':text.letterspacing.spacing', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':text.letterspacing.unit', unit, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1448,7 +1457,7 @@ class BSInterpreter(QObject):
                 value=min(40.0, max(1.0, value))
             value=round(value*100)
 
-        self.__scriptBlockStack.current().setVariable(':text.stretch', value, True)
+        self.__scriptBlockStack.setVariable(':text.stretch', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1466,7 +1475,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text horizontal alignment {self.__strValue(value)}      => :text.alignment.horizontal", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.alignment.horizontal', value, True)
+        self.__scriptBlockStack.setVariable(':text.alignment.horizontal', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1484,7 +1493,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set text vertical alignment {self.__strValue(value)}      => :text.alignment.vertical", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.alignment.vertical', value, True)
+        self.__scriptBlockStack.setVariable(':text.alignment.vertical', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1502,7 +1511,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set draw antialiasing {self.__strValue(value)}      => :draw.antialiasing", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.antialiasing', value, True)
+        self.__scriptBlockStack.setVariable(':draw.antialiasing', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1520,7 +1529,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set draw blending mode {self.__strValue(value)}      => :draw.blendingMode", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.blendingmode', value, True)
+        self.__scriptBlockStack.setVariable(':draw.blendingmode', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1538,7 +1547,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas grid color {self.__strValue(value)}      => :canvas.grid.color", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.color', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1557,7 +1566,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas grid style {self.__strValue(value)}      => :canvas.grid.style", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.style', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.style', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1589,7 +1598,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.color', color, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1645,9 +1654,9 @@ class BSInterpreter(QObject):
         self.__verbose(f"set canvas grid size {self.__strValue(major)} {self.__strValue(minor)} {self.__strValue(unit)}     => :canvas.grid.size.major, :canvas.grid.size.minor, :canvas.grid.size.unit", currentAst)
 
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.major', major, True)
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.minor', minor, True)
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.unit', unit, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.major', major, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.minor', minor, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.unit', unit, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1665,7 +1674,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas origin color {self.__strValue(value)}      => :canvas.origin.color", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.color', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1684,7 +1693,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas origin style {self.__strValue(value)}      => :canvas.origin.style", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.style', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1716,7 +1725,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.color', color, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1743,7 +1752,7 @@ class BSInterpreter(QObject):
         else:
             self.__verbose(f"set canvas origin size {self.__strValue(value)}      => :canvas.origin.size", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.size', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1765,8 +1774,8 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}     => :canvas.origin.position.absissa, canvas.origin.position.ordinate", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.position.absissa', absissa, True)
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.position.ordinate', ordinate, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1784,7 +1793,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas position color {self.__strValue(value)}      => :canvas.position.color", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.color', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1816,7 +1825,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.color', color, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1843,7 +1852,7 @@ class BSInterpreter(QObject):
         else:
             self.__verbose(f"set canvas position size {self.__strValue(value)}      => :canvas.position.size", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.size', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1861,7 +1870,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas position fulfilled {self.__strValue(value)}      => :canvas.position.fulfill", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.fulfill', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1888,7 +1897,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set canvas background opacity {self.__strValue(value)}      => :canvas.background.opacity", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.background.opacity', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1906,7 +1915,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"set script execution verbose {self.__strValue(value)}      => :script.execution.verbose", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':script.execution.verbose', value, False)
+        self.__scriptBlockStack.setVariable(':script.execution.verbose', value, BSVariableScope.CURRENT)
         self.__optionVerboseMode=value
 
         self.__delay()
@@ -1932,7 +1941,7 @@ class BSInterpreter(QObject):
             randSeed=value
         random.seed(randSeed)
 
-        self.__scriptBlockStack.current().setVariable(':script.randomize.seed', randSeed, False)
+        self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.CURRENT)
 
 
         self.__delay()
@@ -2373,7 +2382,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"start to draw shape", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.shape.status', True, True)
+        self.__scriptBlockStack.setVariable(':draw.shape.status', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2390,7 +2399,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"stop to draw shape", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.shape.status', False, True)
+        self.__scriptBlockStack.setVariable(':draw.shape.status', False, BSVariableScope.CURRENT)
         # TODO: implement canvas render
 
         self.__delay()
@@ -2406,7 +2415,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"activate fill", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.status', True, True)
+        self.__scriptBlockStack.setVariable(':fill.status', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2423,7 +2432,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"deactivate fill", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.status', False, True)
+        self.__scriptBlockStack.setVariable(':fill.status', False, BSVariableScope.CURRENT)
         # TODO: implement canvas render
 
         self.__delay()
@@ -2439,7 +2448,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"pen up", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.status', False, True)
+        self.__scriptBlockStack.setVariable(':pen.status', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2456,7 +2465,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"pen down", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.status', True, True)
+        self.__scriptBlockStack.setVariable(':pen.status', True, BSVariableScope.CURRENT)
         # TODO: implement canvas render
 
         self.__delay()
@@ -2662,7 +2671,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"show canvas grid", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2679,7 +2688,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"hide canvas grid", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2696,7 +2705,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"show canvas origin", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2713,7 +2722,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"hide canvas origin", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2730,7 +2739,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"show canvas position", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2747,7 +2756,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"hide canvas position", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2764,7 +2773,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"show canvas background", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.background.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2781,7 +2790,7 @@ class BSInterpreter(QObject):
 
         self.__verbose(f"hide canvas background", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.background.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2967,7 +2976,7 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogBooleanInput.display(title, message), True)
+        scriptBlock.setVariable(variableName, WDialogBooleanInput.display(title, message), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -3005,7 +3014,7 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogStrInput.display(title, message, defaultValue=defaultValue), True)
+        scriptBlock.setVariable(variableName, WDialogStrInput.display(title, message, defaultValue=defaultValue), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -3049,7 +3058,7 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogIntInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), True)
+        scriptBlock.setVariable(variableName, WDialogIntInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -3093,7 +3102,7 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogFloatInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), True)
+        scriptBlock.setVariable(variableName, WDialogFloatInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -3146,36 +3155,7 @@ class BSInterpreter(QObject):
                                              f'colorCombination:{WColorComplementary.COLOR_COMBINATION_TETRADIC}',
                                              f'layoutOrientation:{WColorPicker.OPTION_ORIENTATION_HORIZONTAL}']
                                     },
-                                minSize=minSize), True)
-
-        #self.__delay()
-        return None
-
-
-
-
-
-
-
-        #choiceList=['Item A', 'Item B', 'Item C', 'Item D']
-
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg, inputLabel='Please make a choice', choicesValue=choiceList, defaultChecked=[1,3], minimumChecked=2))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg2, choicesValue=choiceList))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', inputLabel='Your choice', choicesValue=choiceList))
-
-
-        #print(WDialogColorInput.display('test checkbox', msg, inputLabel='Please choose a color'))
-        #print(WDialogColorInput.display('test checkbox', inputLabel='Choose', defaultValue='#ffff00', options={"menu":WColorPicker.OPTION_MENU_ALL, "layout": ['layoutOrientation:1', 'colorWheel', 'colorRGB']}, minSize=QSize(300,700)))
-        #print(WDialogColorInput.display('test checkbox', msg2, defaultValue=QColor('#ff00ff'), options={"layout": ['colorpalette', 'colorWheel', 'colorRGB', 'colorHSL']}))
-
+                                minSize=minSize), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -3238,7 +3218,7 @@ class BSInterpreter(QObject):
         if isinstance(value, int):
             # +1 because in BuliScript, index in list start from 1, not 0
             value+=1
-        scriptBlock.setVariable(variableName, value, True)
+        scriptBlock.setVariable(variableName, value, BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -3299,37 +3279,7 @@ class BSInterpreter(QObject):
         if isinstance(value, list):
             # +1 because in BuliScript, index in list start from 1, not 0
             value=[item+1 for item in value]
-        scriptBlock.setVariable(variableName, value, True)
-
-        #self.__delay()
-        return None
-
-
-
-
-
-
-
-
-        #choiceList=['Item A', 'Item B', 'Item C', 'Item D']
-
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg, inputLabel='Please make a choice', choicesValue=choiceList, defaultChecked=[1,3], minimumChecked=2))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg2, choicesValue=choiceList))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', inputLabel='Your choice', choicesValue=choiceList))
-
-
-        #print(WDialogColorInput.display('test checkbox', msg, inputLabel='Please choose a color'))
-        #print(WDialogColorInput.display('test checkbox', inputLabel='Choose', defaultValue='#ffff00', options={"menu":WColorPicker.OPTION_MENU_ALL, "layout": ['layoutOrientation:1', 'colorWheel', 'colorRGB']}, minSize=QSize(300,700)))
-        #print(WDialogColorInput.display('test checkbox', msg2, defaultValue=QColor('#ff00ff'), options={"layout": ['colorpalette', 'colorWheel', 'colorRGB', 'colorHSL']}))
-
+        scriptBlock.setVariable(variableName, value, BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -4742,8 +4692,6 @@ class BSInterpreter(QObject):
         return returned
 
 
-
-
     # --------------------------------------------------------------------------
     # Public
     # --------------------------------------------------------------------------
@@ -4852,12 +4800,21 @@ class BSInterpreter(QObject):
             raise EInterpreterInternalError("Interpreter is not in Debug Mode", None)
 
 
+class BSVariableScope(Enum):
+    CURRENT = 0
+    LOCAL = 1
+    GLOBAL = 2
+
+
 class BSScriptBlockProperties:
     """Define current script block properties"""
 
-    def __init__(self, parent, ast, allowLocalVariable, id=None):
+    def __init__(self, parent, ast, allowLocalVariable, id, rootStack):
         if not(parent is None or isinstance(parent, BSScriptBlockProperties)):
             raise EInvalidType("Given `parent` must be None or a <BSScriptBlockProperties>")
+
+        # keep a pointer to first stack block (root, used for global variables)
+        self.__rootStack=rootStack
 
         # keep parent, used to access to parents variables
         self.__parent=parent
@@ -4924,19 +4881,34 @@ class BSScriptBlockProperties:
         else:
             return default
 
-    def setVariable(self, name, value, localVariable, forceToBeLocal=False):
+    def setVariable(self, name, value, scope):
         """Set `value` for variable designed by given `name`
+
+        Given `scope` can be:
+        - BSVariableScope.CURRENT: if current scope allows local variable, set to current scope otherwise et to parent scope
+        - BSVariableScope.LOCAL:   force to be local even if local variables are not allowed
+        - BSVariableScope.GLOBAL:  force to be at global scope
 
         If variable doesn't exist in script block, create it
         """
         name=name.lower()
-        if localVariable and self.__allowLocalVariable or not localVariable or forceToBeLocal:
+        if scope==BSVariableScope.GLOBAL:
+            if self.__rootStack:
+                self.__rootStack.setVariable(name, value, BSVariableScope.GLOBAL)
+            else:
+                # occurs if current block is already root stack
+                self.__variables[name]=value
+        elif scope==BSVariableScope.LOCAL:
             self.__variables[name]=value
-        elif not self.__parent is None:
-            self.__parent.setVariable(name, value, localVariable)
         else:
-            # should not occurs, root scriptblock always allows user defined variable
-            pass
+            # current
+            if self.__allowLocalVariable:
+                self.__variables[name]=value
+            elif not self.__parent is None:
+                self.__parent.setVariable(name, value, scope)
+            else:
+                # should not occurs, root scriptblock always allows user defined variable
+                pass
 
     def variables(self, all=False):
         """Return dictionnary key/value of current variables
@@ -4957,14 +4929,17 @@ class BSScriptBlockStack:
     def __init__(self, maxStackSize=1000):
         self.__maxStackSize=maxStackSize
         self.__stack=[]
+        self.__current=None
 
     def push(self, ast, allowLocalVariable, name=None):
         if len(self.__stack)>0:
             parent=self.__stack[-1]
         else:
             parent=None
+
         if len(self.__stack)<self.__maxStackSize:
-            self.__stack.append(BSScriptBlockProperties(parent, ast, allowLocalVariable, name))
+            self.__stack.append(BSScriptBlockProperties(parent, ast, allowLocalVariable, name, self.__stack[0] if len(self.__stack)>0 else None))
+            self.__current=self.__stack[-1]
         else:
             raise EInvalidStatus(f"Current stack size limit ({self.__maxStackSize}) reached!")
 
@@ -4973,16 +4948,21 @@ class BSScriptBlockStack:
         # do not control if there's something to pop
         # normally this method is called only if stack is not empty
         # if called on an empty stack, must raise an error because it must never occurs
-        return self.__stack.pop()
+        returned=self.__stack.pop()
+
+        if len(self.__stack)>0:
+            self.__current=self.__stack[-1]
+        else:
+            self.__current=None
+
+        return returned
 
     def current(self):
         """Return current script block
 
         If nothing in stack, return None
         """
-        if len(self.__stack)>0:
-            return self.__stack[-1]
-        return None
+        return self.__current
 
     def count(self):
         """Return number of script block in stack"""
@@ -4991,6 +4971,18 @@ class BSScriptBlockStack:
     def clear(self):
         """Clear stack"""
         self.__stack.clear()
+
+    def variable(self, name, default=None):
+        """Shortcut to get variable from current block in stack"""
+        if self.__current:
+            return self.__current.variable(name, default)
+        else:
+            return default
+
+    def setVariable(self, name, value, scope):
+        """Shortcut to set variable from current block in stack"""
+        if self.__current:
+            self.__current.setVariable(name, value, scope)
 
 
 class BSScriptBlockMacro:
