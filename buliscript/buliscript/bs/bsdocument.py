@@ -282,7 +282,7 @@ class BSDocument(QWidget):
 
         # TODO: implement color theme...
 
-        self.__codeEditor.setIndentWidth(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_INDENT_WIDTH))
+        self.__codeEditor.setOptionIndentWidth(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_INDENT_WIDTH))
         self.__codeEditor.setOptionShowIndentLevel(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_INDENT_VISIBLE))
 
         self.__codeEditor.setOptionShowSpaces(BSSettings.get(BSSettingsKey.CONFIG_EDITOR_SPACES_VISIBLE))
