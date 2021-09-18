@@ -1,5 +1,21 @@
 <RCC>
   <qresource prefix="pktk/images/normal">
+    <file alias="file_save_as">dark/32dp/file_save_as.svg</file>
+    <file alias="file_save_all">dark/32dp/file_save_all.svg</file>
+    <file alias="file_save">dark/32dp/file_save.svg</file>
+    <file alias="clear">dark/32dp/clear.svg</file>
+    <file alias="help">dark/32dp/help.svg</file>
+    <file alias="stop">dark/32dp/stop.svg</file>
+    <file alias="files_close_all">dark/32dp/file_close_all.svg</file>
+    <file alias="file_close">dark/32dp/file_close.svg</file>
+    <file alias="folder_open_recent">dark/32dp/folder_open_recent.svg</file>
+    <file alias="file_new">dark/32dp/file_new.svg</file>
+    <file alias="filter_highlightall">dark/32dp/filter_highlightall.svg</file>
+    <file alias="filter_backward">dark/32dp/filter_backward.svg</file>
+    <file alias="filter_wholeword">dark/32dp/filter_wholeword.svg</file>
+    <file alias="filter_case">dark/32dp/filter_case.svg</file>
+    <file alias="filter_regex">dark/32dp/filter_regex.svg</file>
+    <file alias="file_repair">dark/32dp/file_repair.svg</file>
     <file alias="filter_alt">dark/32dp/filter_alt.svg</file>
     <file alias="saved_views_new">dark/32dp/saved_views_new.svg</file>
     <file alias="warning">dark/32dp/warning.svg</file>
@@ -30,7 +46,6 @@
     <file alias="comment_add">dark/32dp/comment_add.svg</file>
     <file alias="bookmark_rename">dark/32dp/bookmark_rename.svg</file>
     <file alias="format_text_bold">dark/32dp/format_text_bold.svg</file>
-    <file alias="save">dark/32dp/save.svg</file>
     <file alias="text_t_r90">dark/32dp/text_t_r90.svg</file>
     <file alias="format_text_strikethrough">dark/32dp/format_text_strikethrough.svg</file>
     <file alias="tune">dark/32dp/tune.svg</file>
@@ -132,6 +147,22 @@
     <file alias="layers_edit">dark/32dp/layers_edit.svg</file>
   </qresource>
   <qresource prefix="pktk/images/disabled">
+    <file alias="save">dark/32dp-disabled/file_save.svg</file>
+    <file alias="clear">dark/32dp-disabled/clear.svg</file>
+    <file alias="help">dark/32dp-disabled/help.svg</file>
+    <file alias="stop">dark/32dp-disabled/stop.svg</file>
+    <file alias="file_close_all">dark/32dp-disabled/file_close_all.svg</file>
+    <file alias="file_close">dark/32dp-disabled/file_close.svg</file>
+    <file alias="file_save_as">dark/32dp-disabled/file_save_as.svg</file>
+    <file alias="file_save_all">dark/32dp-disabled/file_save_all.svg</file>
+    <file alias="folder_open_recent">dark/32dp-disabled/folder_open_recent.svg</file>
+    <file alias="file_new">dark/32dp-disabled/file_new.svg</file>
+    <file alias="filter_highlight">dark/32dp-disabled/filter_highlightall.svg</file>
+    <file alias="filter_backward">dark/32dp-disabled/filter_backward.svg</file>
+    <file alias="filter_wholeword">dark/32dp-disabled/filter_wholeword.svg</file>
+    <file alias="filter_case">dark/32dp-disabled/filter_case.svg</file>
+    <file alias="filter_regex">dark/32dp-disabled/filter_regex.svg</file>
+    <file alias="file_repair">dark/32dp-disabled/file_repair.svg</file>
     <file alias="filter_alt">dark/32dp-disabled/filter_alt.svg</file>
     <file alias="saved_views_new">dark/32dp-disabled/saved_views_new.svg</file>
     <file alias="warning">dark/32dp-disabled/warning.svg</file>
@@ -162,7 +193,6 @@
     <file alias="comment_add">dark/32dp-disabled/comment_add.svg</file>
     <file alias="bookmark_rename">dark/32dp-disabled/bookmark_rename.svg</file>
     <file alias="format_text_bold">dark/32dp-disabled/format_text_bold.svg</file>
-    <file alias="save">dark/32dp-disabled/save.svg</file>
     <file alias="text_t_r90">dark/32dp-disabled/text_t_r90.svg</file>
     <file alias="format_text_strikethrough">dark/32dp-disabled/format_text_strikethrough.svg</file>
     <file alias="tune">dark/32dp-disabled/tune.svg</file>
