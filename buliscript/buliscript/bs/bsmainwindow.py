@@ -53,19 +53,12 @@ from buliscript.pktk.modules.menuutils import buildQMenuTree
 from buliscript.pktk.modules.parser import Parser
 from buliscript.pktk.modules.tokenizer import TokenizerRule
 
+from buliscript.pktk.widgets.wseparator import WVLine
+
 from buliscript.pktk.pktk import (
         EInvalidType,
         EInvalidValue
     )
-
-
-class WVLine(QFrame):
-    """A vertical line widget that can be used as a separator"""
-
-    def __init__(self):
-        super(WVLine, self).__init__()
-        self.setFrameShape(self.VLine|self.Sunken)
-
 
 
 class WMenuForCommand(QWidgetAction):

@@ -111,8 +111,10 @@
       <string>&amp;Recent</string>
      </property>
      <property name="icon">
-      <iconset theme="document-open-recent">
-       <normaloff>.</normaloff>.</iconset>
+      <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+       <normaloff>:/pktk/images/normal/folder_open_recent</normaloff>
+       <disabledoff>:/pktk/images/disabled/folder_open_recent</disabledoff>
+       <disabledon>:/pktk/images/disabled/folder_open_recent</disabledon>:/pktk/images/normal/folder_open_recent</iconset>
      </property>
      <addaction name="actionFileRecent_None"/>
     </widget>
@@ -171,7 +173,7 @@
     </property>
     <widget class="QMenu" name="menuViewCanvas">
      <property name="title">
-      <string>Canvas</string>
+      <string>&amp;Canvas</string>
      </property>
      <addaction name="actionViewCanvasShowCanvas"/>
      <addaction name="separator"/>
@@ -181,11 +183,17 @@
     </widget>
     <widget class="QMenu" name="menuViewLanguage">
      <property name="title">
-      <string>Language</string>
+      <string>&amp;Language</string>
+     </property>
+    </widget>
+    <widget class="QMenu" name="menuViewScript">
+     <property name="title">
+      <string>&amp;Script</string>
      </property>
     </widget>
     <addaction name="menuViewCanvas"/>
     <addaction name="menuViewLanguage"/>
+    <addaction name="menuViewScript"/>
     <addaction name="actionViewShowConsole"/>
    </widget>
    <widget class="QMenu" name="menuScript">
@@ -207,8 +215,10 @@
   <widget class="QStatusBar" name="sbInfo"/>
   <action name="actionHelpBuliScriptHandbook">
    <property name="icon">
-    <iconset theme="help-contents">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/help</normaloff>
+     <disabledoff>:/pktk/images/disabled/help</disabledoff>
+     <disabledon>:/pktk/images/disabled/help</disabledon>:/pktk/images/normal/help</iconset>
    </property>
    <property name="text">
     <string>&amp;BuliScript handbook...</string>
@@ -222,8 +232,8 @@
   </action>
   <action name="actionHelpAboutBS">
    <property name="icon">
-    <iconset theme="help-about">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/info</normaloff>:/pktk/images/normal/info</iconset>
    </property>
    <property name="text">
     <string>&amp;About Buli Script...</string>
@@ -237,8 +247,10 @@
   </action>
   <action name="actionFileNew">
    <property name="icon">
-    <iconset theme="document-new">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/file_new</normaloff>
+     <disabledoff>:/pktk/images/disabled/file_new</disabledoff>
+     <disabledon>:/pktk/images/disabled/file_new</disabledon>:/pktk/images/normal/file_new</iconset>
    </property>
    <property name="text">
     <string>&amp;New...</string>
@@ -252,8 +264,10 @@
   </action>
   <action name="actionFileOpen">
    <property name="icon">
-    <iconset theme="document-open">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/folder_open</normaloff>
+     <disabledoff>:/pktk/images/normal/folder_open</disabledoff>
+     <disabledon>:/pktk/images/disabled/folder_open</disabledon>:/pktk/images/normal/folder_open</iconset>
    </property>
    <property name="text">
     <string>&amp;Open...</string>
@@ -267,8 +281,10 @@
   </action>
   <action name="actionFileSave">
    <property name="icon">
-    <iconset theme="document-save">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/file_save</normaloff>
+     <disabledoff>:/pktk/images/disabled/file_save</disabledoff>
+     <disabledon>:/pktk/images/disabled/file_save</disabledon>:/pktk/images/normal/file_save</iconset>
    </property>
    <property name="text">
     <string>&amp;Save</string>
@@ -282,8 +298,10 @@
   </action>
   <action name="actionFileSaveAs">
    <property name="icon">
-    <iconset theme="document-save-as">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/file_save_as</normaloff>
+     <disabledoff>:/pktk/images/disabled/file_save_as</disabledoff>
+     <disabledon>:/pktk/images/disabled/file_save_as</disabledon>:/pktk/images/normal/file_save_as</iconset>
    </property>
    <property name="text">
     <string>Sa&amp;ve as...</string>
@@ -297,8 +315,10 @@
   </action>
   <action name="actionFileSaveAll">
    <property name="icon">
-    <iconset theme="document-save-all">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/file_save_all</normaloff>
+     <disabledoff>:/pktk/images/disabled/file_save_all</disabledoff>
+     <disabledon>:/pktk/images/disabled/file_save_all</disabledon>:/pktk/images/normal/file_save_all</iconset>
    </property>
    <property name="text">
     <string>Save a&amp;ll</string>
@@ -309,8 +329,10 @@
   </action>
   <action name="actionScriptExecute">
    <property name="icon">
-    <iconset theme="run-build">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/play</normaloff>
+     <disabledoff>:/pktk/images/disabled/play</disabledoff>
+     <disabledon>:/pktk/images/disabled/play</disabledon>:/pktk/images/normal/play</iconset>
    </property>
    <property name="text">
     <string>&amp;Execute</string>
@@ -324,8 +346,8 @@
   </action>
   <action name="actionFileQuit">
    <property name="icon">
-    <iconset theme="application-exit">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/application_exit</normaloff>:/pktk/images/normal/application_exit</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -339,8 +361,10 @@
   </action>
   <action name="actionFileClose">
    <property name="icon">
-    <iconset theme="document-close">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/file_close</normaloff>
+     <disabledoff>:/pktk/images/disabled/file_close</disabledoff>
+     <disabledon>:/pktk/images/disabled/file_close</disabledon>:/pktk/images/normal/file_close</iconset>
    </property>
    <property name="text">
     <string>&amp;Close</string>
@@ -359,8 +383,10 @@
   </action>
   <action name="actionEditCut">
    <property name="icon">
-    <iconset theme="edit-cut">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/cut</normaloff>
+     <disabledoff>:/pktk/images/disabled/cut</disabledoff>
+     <disabledon>:/pktk/images/disabled/cut</disabledon>:/pktk/images/normal/cut</iconset>
    </property>
    <property name="text">
     <string>&amp;Cut</string>
@@ -374,8 +400,10 @@
   </action>
   <action name="actionEditCopy">
    <property name="icon">
-    <iconset theme="edit-copy">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/copy</normaloff>
+     <disabledoff>:/pktk/images/disabled/copy</disabledoff>
+     <disabledon>:/pktk/images/disabled/copy</disabledon>:/pktk/images/normal/copy</iconset>
    </property>
    <property name="text">
     <string>C&amp;opy</string>
@@ -389,8 +417,10 @@
   </action>
   <action name="actionEditPaste">
    <property name="icon">
-    <iconset theme="edit-paste">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/paste</normaloff>
+     <disabledoff>:/pktk/images/disabled/paste</disabledoff>
+     <disabledon>:/pktk/images/disabled/paste</disabledon>:/pktk/images/normal/paste</iconset>
    </property>
    <property name="text">
     <string>&amp;Paste</string>
@@ -404,8 +434,10 @@
   </action>
   <action name="actionEditSelectAll">
    <property name="icon">
-    <iconset theme="edit-select-all">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/select_all</normaloff>
+     <disabledoff>:/pktk/images/disabled/select_all</disabledoff>
+     <disabledon>:/pktk/images/disabled/select_all</disabledon>:/pktk/images/normal/select_all</iconset>
    </property>
    <property name="text">
     <string>&amp;Select all</string>
@@ -419,8 +451,10 @@
   </action>
   <action name="actionEditUndo">
    <property name="icon">
-    <iconset theme="edit-undo">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/edit_undo</normaloff>
+     <disabledoff>:/pktk/images/disabled/edit_undo</disabledoff>
+     <disabledon>:/pktk/images/disabled/edit_undo</disabledon>:/pktk/images/normal/edit_undo</iconset>
    </property>
    <property name="text">
     <string>&amp;Undo</string>
@@ -434,8 +468,10 @@
   </action>
   <action name="actionEditRedo">
    <property name="icon">
-    <iconset theme="edit-redo">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/edit_redo</normaloff>
+     <disabledoff>:/pktk/images/disabled/edit_redo</disabledoff>
+     <disabledon>:/pktk/images/disabled/edit_redo</disabledon>:/pktk/images/normal/edit_redo</iconset>
    </property>
    <property name="text">
     <string>&amp;Redo</string>
@@ -478,7 +514,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Canvas origin</string>
+    <string>Canvas &amp;origin</string>
    </property>
   </action>
   <action name="actionViewCanvasShowCanvasPosition">
@@ -500,7 +536,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Canvas</string>
+    <string>&amp;Canvas</string>
    </property>
   </action>
   <action name="actionViewShowConsole">
@@ -511,7 +547,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Console</string>
+    <string>C&amp;onsole</string>
    </property>
   </action>
   <action name="actionSettingsSaveSessionOnExit">
@@ -530,8 +566,10 @@
   </action>
   <action name="actionFileCloseAll">
    <property name="icon">
-    <iconset theme="document-close">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/light_icons.qrc">
+     <normaloff>:/pktk/images/normal/file_close_all</normaloff>
+     <disabledoff>:/pktk/images/disabled/file_close_all</disabledoff>
+     <disabledon>:/pktk/images/disabled/file_close_all</disabledon>:/pktk/images/normal/file_close_all</iconset>
    </property>
    <property name="text">
     <string>Clos&amp;e all</string>
@@ -542,8 +580,10 @@
   </action>
   <action name="actionFileReload">
    <property name="icon">
-    <iconset theme="view-refresh">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/cache_refresh</normaloff>
+     <disabledoff>:/pktk/images/disabled/cache_refresh</disabledoff>
+     <disabledon>:/pktk/images/disabled/cache_refresh</disabledon>:/pktk/images/normal/cache_refresh</iconset>
    </property>
    <property name="text">
     <string>Reloa&amp;d</string>
@@ -554,8 +594,10 @@
   </action>
   <action name="actionScriptBreakPause">
    <property name="icon">
-    <iconset theme="media-playback-pause">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/pause</normaloff>
+     <disabledoff>:/pktk/images/disabled/pause</disabledoff>
+     <disabledon>:/pktk/images/disabled/pause</disabledon>:/pktk/images/normal/pause</iconset>
    </property>
    <property name="text">
     <string>&amp;Break/Pause</string>
@@ -563,8 +605,10 @@
   </action>
   <action name="actionScriptStop">
    <property name="icon">
-    <iconset theme="media-playback-stop">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
+     <normaloff>:/pktk/images/normal/stop</normaloff>
+     <disabledoff>:/pktk/images/disabled/stop</disabledoff>
+     <disabledon>:/pktk/images/disabled/stop</disabledon>:/pktk/images/normal/stop</iconset>
    </property>
    <property name="text">
     <string>&amp;Stop</string>
@@ -599,6 +643,11 @@
     <string>Reference</string>
    </property>
   </action>
+  <action name="actionConsole_output">
+   <property name="text">
+    <string>Console output</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -608,6 +657,9 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../pktk/resources/svg/dark_icons.qrc"/>
+  <include location="../../pktk/resources/svg/light_icons.qrc"/>
+ </resources>
  <connections/>
 </ui>
