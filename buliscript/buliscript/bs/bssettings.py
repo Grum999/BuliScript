@@ -76,6 +76,8 @@ class BSSettingsKey(SettingsKey):
     CONFIG_EDITOR_RIGHTLIMIT_VISIBLE =                       'config.editor.rightLimit.visible'
     CONFIG_EDITOR_AUTOCOMPLETION_ACTIVE =                    'config.editor.autoCompletion.active'
 
+    CONFIG_DOCKER_CONSOLE_BUFFERSIZE =                       'config.docker.console.bufferSize'
+
     SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION =              'session.mainwindow.splitter.main.position'
     SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION =         'session.mainwindow.splitter.secondary.position'
     SESSION_MAINWINDOW_WINDOW_GEOMETRY =                     'session.mainwindow.window.geometry'
@@ -98,6 +100,15 @@ class BSSettingsKey(SettingsKey):
     SESSION_PATH_LASTOPENED =                                'session.paths.last.opened'
     SESSION_PATH_LASTSAVED =                                 'session.paths.last.saved'
 
+    # docker "console output"; keep in memory filter/search options
+    SESSION_DOCKER_CONSOLE_SEARCH_BTN_VISIBLE =                 'session.dockers.console.search.buttons.visible'
+    SESSION_DOCKER_CONSOLE_SEARCH_BTN_REGEX_CHECKED =           'session.dockers.console.search.buttons.regex.checked'
+    SESSION_DOCKER_CONSOLE_SEARCH_BTN_CASESENSITIVE_CHECKED =   'session.dockers.console.search.buttons.caseSensitive.checked'
+    SESSION_DOCKER_CONSOLE_SEARCH_BTN_WHOLEWORD_CHECKED =       'session.dockers.console.search.buttons.wholeWord.checked'
+    SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED =        'session.dockers.console.search.buttons.backward.checked'
+    SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED =    'session.dockers.console.search.buttons.highlightAll.checked'
+    SESSION_DOCKER_CONSOLE_SEARCH_TEXT =                        'session.dockers.console.search.text'
+    SESSION_DOCKER_CONSOLE_FILTER_TYPES =                       'session.dockers.console.filter.types'
 
 
 class BSSettings(Settings):
@@ -134,6 +145,8 @@ class BSSettings(Settings):
 
             SettingsRule(BSSettingsKey.CONFIG_EDITOR_AUTOCOMPLETION_ACTIVE,                 True,                     SettingsFmt(bool)),
 
+            SettingsRule(BSSettingsKey.CONFIG_DOCKER_CONSOLE_BUFFERSIZE,                    1500,                     SettingsFmt(int, (250,25000))),
+
 
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION,           [1000, 1000],             SettingsFmt(int), SettingsFmt(int)),
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION,      [700, 300],               SettingsFmt(int), SettingsFmt(int)),
@@ -159,7 +172,17 @@ class BSSettings(Settings):
             SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_RECENTS,                           [],                       SettingsFmt(list)),
 
             SettingsRule(BSSettingsKey.SESSION_PATH_LASTOPENED,                             "",                       SettingsFmt(str)),
-            SettingsRule(BSSettingsKey.SESSION_PATH_LASTSAVED,                              "",                       SettingsFmt(str))
+            SettingsRule(BSSettingsKey.SESSION_PATH_LASTSAVED,                              "",                       SettingsFmt(str)),
+
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_VISIBLE,           True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_REGEX_CHECKED,     False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_CASESENSITIVE_CHECKED, False,                SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_WHOLEWORD_CHECKED, False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED,  False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED, False,                 SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT,                  '',                       SettingsFmt(str)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES,                 ['error','warning','info','valid'],
+                                                                                                                      SettingsFmt(list, ['error','warning','info','valid']))
         ]
 
         super(BSSettings, self).__init__(pluginId, rules)

@@ -44,6 +44,9 @@ from .bsdwlanguage import (
         BSDockWidgetLangageQuickHelp,
         BSDockWidgetLangageReference
     )
+from .bsdwconsole import (
+        BSDockWidgetConsoleOutput
+    )
 from .bshistory import BSHistory
 from .bsinterpreter import BSInterpreter
 from .bslanguagedef import BSLanguageDef
@@ -62,6 +65,7 @@ from buliscript.pktk.modules.utils import (
     )
 from buliscript.pktk.modules.imgutils import buildIcon
 from buliscript.pktk.modules.about import AboutWindow
+from buliscript.pktk.widgets.wconsole import WConsoleType
 
 from buliscript.pktk.pktk import (
         EInvalidType,
@@ -136,9 +140,11 @@ class BSUIController(QObject):
 
         self.__dwLangageReference=None
         self.__dwLangageQuickHelp=None
+        self.__dwConsoleOutput=None
 
         self.__dwLangageQuickHelpAction=None
         self.__dwLangageReferenceAction=None
+        self.__dwConsoleOutputAction=None
 
         self.__interpreter=BSInterpreter(self.__languageDef)
 
@@ -185,6 +191,13 @@ class BSUIController(QObject):
         self.__dwLangageQuickHelpAction.setText(i18n("Quick Help"))
         self.__window.menuViewLanguage.addAction(self.__dwLangageQuickHelpAction)
         self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwLangageQuickHelp)
+
+        self.__dwConsoleOutput=BSDockWidgetConsoleOutput(self.__window)
+        self.__dwConsoleOutput.setObjectName('__dwConsoleOutput')
+        self.__dwConsoleOutputAction=self.__dwConsoleOutput.toggleViewAction()
+        self.__dwConsoleOutputAction.setText(i18n("Console output"))
+        self.__window.menuViewScript.addAction(self.__dwConsoleOutputAction)
+        self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwConsoleOutput)
 
         self.__window.setWindowTitle(self.__bsTitle)
         self.__window.show()
@@ -246,6 +259,18 @@ class BSUIController(QObject):
 
         self.__lastDocumentDirectoryOpen=BSSettings.get(BSSettingsKey.SESSION_PATH_LASTOPENED)
         self.__lastDocumentDirectorySave=BSSettings.get(BSSettingsKey.SESSION_PATH_LASTSAVED)
+
+        # no ui controller command for dockers
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_BUTTONSHOW, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_VISIBLE))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_REGEX, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_REGEX_CHECKED))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_CASESENSITIVE, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_CASESENSITIVE_CHECKED))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_WHOLEWORD, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_WHOLEWORD_CHECKED))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_BACKWARD, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_HIGHLIGHT, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT))
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES, [WConsoleType.fromStr(type) for type in BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES)])
+
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE, BSSettings.get(BSSettingsKey.CONFIG_DOCKER_CONSOLE_BUFFERSIZE))
 
         # do not load from here, already loaded from BSDocuments() initialisation
         # for fileName in BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_OPENED):
@@ -529,8 +554,17 @@ class BSUIController(QObject):
 
             BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED, self.__window.isMaximized())
             if not self.__window.isMaximized():
-                # when maximized geometry is full screen geomtry, then do it only if no in maximized
+                # when maximized geometry is full screen geometry, then do it only if no in maximized
                 BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY, [self.__window.geometry().x(), self.__window.geometry().y(), self.__window.geometry().width(), self.__window.geometry().height()])
+
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_VISIBLE, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_BUTTONSHOW))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_REGEX_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_REGEX))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_CASESENSITIVE_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_CASESENSITIVE))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_WHOLEWORD_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_WHOLEWORD))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_BACKWARD))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_HIGHLIGHT))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES, [WConsoleType.toStr(type) for type in self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES)])
 
         return BSSettings.save()
 
