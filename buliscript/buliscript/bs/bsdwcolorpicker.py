@@ -36,7 +36,7 @@ class BSDockWidgetColorPicker(QDockWidget):
     MODE_INSERT = 0x01
     MODE_UPDATE = 0x02
 
-    def __init__(self, parent, name='ColorPicker'):
+    def __init__(self, parent, name='Color Picker'):
         super(BSDockWidgetColorPicker, self).__init__(name, parent)
 
         self.__mode=BSDockWidgetColorPicker.MODE_INSERT
