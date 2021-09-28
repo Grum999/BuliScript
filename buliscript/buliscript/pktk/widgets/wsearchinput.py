@@ -425,7 +425,7 @@ class SearchFromPlainTextEdit:
             cursor=QTextCursor(self.__extraSelectionsFoundCurrent.cursor)
             cursor.clearSelection()
             self.__plainTextEdit.setTextCursor(cursor)
-            self.__plainTextEdit.ensureCursorVisible()
+            self.__plainTextEdit.centerCursor()
 
         return found
 
@@ -510,6 +510,6 @@ class SearchFromPlainTextEdit:
             cursor=QTextCursor(self.__extraSelectionsFoundCurrent.cursor)
             cursor.clearSelection()
             self.__plainTextEdit.setTextCursor(cursor)
-            self.__plainTextEdit.ensureCursorVisible()
+            self.__plainTextEdit.centerCursor()
 
         return found
