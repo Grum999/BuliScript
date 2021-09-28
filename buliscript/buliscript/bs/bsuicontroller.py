@@ -598,6 +598,9 @@ class BSUIController(QObject):
     def close(self):
         """When window is about to be closed, execute some cleanup/backup/stuff before exiting BuliScript"""
         # save current settings
+        if not self.__bsStarted:
+            return
+
         for document in self.__window.documents().documents():
             document.saveCache()
 
