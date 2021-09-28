@@ -47,8 +47,10 @@ from .bsdwlanguage import (
 from .bsdwconsole import (
         BSDockWidgetConsoleOutput
     )
+from .bsdwcolorpicker import (
+        BSDockWidgetColorPicker
+    )
 from .bshistory import BSHistory
-from .bsinterpreter import BSInterpreter
 from .bsinterpreter import (
         BSInterpreter,
         EInterpreterInternalError,
@@ -146,10 +148,12 @@ class BSUIController(QObject):
         self.__dwLangageReference=None
         self.__dwLangageQuickHelp=None
         self.__dwConsoleOutput=None
+        self.__dwColorPicker=None
 
         self.__dwLangageQuickHelpAction=None
         self.__dwLangageReferenceAction=None
         self.__dwConsoleOutputAction=None
+        self.__dwColorPickerAction=None
 
         self.__interpreter=BSInterpreter(self.__languageDef)
 
@@ -206,6 +210,15 @@ class BSUIController(QObject):
         # redirect interpeter output to console docker
         self.__interpreter.output.connect(self.__dwConsoleOutput.append)
         self.__dwConsoleOutput.sourceRefClicked.connect(lambda src,colS,rowS,colE,rowE: self.commandScriptGoToLine(rowS))
+
+        self.__dwColorPicker=BSDockWidgetColorPicker(self.__window)
+        self.__dwColorPicker.setObjectName('__dwColorPicker')
+        self.__dwColorPicker.setAllowedAreas(Qt.LeftDockWidgetArea|Qt.RightDockWidgetArea)
+        self.__dwColorPicker.apply.connect(self.commandColorCodeInsert)
+        self.__dwColorPickerAction=self.__dwColorPicker.toggleViewAction()
+        self.__dwColorPickerAction.setText(i18n("Color picker"))
+        self.__window.menuViewLanguage.addAction(self.__dwColorPickerAction)
+        self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwColorPicker)
 
         self.__window.setWindowTitle(self.__bsTitle)
         self.__window.show()
@@ -279,6 +292,8 @@ class BSUIController(QObject):
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES, [WConsoleType.fromStr(type) for type in BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES)])
 
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE, BSSettings.get(BSSettingsKey.CONFIG_DOCKER_CONSOLE_BUFFERSIZE))
+
+        self.__dwColorPicker.setOptions(BSSettings.get(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED))
 
         # do not load from here, already loaded from BSDocuments() initialisation
         # for fileName in BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_OPENED):
@@ -574,6 +589,8 @@ class BSUIController(QObject):
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH))
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES, [WConsoleType.toStr(type) for type in self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES)])
 
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED, self.__dwColorPicker.options())
+
         return BSSettings.save()
 
     def close(self):
@@ -589,10 +606,12 @@ class BSUIController(QObject):
         self.__dwLangageReference.close()
         self.__dwLangageQuickHelp.close()
         self.__dwConsoleOutput.close()
+        self.__dwColorPicker.close()
 
         self.__dwLangageReference=None
         self.__dwLangageQuickHelp=None
         self.__dwConsoleOutput=None
+        self.__dwColorPicker=None
 
         self.__bsStarted = False
         self.bsWindowClosed.emit()
@@ -911,6 +930,34 @@ class BSUIController(QObject):
             if setFocus:
                 self.__currentDocument.codeEditor().setFocus()
 
+    def commandColorCodeInsert(self, color, mode=BSDockWidgetColorPicker.MODE_INSERT, setFocus=True):
+        """According to `mode
+            - Insert given `color` at current position in document
+            - Update color at current position in document with given `color`
+
+        If `setFocus` is True, current document got focus
+        """
+        if self.__currentDocument:
+            if not isinstance(color, QColor):
+                raise EInvalidType("Given `color` must be a <QColor>")
+
+            if color.alpha()==255:
+                colorCode=color.name(QColor.HexRgb)
+            else:
+                colorCode=color.name(QColor.HexArgb)
+
+            print('commandColorCodeInsert', color, colorCode, mode)
+
+            if mode==BSDockWidgetColorPicker.MODE_INSERT:
+                self.__currentDocument.codeEditor().insertLanguageText(colorCode)
+            elif mode==BSDockWidgetColorPicker.MODE_UPDATE:
+                self.__currentDocument.codeEditor().replaceTokenText(colorCode)
+            else:
+                raise EInvalidValue("Given `mode` value is not valid")
+
+            if setFocus:
+                self.__currentDocument.codeEditor().setFocus()
+
 
     def commandViewBringToFront(self):
         """Bring main window to front"""
@@ -1102,6 +1149,19 @@ class BSUIController(QObject):
             else:
                 self.__dwConsoleOutput.hide()
 
+    def commandViewDockColorPickerVisible(self, visible=None):
+        """Display/Hide Color Picker docker"""
+        if visible is None:
+            visible = self.__dwColorPickerAction.isChecked()
+        elif not isinstance(visible, bool):
+            raise EInvalidValue('Given `visible` must be a <bool>')
+
+        if self.__dwColorPicker:
+            if visible:
+                self.__dwColorPicker.show()
+            else:
+                self.__dwColorPicker.hide()
+
 
     def commandDockLangageQuickHelpSet(self, keyword):
         """Define language quick help docker content from given `keyword`
@@ -1121,6 +1181,20 @@ class BSUIController(QObject):
                 example=TokenizerRule.descriptionExtractSection(descriptionProposal[0][2], 'example')
 
                 self.__dwLangageQuickHelp.set(title, descriptionProposal[0][1], description, example)
+
+    def commandDockColorPickerSetColor(self, color):
+        """Set color for color picker
+
+        Given `color` can be a QColor or a string
+        """
+        if self.__dwColorPicker:
+            self.__dwColorPicker.setColor(color)
+
+
+    def commandDockColorPickerSetMode(self, mode=BSDockWidgetColorPicker.MODE_INSERT):
+        """Set mode for color picker"""
+        if self.__dwColorPicker:
+            self.__dwColorPicker.setMode(mode)
 
 
     def commandSettingsSaveSessionOnExit(self, saveSession=None):

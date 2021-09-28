@@ -40,6 +40,9 @@ from PyQt5.QtCore import (
         QFileSystemWatcher
     )
 
+from .bslanguagedef import BSLanguageDef
+from .bsdwcolorpicker import BSDockWidgetColorPicker
+
 from buliscript.pktk.pktk import (
         EInvalidType,
         EInvalidValue,
@@ -608,14 +611,24 @@ class BSDocuments(QTabWidget):
         self.tabCloseRequested.connect(self.__tabRequestClose)
 
 
-    def __updateLanguageQuickHelp(self):
-        """Update docker Language Quick Help according to current highlighted token"""
+    def __updateDockersContent(self):
+        """Update dockers content according to current highlighted token"""
         cursorToken=self.__currentDocument.codeEditor().cursorToken()
         if cursorToken:
             # a token is found
             if self.__currentCursorToken!=cursorToken.text():
+                # token is not the same than previously highlighted token
                 self.__uiController.commandDockLangageQuickHelpSet(cursorToken.text())
                 self.__currentCursorToken=cursorToken
+
+            if cursorToken.type()==BSLanguageDef.ITokenType.COLOR_CODE:
+                # current token is a color, update color in color picker docker
+                self.__uiController.commandDockColorPickerSetMode(BSDockWidgetColorPicker.MODE_UPDATE)
+                self.__uiController.commandDockColorPickerSetColor(QColor(cursorToken.value()))
+            else:
+                self.__uiController.commandDockColorPickerSetMode(BSDockWidgetColorPicker.MODE_INSERT)
+        else:
+            self.__uiController.commandDockColorPickerSetMode(BSDockWidgetColorPicker.MODE_INSERT)
 
 
     def __updateStatusBarOverwrite(self, dummy=None):
@@ -634,7 +647,7 @@ class BSDocuments(QTabWidget):
         if position[3]==0:
             # no selection
             self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_SELECTION, '')
-            self.__updateLanguageQuickHelp()
+            self.__updateDockersContent()
         else:
             # selection...
             self.__mainWindow.setStatusBarText(self.__mainWindow.STATUSBAR_SELECTION, f'{position[1].x()}:{position[1].y()} - {position[2].x()}:{position[2].y()} [{position[3]}]')
@@ -894,6 +907,8 @@ class BSDocuments(QTabWidget):
             self.__optionAutoCompletionHelp=value
             for document in self.__documents:
                 document.codeEditor().setOptionAutoCompletionHelp(self.__optionAutoCompletionHelp)
+
+
 
 class BSDocumentsTabBar(QTabBar):
     """Implement a tabbar that let possibility in code editor to made distinction

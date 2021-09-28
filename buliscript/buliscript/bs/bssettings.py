@@ -110,6 +110,9 @@ class BSSettingsKey(SettingsKey):
     SESSION_DOCKER_CONSOLE_SEARCH_TEXT =                        'session.dockers.console.search.text'
     SESSION_DOCKER_CONSOLE_FILTER_TYPES =                       'session.dockers.console.filter.types'
 
+    # docker "color picker"
+    SESSION_DOCKER_COLORPICKER_MENU_SELECTED =                  'session.dockers.colorPicker.menu.selected'
+
 
 class BSSettings(Settings):
     """Manage all BuliScript settings with open&save options
@@ -182,7 +185,10 @@ class BSSettings(Settings):
             SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED, False,                 SettingsFmt(bool)),
             SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT,                  '',                       SettingsFmt(str)),
             SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES,                 ['error','warning','info','valid'],
-                                                                                                                      SettingsFmt(list, ['error','warning','info','valid']))
+                                                                                                                      SettingsFmt(list, ['error','warning','info','valid'])),
+
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED,            ['colorRGB', 'colorHSV', 'colorAlpha', 'colorCssRGB', 'colorWheel', 'colorPreview'],
+                                                                                                                      SettingsFmt(list)) # list is not fixed as palette names are not known
         ]
 
         super(BSSettings, self).__init__(pluginId, rules)
