@@ -149,6 +149,10 @@ class BSMainWindow(QMainWindow):
 
         self.setDockOptions(QMainWindow.AllowTabbedDocks|QMainWindow.AllowNestedDocks)
         self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
+        self.setCorner(Qt.TopLeftCorner, Qt.LeftDockWidgetArea)
+        self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
+        self.setCorner(Qt.TopRightCorner, Qt.RightDockWidgetArea)
+        self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
         self.setDocumentMode(False)
 
         self.__initStatusBar()

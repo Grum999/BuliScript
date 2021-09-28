@@ -49,6 +49,7 @@ class BSDockWidgetConsoleOutput(QDockWidget):
     - QButtons: used to define quick filters & actions
     - A WConsole: used to provide output content
     """
+    sourceRefClicked = Signal(str, int, int, int, int)   # source, col start, row start, col end, row end
 
     OPTION_BTN_REGEX =               0b0000000000000001
     OPTION_BTN_CASESENSITIVE =       0b0000000000000010
@@ -77,8 +78,24 @@ class BSDockWidgetConsoleOutput(QDockWidget):
 
         self.__cConsole.setOptionBufferSize(1500)
 
+        self.__origConsoleMouseEvent=self.__cConsole.mousePressEvent
+        self.__cConsole.mousePressEvent=self.__mouseClick
+
         self.setWidget(self.__widget)
 
+    def __mouseClick(self, event):
+        """Clicked on console"""
+        if self.__origConsoleMouseEvent:
+            self.__origConsoleMouseEvent(event)
+
+        cursor=self.__cConsole.cursorForPosition(event.pos())
+        if cursor:
+            data=cursor.block().userData()
+            if data is None:
+                return
+            data=data.data('position')
+            if not data is None:
+                self.sourceRefClicked.emit('', data['from']['column'], data['from']['row'], data['to']['column'], data['to']['row'] )
 
     def option(self, optionId):
         """Return current option value
@@ -120,6 +137,18 @@ class BSDockWidgetConsoleOutput(QDockWidget):
             self.__tbFilter.setOption(optionId, value)
 
 
+    def console(self):
+        """Return console instance"""
+        return self.__cConsole
+
+    def append(self, text, type=WConsoleType.NORMAL, data=None, cReturn=True):
+        """Append `text` to console, using given `type`
+        If `cReturn` is True, apply a carriage return
+        """
+        if cReturn==True:
+            self.__cConsole.appendLine(text, type, data)
+        else:
+            self.__cConsole.append(text)
 
 
 class BSConsoleTBar(QWidget):
@@ -165,21 +194,20 @@ class BSConsoleTBar(QWidget):
         self.__actionFilterTypeWarning.setCheckable(True)
         self.__actionFilterTypeWarning.setChecked(True)
         self.__actionFilterTypeWarning.toggled.connect(self.__filterOptionModified)
-        self.__actionFilterTypeInfo=QAction(i18n('Show informations'), self)
+        self.__actionFilterTypeInfo=QAction(i18n('Show verbose'), self)
         self.__actionFilterTypeInfo.setCheckable(True)
         self.__actionFilterTypeInfo.setChecked(True)
         self.__actionFilterTypeInfo.toggled.connect(self.__filterOptionModified)
-        #self.__actionFilterTypeValid=QAction(i18n('Show valid'), self)
-        #self.__actionFilterTypeValid.setCheckable(True)
-        #self.__actionFilterTypeValid.setChecked(True)
-        #self.__actionFilterTypeValid.toggled.connect(self.__filterOptionModified)
+        self.__actionFilterTypeValid=QAction(i18n('Show informations'), self)
+        self.__actionFilterTypeValid.setCheckable(True)
+        self.__actionFilterTypeValid.setChecked(True)
+        self.__actionFilterTypeValid.toggled.connect(self.__filterOptionModified)
 
         self.__menuFilterType = QMenu(self.__btFilterType)
         self.__menuFilterType.addAction(self.__actionFilterTypeError)
         self.__menuFilterType.addAction(self.__actionFilterTypeWarning)
         self.__menuFilterType.addAction(self.__actionFilterTypeInfo)
-        #self.__menuFilterType.addAction(self.__actionFilterTypeValid)
-        #self.__menuFilterType.aboutToShow.connect(self.__updateMenuFilterType)
+        self.__menuFilterType.addAction(self.__actionFilterTypeValid)
         self.__btFilterType.setMenu(self.__menuFilterType)
 
         self.setLayout(self.__layout)
@@ -235,6 +263,8 @@ class BSConsoleTBar(QWidget):
             filtered.append(WConsoleType.WARNING)
         if not self.__actionFilterTypeInfo.isChecked():
             filtered.append(WConsoleType.INFO)
+        if not self.__actionFilterTypeValid.isChecked():
+            filtered.append(WConsoleType.VALID)
         self.__console.setOptionFilteredTypes(filtered)
 
 
@@ -277,6 +307,8 @@ class BSConsoleTBar(QWidget):
                 returned.append(WConsoleType.WARNING)
             if self.__actionFilterTypeInfo.isChecked():
                 returned.append(WConsoleType.INFO)
+            if self.__actionFilterTypeValid.isChecked():
+                returned.append(WConsoleType.VALID)
             return returned
 
     def setOption(self, optionId, value):
@@ -328,3 +360,4 @@ class BSConsoleTBar(QWidget):
             self.__actionFilterTypeError.setChecked(WConsoleType.ERROR in value)
             self.__actionFilterTypeWarning.setChecked(WConsoleType.WARNING in value)
             self.__actionFilterTypeInfo.setChecked(WConsoleType.INFO in value)
+            self.__actionFilterTypeValid.setChecked(WConsoleType.VALID in value)

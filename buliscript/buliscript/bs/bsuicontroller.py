@@ -49,6 +49,11 @@ from .bsdwconsole import (
     )
 from .bshistory import BSHistory
 from .bsinterpreter import BSInterpreter
+from .bsinterpreter import (
+        BSInterpreter,
+        EInterpreterInternalError,
+        EInterpreter
+    )
 from .bslanguagedef import BSLanguageDef
 from .bsmainwindow import BSMainWindow
 from .bssystray import BSSysTray
@@ -198,6 +203,9 @@ class BSUIController(QObject):
         self.__dwConsoleOutputAction.setText(i18n("Console output"))
         self.__window.menuViewScript.addAction(self.__dwConsoleOutputAction)
         self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwConsoleOutput)
+        # redirect interpeter output to console docker
+        self.__interpreter.output.connect(self.__dwConsoleOutput.append)
+        self.__dwConsoleOutput.sourceRefClicked.connect(lambda src,colS,rowS,colE,rowE: self.commandScriptGoToLine(rowS))
 
         self.__window.setWindowTitle(self.__bsTitle)
         self.__window.show()
@@ -580,9 +588,11 @@ class BSUIController(QObject):
         # don't close floating dockers
         self.__dwLangageReference.close()
         self.__dwLangageQuickHelp.close()
+        self.__dwConsoleOutput.close()
 
         self.__dwLangageReference=None
         self.__dwLangageQuickHelp=None
+        self.__dwConsoleOutput=None
 
         self.__bsStarted = False
         self.bsWindowClosed.emit()
@@ -833,24 +843,48 @@ class BSUIController(QObject):
 
     def commandScriptExecute(self):
         """Execute script"""
+        def fmtAstLocation(ast):
+            if ast:
+                position=ast.position()['from']['row']
+
+                if position>0:
+                    return f"#w#, *line*# #y#***{position}***#"
+
+            return ""
+
         if self.__currentDocument:
             self.__interpreter.setOptionVerboseMode(True)
 
             try:
                 returned=self.__interpreter.setScript(self.__currentDocument.codeEditor().toPlainText())
+            except EInterpreterInternalError as e:
+                self.__interpreter.error(f" *##lr#**INTERNAL ERROR**:# #r#*{str(e)}*#{fmtAstLocation(e.ast())}\n**Traceback:**\n{traceback.format_exc()}", e.ast())
+                return
+            except EInterpreter as e:
+                if e.errorLevel()==EInterpreter.ERROR_LEVEL_STOP:
+                    self.__interpreter.valid(f" *##lg#**SCRIPT EXECUTION STOPPED**:# {str(e)}", e.ast())
+                else:
+                    self.__interpreter.error(f" *##lr#**SCRIPT EXECUTION IN ERROR**:# #r#*{str(e)}", e.ast())
+                    Debug.print('traceback:', traceback.format_exc())
+                return
             except Exception as e:
-                print("commandScriptExecute/Error", str(e))
-                print('traceback:', traceback.format_exc())
+                self.__interpreter.error(f" *##lr#**PYTHON ERROR**:# #r#*{str(e)}\n *##lr#**Traceback:*\n{traceback.format_exc()}")
                 return
 
             try:
                 returned=self.__interpreter.execute()
-            except Exception as e:
-                print("commandScriptExecute/Error", str(e))
-                print('traceback:', traceback.format_exc())
+            except EInterpreterInternalError as e:
+                self.__interpreter.error(f" *##lr#**INTERNAL ERROR**:# #r#*{str(e)}\n *##lr#**Traceback:**\n{traceback.format_exc()}", e.ast())
                 return
-
-            print('commandScriptExecute', returned)
+            except EInterpreter as e:
+                if e.errorLevel()==EInterpreter.ERROR_LEVEL_STOP:
+                    self.__interpreter.valid(f" *##lg#**SCRIPT EXECUTION STOPPED**:# #g#*{str(e)}", e.ast())
+                else:
+                    self.__interpreter.error(f" *##lr#**SCRIPT EXECUTION IN ERROR**:# #r#*{str(e)}", e.ast())
+                return
+            except Exception as e:
+                self.__interpreter.error(f" *##lr#**PYTHON ERROR**:# #r#*{str(e)}\n *##lr#**Traceback:**\n{traceback.format_exc()}")
+                return
 
 
     def commandScriptBreakPause(self):
@@ -860,6 +894,11 @@ class BSUIController(QObject):
     def commandScriptStop(self):
         """Stop script execution"""
         print("TODO: implement commandScriptStop")
+
+    def commandScriptGoToLine(self, lineNumber, document=None):
+        """Scroll to line number"""
+        if self.__currentDocument:
+            self.__currentDocument.codeEditor().scrollToLine(lineNumber)
 
 
     def commandLanguageInsert(self, text, setFocus=True):
@@ -1050,6 +1089,18 @@ class BSUIController(QObject):
             else:
                 self.__dwLangageReference.hide()
 
+    def commandViewDockConsoleOutputVisible(self, visible=None):
+        """Display/Hide Console output docker"""
+        if visible is None:
+            visible = self.__dwConsoleOutputAction.isChecked()
+        elif not isinstance(visible, bool):
+            raise EInvalidValue('Given `visible` must be a <bool>')
+
+        if self.__dwConsoleOutput:
+            if visible:
+                self.__dwConsoleOutput.show()
+            else:
+                self.__dwConsoleOutput.hide()
 
 
     def commandDockLangageQuickHelpSet(self, keyword):
