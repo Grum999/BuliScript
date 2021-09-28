@@ -109,12 +109,12 @@ class Parser:
             else:
                 # All tokens have not been parsed, that's not a normal case
                 self.__ast.setStatus(ASTStatus.INVALID)
-                self.__errors.append(ParserError(i18n("Some tokens have not been parsed"), self.__tokens.value()))
+                self.__errors.append(ParserError(i18n("Unknown syntax"), self.__tokens.value()))
 
         # result errors list
         self.__errors=[]
 
-        # intialise empty AST
+        # initialise empty AST
         self.__ast=ASTItem(ASTSpecialItemType.ROOT)
 
         # rewind tokens list to first position
@@ -122,7 +122,8 @@ class Parser:
 
         # start to check grammar rules for tokens
         checkGrammarRule(self.__grammarRules.idFirst())
-        #Debug.print(self.__ast)
+        #print(self.__tokens)
+        #print(self.__ast)
 
 
     def grammarRules(self):
@@ -264,6 +265,15 @@ class ASTItem:
         self.__status=ASTStatus.NOMATCH
         self.__grammarRule=grammarRule
 
+        self.__position={
+                'from': {'column': 0,
+                         'row': 0
+                    },
+                'to': {'column': 0,
+                       'row': 0
+                    }
+            }
+
         self.__checkOperatorPrecedenceEnabled=True
 
     def __repr__(self):
@@ -336,6 +346,43 @@ class ASTItem:
         if isinstance(item, Token):
             # in all case, a token is added to token list
             self.__tokens.append(item)
+
+            if len(self.__tokens)>0:
+                lastToken=self.__tokens[-1]
+                while lastToken.type()==TokenType.DEDENT:
+                    lastToken=lastToken.previous()
+
+                position={'from': {'column': self.__tokens[0].column(),
+                                 'row': self.__tokens[0].row()
+                            },
+                        'to': {'column': lastToken.column() + lastToken.length(),
+                               'row': lastToken.row()
+                            }
+                    }
+            else:
+                position={'from': {'column': 0,
+                                 'row': 0
+                            },
+                        'to': {'column': 0,
+                               'row': 0
+                            }
+                    }
+        elif isinstance(item, ASTItem):
+            position=item.position()
+
+        if position['from']['row']>0:
+            if position['from']['row']<self.__position['from']['row'] or self.__position['from']['row']==0:
+                self.__position['from']['row']=position['from']['row']
+                self.__position['from']['column']=position['from']['column']
+            elif position['from']['row']==self.__position['from']['row'] and position['from']['column']<self.__position['from']['column']:
+                    self.__position['from']['column']=position['from']['column']
+        if position['to']['row']>0:
+            if position['to']['row']>self.__position['to']['row']:
+                self.__position['to']['row']=position['to']['row']
+                self.__position['to']['column']=position['to']['column']
+            elif position['to']['row']==self.__position['to']['row'] and position['to']['column']>self.__position['to']['column']:
+                    self.__position['to']['column']=position['to']['column']
+
 
     def nodes(self):
         """Return nodes list"""
@@ -583,23 +630,7 @@ class ASTItem:
 
     def position(self):
         """Return position column/rows of starting/ending tokens for current AST"""
-        if len(self.__tokens)>0:
-            return {'from': {'column': self.__tokens[0].column(),
-                             'row': self.__tokens[0].row()
-                        },
-                    'to': {'column': self.__tokens[-1].column() + self.__tokens[-1].length(),
-                           'row': self.__tokens[0].row()
-                        }
-                }
-        else:
-            return {'from': {'column': 0,
-                             'row': 0
-                        },
-                    'to': {'column': 0,
-                           'row': 0
-                        }
-                }
-
+        return self.__position
 
 
 class GROperatorPrecedence:
