@@ -98,7 +98,9 @@ class BSSysTray(object):
         # --------
         # Open BS  | Show BS            ==> Open is not yet opened, otherwise show
         # Quit BS
-        print("__displayContextMenu()")
+
+        #print("__displayContextMenu()")
+        pass
 
 
     def __displayBuliScript(self):
