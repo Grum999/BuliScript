@@ -31,6 +31,7 @@ from PyQt5.QtCore import (
 
 
 from buliscript.pktk.modules.imgutils import buildIcon
+from buliscript.pktk.widgets.wseparator import WVLine
 from buliscript.pktk.widgets.wconsole import (
         WConsole,
         WConsoleType
@@ -56,10 +57,12 @@ class BSDockWidgetConsoleOutput(QDockWidget):
     OPTION_BTN_WHOLEWORD =           0b0000000000000100
     OPTION_BTN_BACKWARD =            0b0000000000001000
     OPTION_BTN_HIGHLIGHT =           0b0000000000010000
+    # available bits:                       <---->
     OPTION_BTN_BUTTONSHOW =          0b1000000000000000
     OPTION_TXT_SEARCH =              0b0100000000000000
     OPTION_FILTER_TYPES =            0b0010000000000000
     OPTION_BUFFER_SIZE =             0b0001000000000000
+    OPTION_AUTOCLEAR =               0b0000100000000000
 
     def __init__(self, parent, name='Output'):
         super(BSDockWidgetConsoleOutput, self).__init__(name, parent)
@@ -110,6 +113,7 @@ class BSDockWidgetConsoleOutput(QDockWidget):
             BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH                     String
             BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES                   List
             BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE                    Integer
+            BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR                      Boolean
         """
         if optionId&BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE==BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE:
             return self.__cConsole.optionBufferSize()
@@ -130,6 +134,7 @@ class BSDockWidgetConsoleOutput(QDockWidget):
             BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH                     String
             BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES                   List
             BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE                    Integer
+            BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR                      Boolean
         """
         if optionId&BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE==BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE:
             self.__cConsole.setOptionBufferSize(value)
@@ -170,6 +175,8 @@ class BSConsoleTBar(QWidget):
         self.__btClear.setAutoRaise(True)
         self.__btClear.setIcon(buildIcon('pktk:clear'))
         self.__btClear.setToolTip(i18n('Clear console output'))
+        self.__btClear.setStatusTip(i18n('When checked, clear console output automatically before script execution'))
+        self.__btClear.setPopupMode(QToolButton.MenuButtonPopup)
         self.__btClear.clicked.connect(self.__console.clear)
 
         self.__siSearch=WSearchInput(WSearchInput.OPTION_ALL_BUTTONS|WSearchInput.OPTION_STATE_BUTTONSHOW, self)
@@ -181,6 +188,7 @@ class BSConsoleTBar(QWidget):
         self.__currentOptions=0
 
         self.__layout.addWidget(self.__btClear)
+        self.__layout.addWidget(WVLine(self))
         self.__layout.addWidget(self.__btFilterType)
         self.__layout.addWidget(self.__siSearch)
         self.__layout.setContentsMargins(0,0,0,0)
@@ -209,6 +217,16 @@ class BSConsoleTBar(QWidget):
         self.__menuFilterType.addAction(self.__actionFilterTypeInfo)
         self.__menuFilterType.addAction(self.__actionFilterTypeValid)
         self.__btFilterType.setMenu(self.__menuFilterType)
+
+        # -- build menu for clear button
+        self.__actionAutoClear=QAction(i18n('Auto clear'), self)
+        self.__actionAutoClear.setCheckable(True)
+        self.__actionAutoClear.setChecked(True)
+
+        self.__menuClearOptions = QMenu(self.__btClear)
+        self.__menuClearOptions.addAction(self.__actionAutoClear)
+        self.__btClear.setMenu(self.__menuClearOptions)
+
 
         self.setLayout(self.__layout)
 
@@ -267,7 +285,6 @@ class BSConsoleTBar(QWidget):
             filtered.append(WConsoleType.VALID)
         self.__console.setOptionFilteredTypes(filtered)
 
-
     def search(self):
         """Return current applied filter"""
         return self.__search
@@ -284,6 +301,7 @@ class BSConsoleTBar(QWidget):
             BSDockWidgetConsoleOutput.OPTION_BTN_BUTTONSHOW                 Boolean
             BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH                     String
             BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES                   List
+            BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR                      Boolean
         """
         if optionId&BSDockWidgetConsoleOutput.OPTION_BTN_REGEX==BSDockWidgetConsoleOutput.OPTION_BTN_REGEX:
             return self.__siSearch.options()&SearchOptions.REGEX==SearchOptions.REGEX
@@ -310,6 +328,8 @@ class BSConsoleTBar(QWidget):
             if self.__actionFilterTypeValid.isChecked():
                 returned.append(WConsoleType.VALID)
             return returned
+        elif optionId&BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR==BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR:
+            return self.__actionAutoClear.isChecked()
 
     def setOption(self, optionId, value):
         """Set option value
@@ -323,6 +343,7 @@ class BSConsoleTBar(QWidget):
             BSDockWidgetConsoleOutput.OPTION_BTN_BUTTONSHOW                 Boolean
             BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH                     String
             BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES                   List
+            BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR                      Boolean
         """
         if optionId&BSDockWidgetConsoleOutput.OPTION_BTN_REGEX==BSDockWidgetConsoleOutput.OPTION_BTN_REGEX:
             if value:
@@ -361,3 +382,5 @@ class BSConsoleTBar(QWidget):
             self.__actionFilterTypeWarning.setChecked(WConsoleType.WARNING in value)
             self.__actionFilterTypeInfo.setChecked(WConsoleType.INFO in value)
             self.__actionFilterTypeValid.setChecked(WConsoleType.VALID in value)
+        elif optionId&BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR==BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR:
+            self.__actionAutoClear.setChecked(value)

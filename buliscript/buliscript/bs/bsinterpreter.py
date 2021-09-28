@@ -438,7 +438,7 @@ class BSInterpreter(QObject):
         #self.__currentLayer=self.__currentDocument.activeNode()
         #self.__currentLayerBounds=self.__currentLayer.bounds()
 
-        self.valid("**Start script execution**")
+        self.valid(f"**Start script execution**# #w#[##lw#*{time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}*##w#]")
         if self.__astRoot.id()==ASTSpecialItemType.ROOT:
             startTime=time.time()
             try:

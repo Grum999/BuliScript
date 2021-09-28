@@ -289,7 +289,8 @@ class BSUIController(QObject):
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_BACKWARD, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED))
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BTN_HIGHLIGHT, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED))
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT))
-        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES, [WConsoleType.fromStr(type) for type in BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES)])
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES, [WConsoleType.fromStr(type) for type in BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_OPTIONS_FILTER_TYPES)])
+        self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR, BSSettings.get(BSSettingsKey.SESSION_DOCKER_CONSOLE_OPTIONS_AUTOCLEAR))
 
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE, BSSettings.get(BSSettingsKey.CONFIG_DOCKER_CONSOLE_BUFFERSIZE))
 
@@ -587,7 +588,8 @@ class BSUIController(QObject):
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_BACKWARD))
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_BTN_HIGHLIGHT))
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_TXT_SEARCH))
-            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES, [WConsoleType.toStr(type) for type in self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES)])
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_OPTIONS_FILTER_TYPES, [WConsoleType.toStr(type) for type in self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_FILTER_TYPES)])
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_CONSOLE_OPTIONS_AUTOCLEAR, self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR))
 
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED, self.__dwColorPicker.options())
 
@@ -872,7 +874,9 @@ class BSUIController(QObject):
             return ""
 
         if self.__currentDocument:
-            self.__interpreter.setOptionVerboseMode(True)
+            #self.__interpreter.setOptionVerboseMode(True)
+            if self.__dwConsoleOutput and self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR):
+                self.__dwConsoleOutput.console().clear()
 
             try:
                 returned=self.__interpreter.setScript(self.__currentDocument.codeEditor().toPlainText())

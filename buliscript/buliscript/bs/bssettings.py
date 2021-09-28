@@ -108,7 +108,8 @@ class BSSettingsKey(SettingsKey):
     SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED =        'session.dockers.console.search.buttons.backward.checked'
     SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED =    'session.dockers.console.search.buttons.highlightAll.checked'
     SESSION_DOCKER_CONSOLE_SEARCH_TEXT =                        'session.dockers.console.search.text'
-    SESSION_DOCKER_CONSOLE_FILTER_TYPES =                       'session.dockers.console.filter.types'
+    SESSION_DOCKER_CONSOLE_OPTIONS_AUTOCLEAR =                  'session.dockers.console.options.autoClear'
+    SESSION_DOCKER_CONSOLE_OPTIONS_FILTER_TYPES =               'session.dockers.console.options.filter.types'
 
     # docker "color picker"
     SESSION_DOCKER_COLORPICKER_MENU_SELECTED =                  'session.dockers.colorPicker.menu.selected'
@@ -184,7 +185,8 @@ class BSSettings(Settings):
             SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_BACKWARD_CHECKED,  False,                    SettingsFmt(bool)),
             SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_BTN_HIGHLIGHTALL_CHECKED, False,                 SettingsFmt(bool)),
             SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_SEARCH_TEXT,                  '',                       SettingsFmt(str)),
-            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_FILTER_TYPES,                 ['error','warning','info','valid'],
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_OPTIONS_AUTOCLEAR,            True,                     SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_CONSOLE_OPTIONS_FILTER_TYPES,         ['error','warning','info','valid'],
                                                                                                                       SettingsFmt(list, ['error','warning','info','valid'])),
 
             SettingsRule(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED,            ['colorRGB', 'colorHSV', 'colorAlpha', 'colorCssRGB', 'colorWheel', 'colorPreview'],
