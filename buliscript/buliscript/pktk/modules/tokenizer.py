@@ -1019,8 +1019,8 @@ class Tokenizer(object):
                                         previousToken=tokenIndent
 
                                 elif previousIndent>token.indent():
-                                    # token indent is greater than previous indent value
-                                    # need to add INDENT token
+                                    # token indent is lower than previous indent value
+                                    # need to add DEDENT token
                                     nbIndent, nbWrongIndent=divmod(previousIndent - token.indent(), indent)
 
                                     for numIndent in range(nbIndent):
