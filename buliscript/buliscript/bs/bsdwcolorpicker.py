@@ -27,9 +27,10 @@ from PyQt5.QtCore import (
 
 
 from buliscript.pktk.widgets.wcolorselector import WColorPicker
+from buliscript.pktk.widgets.wdockwidget import WDockWidget
 
 
-class BSDockWidgetColorPicker(QDockWidget):
+class BSDockWidgetColorPicker(WDockWidget):
     """A dock widget to display color selector, to insert/update a color code in script"""
     apply=Signal(QColor, int)       # upsert button cliked, apply color according to mode
 
@@ -69,6 +70,7 @@ class BSDockWidgetColorPicker(QDockWidget):
         self.__layout.addWidget(self.__cColorPicker)
         self.__layout.addWidget(self.__btnUpsert)
 
+        self.updateStatus()
         self.setWidget(self.__widget)
 
     def __clicked(self):

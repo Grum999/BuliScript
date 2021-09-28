@@ -31,6 +31,7 @@ from PyQt5.QtCore import (
 
 
 from buliscript.pktk.modules.imgutils import buildIcon
+from buliscript.pktk.widgets.wdockwidget import WDockWidget
 from buliscript.pktk.widgets.wseparator import WVLine
 from buliscript.pktk.widgets.wconsole import (
         WConsole,
@@ -42,7 +43,7 @@ from buliscript.pktk.widgets.wsearchinput import (
     )
 
 
-class BSDockWidgetConsoleOutput(QDockWidget):
+class BSDockWidgetConsoleOutput(WDockWidget):
     """A dock widget to display reference language
 
     Docker is made of:

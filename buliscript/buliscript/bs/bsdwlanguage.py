@@ -30,9 +30,10 @@ from PyQt5.QtCore import (
 
 
 from buliscript.pktk.modules.imgutils import buildIcon
+from buliscript.pktk.widgets.wdockwidget import WDockWidget
 
 
-class BSDockWidgetLangageQuickHelp(QDockWidget):
+class BSDockWidgetLangageQuickHelp(WDockWidget):
     """A dock widget to display quick help about language
 
     Docker is made of:
@@ -145,7 +146,7 @@ class BSDockWidgetLangageQuickHelp(QDockWidget):
 
 
 
-class BSDockWidgetLangageReference(QDockWidget):
+class BSDockWidgetLangageReference(WDockWidget):
     """A dock widget to display reference language
 
     Docker is made of:
