@@ -93,6 +93,23 @@ class WConsole(QPlainTextEdit):
 
     __TYPE_COLOR_ALPHA=30
 
+    @staticmethod
+    def escape(text):
+        """Escape characters used to format data in console:
+            '*'
+            '#'
+
+        """
+        return re.sub(r'([\*\$#])', r'$\1', text)
+
+    def unescape(text):
+        """unescape characters used to format data in console:
+            '*'
+            '#'
+        """
+        return re.sub(r'(?:\$([\*\$#]))', r'\1', text)
+
+
     def __init__(self, parent=None):
         super(WConsole, self).__init__(parent)
 
@@ -230,11 +247,17 @@ class WConsole(QPlainTextEdit):
             else:
                 return f'<span style="color: {color}">{regResult.groups()[1]}</span>'
 
+        def asBold(regResult):
+            return f'<b>{WConsole.unescape(regResult.groups()[0])}</b>'
+
+        def asItalic(regResult):
+            return f'<i>{WConsole.unescape(regResult.groups()[0])}</i>'
+
         def formatText(text):
-            text=re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', text)
-            text=re.sub(r'\*([^*]+)\*', r'<i>\1</i>', text)
-            text=re.sub(r'#(l?[rgbcmykw]|[A-F0-9]{6})#([^#]+)#', replaceColor, text)
-            return text
+            text=re.sub(r'(?<!\$)\*\*([^*]+)(?<!\$)\*\*', r'<b>\1</b>', text)
+            text=re.sub(r'(?<!\$)\*([^*]+)(?<!\$)\*', r'<i>\1</i>', text)
+            text=re.sub(r'(?<!\$)#(l?[rgbcmykw]|[A-F0-9]{6})(?<!\$)#([^#]+)(?<!\$)#', replaceColor, text)
+            return WConsole.unescape(text)
 
         texts=text.split("\n")
         returned=[]
@@ -278,7 +301,7 @@ class WConsole(QPlainTextEdit):
 
             blockData=block.userData()
             if blockData:
-                colorLevel=block.userData().value()
+                colorLevel=block.userData().type()
 
             block.setVisible(not self.__isTypeFiltered(colorLevel))
             block = block.next()
@@ -334,7 +357,7 @@ class WConsole(QPlainTextEdit):
 
                 blockData=block.userData()
                 if blockData:
-                    colorLevel=block.userData().value()
+                    colorLevel=block.userData().type()
 
                 if colorLevel!=WConsoleType.NORMAL:
                     color=QColor(self.__typeColors[colorLevel])
@@ -395,7 +418,7 @@ class WConsole(QPlainTextEdit):
 
                 blockData=block.userData()
                 if blockData:
-                    colorLevel=block.userData().value()
+                    colorLevel=block.userData().type()
 
                 if colorLevel!=WConsoleType.NORMAL:
                     color=QColor(self.__typeColors[colorLevel])
@@ -527,7 +550,7 @@ class WConsole(QPlainTextEdit):
     # ---
 
 
-    def appendLine(self, text, type=WConsoleType.NORMAL):
+    def appendLine(self, text, type=WConsoleType.NORMAL, data=None):
         """Append a new line to console
 
         Given `style` is a combination of WConsoleTextStyle
@@ -541,7 +564,7 @@ class WConsole(QPlainTextEdit):
 
             lastBlock=self.document().lastBlock()
             if lastBlock:
-                lastBlock.setUserData(WConsoleUserData(type))
+                lastBlock.setUserData(WConsoleUserData(type, data))
                 lastBlock.setVisible(not self.__isTypeFiltered(type))
 
 
@@ -552,7 +575,7 @@ class WConsole(QPlainTextEdit):
 
         for text in texts:
             self.moveCursor(QTextCursor.End)
-            self.textCursor().insertHtml(text, style)
+            self.textCursor().insertHtml(text)
             self.moveCursor(QTextCursor.End)
 
 
@@ -566,12 +589,21 @@ class WConsole(QPlainTextEdit):
 
 class WConsoleUserData(QTextBlockUserData):
 
-    def __init__(self, value):
+    def __init__(self, type=None, data={}):
         QTextBlockUserData.__init__(self)
-        self.__value=value
+        self.__type=type
+        self.__data=data
 
-    def value(self):
-        return self.__value
+    def type(self):
+        return self.__type
+
+    def data(self, key=None):
+        if key is None or not isinstance(self.__data, dict):
+            return self.__data
+        elif key in self.__data:
+            return self.__data[key]
+        else:
+            return None
 
 
 class WConsoleGutterArea(QWidget):
