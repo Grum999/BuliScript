@@ -1,4 +1,4 @@
-# ------------------------------------------------------------------------------
+#---------------------------------------------------------------------
 # A testing script for BuliScript language
 #
 # This script doesn't do anything, it can be used to test and validate:
@@ -22,19 +22,25 @@ import macro from "test.bs"
 import macro from string.upper("test") + :bsExt
 
 import image from "test.png" as "image test"
-import image from list.pop(["test.png"]) as "image test"
+import image from list.index(["test.png"]) as "image test"
 
 # ------------------------------------------------------------------------------
 # flow define macro
 # ------------------------------------------------------------------------------
 define macro "macro test 1" as
-    print "test"
+    print ">> Execution of macro test 1"
+    return 0
 
 define macro "macro test 2" with parameters :v1 as
-    print "test" :v1
+    print ">> Execution of macro test 2" :v1
+    set variable :v1 = :v1 * 2
+    set global variable :vg.test = :v1 / 2
+    return :v1
 
 define macro "macro test 3" with parameters :v1 :v2 as
-    print "test" :v1 :v2
+    print ">> Execution of macro test 3" :v1 :v2
+    set variable :v1 = :v1 * :v2
+    return :v1
 
 
     # test
@@ -51,9 +57,9 @@ as
 # ------------------------------------------------------------------------------
 # flow set variables
 # ------------------------------------------------------------------------------
-set variable :color = #ffcc66
+set variable :color = #4c1e5051
 
-set variable :unitM = PX
+set variable :unitM = MM
 set variable :unitR = DEGREE
 
 set variable :numInt = 10
@@ -66,8 +72,8 @@ set variable :penJoin = BEVEL
 set variable :fillRule = EVEN
 
 set variable :text = "Test"
-set variable :text = "Test"
-#"texte" + string.upper("toto")
+set variable :text = "Test "
+                     "texte " + string.upper("toto")
 
 set variable :boolean = ON
 
@@ -84,6 +90,10 @@ set variable :blending = SOURCE_OVER
 
 set variable :list = [1,2,3,4]
 
+set variable :testUiDialog = OFF
+
+set global variable :vg.test = 0
+
 # ------------------------------------------------------------------------------
 # set unit
 # ------------------------------------------------------------------------------
@@ -91,12 +101,12 @@ set unit canvas PX
 set unit canvas PCT
 set unit canvas MM
 set unit canvas INCH
-set unit canvas list.pop([PX])
+set unit canvas list.index([PX], 1)
 set unit canvas :unitM
 
 set unit rotation DEGREE
 set unit rotation RADIAN
-set unit rotation list.pop([RADIAN])
+set unit rotation list.index([RADIAN], 1)
 set unit rotation :unitR
 
 # ------------------------------------------------------------------------------
@@ -104,54 +114,54 @@ set unit rotation :unitR
 # ------------------------------------------------------------------------------
 set pen color #ffcc99
 set pen color color.hsl(1.0,1.0,1.0)
-set pen color list.pop([#ffcc88])
+set pen color list.index([#493fa7], 1)
 set pen color :color
 
 set pen size 10
 set pen size :numInt PX
 set pen size :numInt+2 MM
 set pen size (:numInt+2)/:numDec INCH
-set pen size math.round(4.56789, 1) list.pop([PX])
-set pen size list.pop([10]) :unitM
+set pen size math.round(4.56789, 1) list.index([PX], 1)
+set pen size list.index([10], 1) :unitM
 
 set pen style SOLID
 set pen style DASHDOT
 set pen style DASH
 set pen style DOT
-set pen style list.pop([SOLID])
+set pen style list.index([SOLID], 1)
 set pen style :penStyle
 
 set pen cap SQUARE
 set pen cap FLAT
 set pen cap ROUNDCAP
-set pen cap list.pop([SQUARE])
+set pen cap list.index([SQUARE], 1)
 set pen cap :penCap
 
 set pen join BEVEL
 set pen join MITTER
 set pen join ROUNDJOIN
-set pen join list.pop([BEVEL])
+set pen join list.index([BEVEL], 1)
 set pen join :penJoin
 
 set pen opacity 1.0
 set pen opacity 255
 set pen opacity :numInt
-set pen opacity :numInt+2
+set pen opacity :numInt+250
 set pen opacity (:numInt+2)/:numDec
 set pen opacity math.round(4.56789, 1)
-set pen opacity list.pop([10])
+set pen opacity list.index([10], 1)
 
 # ------------------------------------------------------------------------------
 # set fill
 # ------------------------------------------------------------------------------
 set fill color #ffcc99
 set fill color color.hsl(1.0,1.0,1.0)
-set fill color list.pop([#ffcc88])
+set fill color list.index([#ffcc88], 1)
 set fill color :color
 
 set fill rule EVEN
 set fill rule WINDING
-set fill rule list.pop([EVEN])
+set fill rule list.index([EVEN], 1)
 set fill rule :fillRule
 
 set fill opacity 1.0
@@ -160,14 +170,14 @@ set fill opacity :numInt
 set fill opacity :numInt+2
 set fill opacity (:numInt+2)/:numDec
 set fill opacity math.round(4.56789, 1)
-set fill opacity list.pop([10])
+set fill opacity list.index([10], 1)
 
 # ------------------------------------------------------------------------------
 # set text
 # ------------------------------------------------------------------------------
 set text color #ffcc99
 set text color color.hsl(1.0,1.0,1.0)
-set text color list.pop([#ffcc88])
+set text color list.index([#ffcc88], 1)
 set text color :color
 
 set text opacity 1.0
@@ -176,7 +186,7 @@ set text opacity :numInt
 set text opacity :numInt+2
 set text opacity (:numInt+2)/:numDec
 set text opacity math.round(4.56789, 1)
-set text opacity list.pop([10])
+set text opacity list.index([10], 1)
 
 set text font "monospace"
 set text font "mono" "space"
@@ -189,8 +199,8 @@ set text size 10
 set text size :numInt PX
 set text size :numInt+2 MM
 set text size (:numInt+2)/:numDec INCH
-set text size math.round(4.56789, 1) list.pop([PX])
-set text size list.pop([10]) :unitM
+set text size math.round(4.56789, 1) list.index([PX], 1)
+set text size list.index([10], 1) :unitM
 
 set text bold ON
 set text bold OFF
@@ -198,7 +208,7 @@ set text bold :boolean
 set text bold not :boolean
 set text bold not (:boolean and ON)
 set text bold :numInt > 5
-set text bold list.pop([OFF])
+set text bold list.index([OFF], 1)
 set text bold boolean.isString(:text)
 
 set text italic ON
@@ -207,7 +217,7 @@ set text italic :boolean
 set text italic not :boolean
 set text italic not (:boolean and ON)
 set text italic :numInt > 5
-set text italic list.pop([OFF])
+set text italic list.index([OFF], 1)
 set text italic boolean.isString(:text)
 
 set text outline ON
@@ -216,33 +226,33 @@ set text outline :boolean
 set text outline not :boolean
 set text outline not (:boolean and ON)
 set text outline :numInt > 5
-set text outline list.pop([OFF])
+set text outline list.index([OFF], 1)
 set text outline boolean.isString(:text)
 
 set text letter spacing 10
 set text letter spacing :numInt PX
 set text letter spacing :numInt+2 MM
 set text letter spacing (:numInt+2)/:numDec INCH
-set text letter spacing math.round(4.56789, 1) list.pop([PX])
-set text letter spacing list.pop([10]) :unitM
+set text letter spacing math.round(4.56789, 1) list.index([PX], 1)
+set text letter spacing list.index([10], 1) :unitM
 
 set text stretch 10
 set text stretch :numInt
 set text stretch :numInt+2
 set text stretch (:numInt+2)/:numDec
 set text stretch math.round(4.56789, 1)
-set text stretch list.pop([10])
+set text stretch list.index([10], 1)
 
 set text horizontal alignment LEFT
 set text horizontal alignment CENTER
 set text horizontal alignment RIGHT
-set text horizontal alignment list.pop([LEFT])
+set text horizontal alignment list.index([LEFT], 1)
 set text horizontal alignment :halign
 
 set text vertical alignment TOP
 set text vertical alignment MIDDLE
 set text vertical alignment BOTTOM
-set text vertical alignment list.pop([TOP])
+set text vertical alignment list.index([TOP], 1)
 set text vertical alignment :valign
 
 # ------------------------------------------------------------------------------
@@ -254,77 +264,77 @@ set draw antialiasing :boolean
 set draw antialiasing not :boolean
 set draw antialiasing not (:boolean and ON)
 set draw antialiasing :numInt > 5
-set draw antialiasing list.pop([OFF])
+set draw antialiasing list.index([OFF], 1)
 set draw antialiasing boolean.isString(:text)
 
-set draw blending NORMAL
-set draw blending SOURCE_OVER
-set draw blending DESTINATION_OVER
-set draw blending DESTINATION_CLEAR
-set draw blending SOURCE_IN
-set draw blending SOURCE_OUT
-set draw blending DESTINATION_IN
-set draw blending DESTINATION_OUT
-set draw blending SOURCE_ATOP
-set draw blending DESTINATION_ATOP
-set draw blending EXCLUSIVE_OR
-set draw blending PLUS
-set draw blending MULTIPLY
-set draw blending SCREEN
-set draw blending OVERLAY
-set draw blending DARKEN
-set draw blending LIGHTEN
-set draw blending COLORDODGE
-set draw blending COLORBURN
-set draw blending HARD_LIGHT
-set draw blending SOFT_LIGHT
-set draw blending DIFFERENCE
-set draw blending EXCLUSION
-set draw blending BITWISE_S_OR_D
-set draw blending BITWISE_S_AND_D
-set draw blending BITWISE_S_XOR_D
-set draw blending BITWISE_S_NOR_D
-set draw blending BITWISE_S_NAND_D
-set draw blending BITWISE_NS_XOR_D
-set draw blending BITWISE_S_NOT
-set draw blending BITWISE_NS_AND_D
-set draw blending BITWISE_S_AND_ND
-set draw blending BITWISE_NS_OR_D
-set draw blending BITWISE_CLEAR
-set draw blending BITWISE_SET
-set draw blending BITWISE_NOT_D
-set draw blending BITWISE_S_OR_ND
-set draw blending list.pop([SOURCE_OVER])
-set draw blending :blending
+set draw blending mode NORMAL
+set draw blending mode SOURCE_OVER
+set draw blending mode DESTINATION_OVER
+set draw blending mode DESTINATION_CLEAR
+set draw blending mode SOURCE_IN
+set draw blending mode SOURCE_OUT
+set draw blending mode DESTINATION_IN
+set draw blending mode DESTINATION_OUT
+set draw blending mode SOURCE_ATOP
+set draw blending mode DESTINATION_ATOP
+set draw blending mode EXCLUSIVE_OR
+set draw blending mode PLUS
+set draw blending mode MULTIPLY
+set draw blending mode SCREEN
+set draw blending mode OVERLAY
+set draw blending mode DARKEN
+set draw blending mode LIGHTEN
+set draw blending mode COLORDODGE
+set draw blending mode COLORBURN
+set draw blending mode HARD_LIGHT
+set draw blending mode SOFT_LIGHT
+set draw blending mode DIFFERENCE
+set draw blending mode EXCLUSION
+set draw blending mode BITWISE_S_OR_D
+set draw blending mode BITWISE_S_AND_D
+set draw blending mode BITWISE_S_XOR_D
+set draw blending mode BITWISE_S_NOR_D
+set draw blending mode BITWISE_S_NAND_D
+set draw blending mode BITWISE_NS_XOR_D
+set draw blending mode BITWISE_S_NOT
+set draw blending mode BITWISE_NS_AND_D
+set draw blending mode BITWISE_S_AND_ND
+set draw blending mode BITWISE_NS_OR_D
+set draw blending mode BITWISE_CLEAR
+set draw blending mode BITWISE_SET
+set draw blending mode BITWISE_NOT_D
+set draw blending mode BITWISE_S_OR_ND
+set draw blending mode list.index([SOURCE_OVER], 1)
+set draw blending mode :blending
 
 # ------------------------------------------------------------------------------
 # set canvas
 # ------------------------------------------------------------------------------
 set canvas grid color #ffcc99
 set canvas grid color color.hsl(1.0,1.0,1.0)
-set canvas grid color list.pop([#ffcc88])
+set canvas grid color list.index([#ffcc88], 1)
 set canvas grid color :color
 
 set canvas grid style SOLID
 set canvas grid style DASHDOT
 set canvas grid style DASH
 set canvas grid style DOT
-set canvas grid style list.pop([SOLID])
+set canvas grid style list.index([SOLID], 1)
 set canvas grid style :penStyle
 
 set canvas grid size 10
 set canvas grid size :numInt PX
 set canvas grid size :numInt+2 MM
 set canvas grid size (:numInt+2)/:numDec INCH
-set canvas grid size math.round(4.56789, 1) list.pop([PX])
-set canvas grid size list.pop([10]) :unitM
+set canvas grid size math.round(4.56789, 1) list.index([PX], 1)
+set canvas grid size list.index([10], 1) :unitM
 
 set canvas grid size 10 20
 set canvas grid size :numInt :numDec*2 PX
 set canvas grid size :numInt+2 :numDec+0.5 MM
 set canvas grid size (:numInt+2)/:numDec (:numInt+4)/:numDec INCH
-set canvas grid size math.round(4.56789, 1) math.round(6.789123, 2) list.pop([PX])
-set canvas grid size list.pop([10]) list.pop([20]) :unitM
+set canvas grid size math.round(4.56789, 1) math.round(6.789123, 2) list.index([PX], 1)
+set canvas grid size list.index([10], 1) list.index([20], 1) :unitM
 
 set canvas grid opacity 1.0
 set canvas grid opacity 255
@@ -332,33 +342,26 @@ set canvas grid opacity :numInt
 set canvas grid opacity :numInt+2
 set canvas grid opacity (:numInt+2)/:numDec
 set canvas grid opacity math.round(4.56789, 1)
-set canvas grid opacity list.pop([10])
+set canvas grid opacity list.index([10], 1)
 
 set canvas origin color #ffcc99
 set canvas origin color color.hsl(1.0,1.0,1.0)
-set canvas origin color list.pop([#ffcc88])
+set canvas origin color list.index([#ffcc88], 1)
 set canvas origin color :color
 
 set canvas origin style SOLID
 set canvas origin style DASHDOT
 set canvas origin style DASH
 set canvas origin style DOT
-set canvas origin style list.pop([SOLID])
+set canvas origin style list.index([SOLID], 1)
 set canvas origin style :penStyle
 
 set canvas origin size 10
 set canvas origin size :numInt PX
 set canvas origin size :numInt+2 MM
 set canvas origin size (:numInt+2)/:numDec INCH
-set canvas origin size math.round(4.56789, 1) list.pop([PX])
-set canvas origin size list.pop([10]) :unitM
-
-set canvas origin size 10 20
-set canvas origin size :numInt :numDec*2 PX
-set canvas origin size :numInt+2 :numDec+0.5 MM
-set canvas origin size (:numInt+2)/:numDec (:numInt+4)/:numDec INCH
-set canvas origin size math.round(4.56789, 1) math.round(6.789123, 2) list.pop([PX])
-set canvas origin size list.pop([10]) list.pop([20]) :unitM
+set canvas origin size math.round(4.56789, 1) list.index([PX], 1)
+set canvas origin size list.index([10], 1) :unitM
 
 set canvas origin opacity 1.0
 set canvas origin opacity 255
@@ -366,26 +369,25 @@ set canvas origin opacity :numInt
 set canvas origin opacity :numInt+2
 set canvas origin opacity (:numInt+2)/:numDec
 set canvas origin opacity math.round(4.56789, 1)
-set canvas origin opacity list.pop([10])
+set canvas origin opacity list.index([10], 1)
+
+set canvas origin position CENTER MIDDLE
+set canvas origin position LEFT TOP
+set canvas origin position RIGHT BOTTOM
+
+
 
 set canvas position color #ffcc99
 set canvas position color color.hsl(1.0,1.0,1.0)
-set canvas position color list.pop([#ffcc88])
+set canvas position color list.index([#ffcc88], 1)
 set canvas position color :color
 
 set canvas position size 10
 set canvas position size :numInt PX
 set canvas position size :numInt+2 MM
 set canvas position size (:numInt+2)/:numDec INCH
-set canvas position size math.round(4.56789, 1) list.pop([PX])
-set canvas position size list.pop([10]) :unitM
-
-set canvas position size 10 20
-set canvas position size :numInt :numDec*2 PX
-set canvas position size :numInt+2 :numDec+0.5 MM
-set canvas position size (:numInt+2)/:numDec (:numInt+4)/:numDec INCH
-set canvas position size math.round(4.56789, 1) math.round(6.789123, 2) list.pop([PX])
-set canvas position size list.pop([10]) list.pop([20]) :unitM
+set canvas position size math.round(4.56789, 1) list.index([PX], 1)
+set canvas position size list.index([10], 1) :unitM
 
 set canvas position opacity 1.0
 set canvas position opacity 255
@@ -393,7 +395,7 @@ set canvas position opacity :numInt
 set canvas position opacity :numInt+2
 set canvas position opacity (:numInt+2)/:numDec
 set canvas position opacity math.round(4.56789, 1)
-set canvas position opacity list.pop([10])
+set canvas position opacity list.index([10], 1)
 
 set canvas position fulfilled ON
 set canvas position fulfilled OFF
@@ -401,7 +403,7 @@ set canvas position fulfilled :boolean
 set canvas position fulfilled not :boolean
 set canvas position fulfilled not (:boolean and ON)
 set canvas position fulfilled :numInt > 5
-set canvas position fulfilled list.pop([OFF])
+set canvas position fulfilled list.index([OFF], 1)
 set canvas position fulfilled boolean.isString(:text)
 
 set canvas background opacity 1.0
@@ -410,19 +412,20 @@ set canvas background opacity :numInt
 set canvas background opacity :numInt+2
 set canvas background opacity (:numInt+2)/:numDec
 set canvas background opacity math.round(4.56789, 1)
-set canvas background opacity list.pop([10])
+set canvas background opacity list.index([10], 1)
 
 # ------------------------------------------------------------------------------
 # set execution
 # ------------------------------------------------------------------------------
-set execution verbose ON
-set execution verbose OFF
-set execution verbose :boolean
-set execution verbose not :boolean
-set execution verbose not (:boolean and ON)
-set execution verbose :numInt > 5
-set execution verbose list.pop([OFF])
-set execution verbose boolean.isString(:text)
+set script execution verbose ON
+set script execution verbose OFF
+set script execution verbose :boolean
+set script execution verbose not :boolean
+set script execution verbose not (:boolean and ON)
+set script execution verbose :numInt > 5
+set script execution verbose list.index([OFF], 1)
+set script execution verbose boolean.isString(:text)
+set script execution verbose ON
 
 # ------------------------------------------------------------------------------
 # draw shape
@@ -431,40 +434,40 @@ draw square 10
 draw square :numInt PX
 draw square :numInt+2 MM
 draw square (:numInt+2)/:numDec INCH
-draw square math.round(4.56789, 1) list.pop([PX])
-draw square list.pop([10]) :unitM
+draw square math.round(4.56789, 1) list.index([PX], 1)
+draw square list.index([10], 1) :unitM
 
 draw round square 10 5
 draw round square :numInt :numDec/2 PX
 draw round square :numInt+2 PX :numInt/2
 draw round square (:numInt+2)/:numDec PX (:numInt - 2)/:numDec INCH
-draw round square math.round(4.56789, 1) :unitM math.round(4.56789, 2) list.pop([PX])
-draw round square list.pop([10]) :unitM list.pop([2]) list.pop([RPCT])
+draw round square math.round(4.56789, 1) :unitM math.round(4.56789, 2) list.index([PX], 1)
+draw round square list.index([10], 1) :unitM list.index([2], 1) list.index([RPCT], 1)
 
 draw rect 10 15
 draw rect :numInt :numInt+2 PX
-draw rect :numInt+2 list.pop([25]) MM
-draw rect (:numInt+2)/:numDec list.pop([25])/4 INCH
-draw rect math.round(4.56789, 1) :numInt list.pop([25])
-draw rect list.pop([10]) math.round(4.56789, 1) :unitM
+draw rect :numInt+2 list.index([25], 1) MM
+draw rect (:numInt+2)/:numDec list.index([25], 1)/4 INCH
+draw rect math.round(4.56789, 1) :numInt list.index([PX], 1)
+draw rect list.index([10], 1) math.round(4.56789, 1) :unitM
 
 draw round rect 10 5 2
 draw round rect :numInt math.average(1,2)/:numDec PX 2
-draw round rect 10 5 :unitM :numDec list.pop([PX])
+draw round rect 10 5 :unitM :numDec list.index([RPCT], 1)
 
 draw circle 10
 draw circle :numInt PX
 draw circle :numInt+2 MM
 draw circle (:numInt+2)/:numDec INCH
-draw circle math.round(4.56789, 1) list.pop([PX])
-draw circle list.pop([10]) :unitM
+draw circle math.round(4.56789, 1) list.index([PX], 1)
+draw circle list.index([10], 1) :unitM
 
 draw ellipse 10 15
 draw ellipse :numInt :numInt+2 PX
-draw ellipse :numInt+2 list.pop([25]) MM
-draw ellipse (:numInt+2)/:numDec list.pop([25])/4 INCH
-draw ellipse math.round(4.56789, 1) :numInt list.pop([25])
-draw ellipse list.pop([10]) math.round(4.56789, 1) :unitM
+draw ellipse :numInt+2 list.index([25], 1) MM
+draw ellipse (:numInt+2)/:numDec list.index([25], 1)/4 INCH
+draw ellipse math.round(4.56789, 1) :numInt list.index([:unitM], 1)
+draw ellipse list.index([10], 1) math.round(4.56789, 1) :unitM
 
 draw dot
 
@@ -478,7 +481,7 @@ draw image string.upper("test") + "-" + string.lower("test") + :text
 draw scaled image "/home/user/test.png" 10 20
 draw scaled image :text :numInt :numDec/2 RPCT
 draw scaled image string.upper("test") math.minimum(1,2,4) math.maximum(1,2,3) :unitM
-draw scaled image string.upper("test") + "-" + string.lower("test") + :text list.pop([10]) math.round(4.56789, 1) list.pop([:unitM])
+draw scaled image string.upper("test") + "-" + string.lower("test") + :text list.index([10], 1) math.round(4.56789, 1) list.index([:unitM], 1)
 
 draw text "/home/user/test.png"
 draw text :text
@@ -488,7 +491,7 @@ draw text string.upper("test") + "-" + string.lower("test") + :text
 draw star 10 5 2
 draw star 10 5 2
 draw star :numInt math.average(1,2)/:numDec PX 2
-draw star 10 5 :unitM :numDec list.pop([PX])
+draw star 10 5 :unitM :numDec list.index([PX], 1)
 
 
 # ------------------------------------------------------------------------------
@@ -499,8 +502,12 @@ clear canvas
 # ------------------------------------------------------------------------------
 # draw fill
 # ------------------------------------------------------------------------------
-fill begin
-fill end
+start to draw shape
+stop to draw shape
+
+activate fill
+deactivate fill
+
 
 # ------------------------------------------------------------------------------
 # draw pen
@@ -516,27 +523,27 @@ move home
 move forward 10
 move forward :numInt PX
 move forward math.round(:numDec/4, 2) :unitM
-move forward list.pop([2]) list.pop([MM])
+move forward list.index([2], 1) list.index([MM], 1)
 
 move backward 10
 move backward :numInt PX
 move backward math.round(:numDec/4, 2) :unitM
-move backward list.pop([2]) list.pop([MM])
+move backward list.index([2], 1) list.index([MM], 1)
 
 move left 10
 move left :numInt PX
 move left math.round(:numDec/4, 2) :unitM
-move left list.pop([2]) list.pop([MM])
+move left list.index([-2], 1) list.index([MM], 1)
 
 move right 10
 move right :numInt PX
 move right math.round(:numDec/4, 2) :unitM
-move right list.pop([2]) list.pop([MM])
+move right -list.index([-2], 1) list.index([MM], 1)
 
 move to 10 5
 move to :numInt math.round(:numDec/4, 2) PX
-move to math.round(:numDec/4, 2) list.pop([2]) :unitM
-move to list.pop([2]) :numInt list.pop([MM])
+move to math.round(:numDec/4, 2) list.index([2], 1) :unitM
+move to -list.index([2], 1) :numInt list.index([MM], 1)
 
 # ------------------------------------------------------------------------------
 # draw turn
@@ -544,17 +551,17 @@ move to list.pop([2]) :numInt list.pop([MM])
 turn left 90
 turn left :numInt DEGREE
 turn left math.round(:numDec/4, 2)/:numDec RADIAN
-turn left list.pop([10]) list.pop([DEGREE])
+turn left list.index([10], 1) list.index([DEGREE], 1)
 
 turn right 90
 turn right :numInt DEGREE
 turn right math.round(:numDec/4, 2)/:numDec RADIAN
-turn right list.pop([10]) list.pop([DEGREE])
+turn right list.index([10], 1) list.index([DEGREE], 1)
 
 turn to 90
 turn to :numInt DEGREE
 turn to math.round(:numDec/4, 2)/:numDec RADIAN
-turn to list.pop([10]) list.pop([DEGREE])
+turn to list.index([10], 1) list.index([DEGREE], 1)
 
 # ------------------------------------------------------------------------------
 # state
@@ -582,88 +589,141 @@ hide canvas background
 # ------------------------------------------------------------------------------
 print "test"
 print :numInt
-print list.pop(['test'])
+print list.index(['test'], 1)
 print math.average(1,2,3)
 print PX
 
 print "test" + string.upper("toto")
 print :numInt/2
-print list.pop(['test']) - 7
+print list.index([100], 1) - 7
 print math.average(1,2,3)+:numInt/4
 
 print "test" + string.upper("toto") 45
-print :numInt/2 "truc"
-print list.pop(['test']) - 7 PX
+print :numInt/2 "truc" [1, 2, "aaa"]
+print list.index([100], 1) - 7 PX
 print math.average(1,2,3)+:numInt/4 4/:numDec "test"
 
 # ------------------------------------------------------------------------------
 # UIDialog
 # ------------------------------------------------------------------------------
-open dialog for message
-open dialog for message
-    with message "test"
-    with title "yop!"
+if :testUiDialog then
+    open dialog for message
+    open dialog for message
+        with message "<h1>test</h1><p>Oyoyo!!</p>"
+        with title "yop!"
 
-open dialog for boolean input :bool
-open dialog for boolean input :bool
-    with message "test"
-    with title "yop!"
+    open dialog for boolean input :bool
+    open dialog for boolean input :bool
+        with message "test - bool input"
+        with title "yop!"
 
-open dialog for integer input :numInt
-open dialog for integer input :numInt
-    with message "test"
-    with title "yop!"
 
-open dialog for integer input :numInt
-open dialog for integer input :numInt
-    with message "test"
-    with title "yop!"
-    with minimum value 45
-    with maximum value :vMax
-    with default value math.random(45, :vMax)
+    open dialog for integer input :numInt
+    open dialog for integer input :numInt
+        with message "test - int input"
+        with title "yop!"
 
-open dialog for decimal input :numDec
-open dialog for decimal input :numDec
-    with message "test"
-    with title "yop!"
-    with minimum value 45.0
-    with maximum value :vMax
-    with default value math.random(45.0, :vMax)
 
-open dialog for color input :color
-open dialog for color input :color
-    with message "test"
-    with title "yop!"
-    with default value #cc99dd
+    open dialog for integer input :numInt
+    open dialog for integer input :numInt
+        with message "test - int min/max"
+        with title "yop!"
+        with minimum value -5
+        with maximum value 100
+        with default value math.random(-5, 100)
 
-open dialog for string input :text
-open dialog for string input :text
-    with message "test"
-    with title "yop!"
-    with default value string.lower("TEST")
 
-# ------------------------------------------------------------------------------
-# flow stop
-# ------------------------------------------------------------------------------
-stop script
+    open dialog for decimal input :numDec
+    open dialog for decimal input :numDec
+        with message "test"
+        with title "yop!"
+        with minimum value -10.0
+        with maximum value 10.0
+        with default value math.random(-10.0, 10.0)
+
+
+    open dialog for color input :color
+    open dialog for color input :color
+        with message "test"
+        with title "yop!"
+        with default value #cc99dd
+
+
+    open dialog for string input :text
+    open dialog for string input :text
+        with message "test"
+        with title "yop!"
+        with default value string.lower("TEST default value")
+
+
+    open dialog for single choice input :result
+        with message "test"
+        with title "yop!"
+        with combobox choices ["Item A",
+                            "Item B",
+                            "Item C"]
+        with default index 1
+    print :result
+
+    open dialog for single choice input :result
+        with message "test"
+        with title "yop!"
+        with radio button choices ["Item A",
+                                "Item B",
+                                "Item C"]
+        with default index 2
+    print :result
+
+    open dialog for multiple choice input :result
+        with message "test"
+        with title "yop!"
+        with choices ["Item A",
+                    "Item B",
+                    "Item C",
+                    "Item D",
+                    "Item E"]
+        with default index [0, 2]
+        with minimum choices 3
+    print :result
+
+
+
+
+
+
+
+
 
 # ------------------------------------------------------------------------------
 # flow call macro
 # ------------------------------------------------------------------------------
+set variable :numDec = 2.5
+set variable :v1 = 100
+
+print "Values before macro call" ":v1=" :v1 ":vg.test=" :vg.test
+
 call macro "macro test 1"
 call macro "macro test 2" 45/:numDec
-call macro "macro test 3" string.upper("test") PX
+call macro "macro test 3" 10 5
 
-call macro "macro test 1" and store result into variable :v1
+call macro "macro test 1" and store result into variable :v2
+print "Values after 'macro test 1' call" ":v1=" :v1 ":v2=" :v2
+
 call macro "macro test 2" 45/:numDec
-     and store result into variable :v1
-call macro "macro test 3" string.upper("test") PX
-     and store result into variable :v1
+     and store result into variable :v2
+print "Values after 'macro test 2' call" ":v1=" :v1 ":v2=" :v2 ":vg.test" :vg.test
+
+call macro "macro test 3" 10 5
+     and store result into variable :v2
+print "Values after 'macro test 3' call" ":v1=" :v1 ":v2=" :v2
 
 
 # ------------------------------------------------------------------------------
 # flow if
 # ------------------------------------------------------------------------------
+set variable :numInt = 50
+
+
 if ON then
     print "test1"
 
@@ -671,22 +731,48 @@ if :numInt >= 45
 then
     print "test2"
 
-if boolean.isString(:text) and (:numInt >= 10 or :numInt <= 5) then
+if boolean.isString(:text) and ((:numInt >= 10) or (:numInt <= 5)) then
     print "test3"
 
-if :numInt >= 45 then
-    print "test2-a"
+if ON then
+    print "test4-a ==> OK!"
 else
-    print "test2-b"
+    print "test4-b ==> KO"
 
-if :numInt >= 45 then
-    print "test2-a"
-else if :numInt >= 35 then
-    print "test2-b"
-else if :numInt >= 25 then
-    print "test2-c"
+if OFF then
+    print "test5-a ==> KO"
 else
-    print "test2-d"
+    print "test5-b ==> OK!"
+
+
+if ON then
+    print "test6-a ==> OK!"
+else if ON then
+    print "test6-b ==> KO"
+else
+    print "test6-c ==> KO"
+
+if OFF then
+    print "test7-a ==> KO"
+else if ON then
+    print "test7-b ==> OK!"
+else
+    print "test7-c ==> KO"
+
+if OFF then
+    print "test8-a ==> KO"
+else if OFF then
+    print "test8-b ==> KO"
+else
+    print "test8-c ==> OK!"
+
+
+if ON then
+    print ":numInt in if ... then" :numInt "=50"
+    set variable :numInt = 80
+    print ":numInt in if ... then" :numInt "=80"
+print ":numInt out if ... then" :numInt "=80"
+
 
 # ------------------------------------------------------------------------------
 # flow return
@@ -698,67 +784,106 @@ return 45/:numDec
 # ------------------------------------------------------------------------------
 # flow repeat
 # ------------------------------------------------------------------------------
+set variable :x = 0
 repeat 4 times
-    print "test"
+    set variable :x = :x + 1
+    print ':repeat.totalIteration=' :repeat.totalIteration
+    print ':repeat.currentIteration=' :repeat.currentIteration
+    print ':repeat.isFirstIteration=' :repeat.isFirstIteration
+    print ':repeat.isLastIteration=' :repeat.isLastIteration
+    print ':repeat.incAngle=' :repeat.incAngle
+    print ':repeat.currentAngle=' :repeat.currentAngle
+
+    print ':x=' :x
+
+print 'done> :x=' :x "=4"
+
 
 repeat math.random(1,15) times
-    print "test"
+    print :repeat.currentIteration "/" :repeat.totalIteration
 
-repeat :numInt times
-    print "test"
+
 
 # ------------------------------------------------------------------------------
 # flow foreach
 # ------------------------------------------------------------------------------
-for each :letter
-    in ["a",
-        "b",
-        "c"
-       ]
-    do
-    print :letter
+set variable :x = 0
+for each item from [0,2,4,6,8] as :number do
+    set variable :x = :x + 1
+    print ':foreach.totalIteration=' :foreach.totalIteration
+    print ':foreach.currentIteration=' :foreach.currentIteration
+    print ':foreach.isFirstIteration=' :foreach.isFirstIteration
+    print ':foreach.isLastIteration=' :foreach.isLastIteration
+    print ':foreach.incAngle=' :foreach.incAngle
+    print ':foreach.currentAngle=' :foreach.currentAngle
 
-for each :letter in string.split("test", "") do
-    print :letter
+    print ':number=' :number
+    print ':x=' :x
+
+print 'done> :x=' :x "=5"
+
+
+set variable :x = 0
+for each item from "testing!" as :letter do
+    set variable :x = :x + 1
+    print ':foreach.totalIteration=' :foreach.totalIteration
+    print ':foreach.currentIteration=' :foreach.currentIteration
+    print ':foreach.isFirstIteration=' :foreach.isFirstIteration
+    print ':foreach.isLastIteration=' :foreach.isLastIteration
+    print ':foreach.incAngle=' :foreach.incAngle
+    print ':foreach.currentAngle=' :foreach.currentAngle
+
+    print ':letter=' :letter
+    print ':x=' :x
+
+print 'done> :x=' :x "=5"
 
 # ------------------------------------------------------------------------------
 # functions
 # ------------------------------------------------------------------------------
+set variable :v = 44
+
 set variable :x = math.random()
 set variable :x = math.random(1, 5)
-set variable :x = math.abs(-:v)
+set variable :x = math.absolute(-:v)
 set variable :x = math.sign(:v)
 set variable :x = math.even(:v)
+set variable :x = math.odd(:v)
 set variable :x = math.exp(2)
-set variable :x = math.power(2)
-set variable :x = math.square_root(2)
+set variable :x = math.power(2, 3)
+set variable :x = math.squareRoot(2)
 set variable :x = math.logn(2)
 set variable :x = math.log(2)
 set variable :x = math.convert(4, PX, MM)
-set variable :x = math.minimum(1, 2, 3, 4, 5)
-set variable :x = math.maximum(1, 2, 3, 4, 5)
+set variable :x = math.minimum(1, 2, 3, 4, 5, 0.5)
+set variable :x = math.maximum(1, [2, 3.0, 8], 4, 5)
 set variable :x = math.average(1, 2, 3, 4, 5)
 set variable :x = math.sum(1, 2, 3, 4, 5)
 set variable :x = math.product(1, 2, 3, 4, 5)
 set variable :x = math.ceil(1.1499)
 set variable :x = math.floor(1.1499)
+set variable :x = math.round(1.1499)
 set variable :x = math.round(1.1499, 2)
 set variable :x = math.cos(3.14/3)
 set variable :x = math.sin(3.14/3)
 set variable :x = math.tan(3.14/3)
-set variable :x = math.acos(3.14/3)
-set variable :x = math.asin(3.14/3)
-set variable :x = math.atan(3.14/3)
+set variable :x = math.acos(0.25)
+set variable :x = math.asin(0.25)
+set variable :x = math.atan(0.25)
 set variable :x = math.cosh(3.14/3)
 set variable :x = math.sinh(3.14/3)
 set variable :x = math.tanh(3.14/3)
 set variable :x = math.acosh(3.14/3)
 set variable :x = math.asinh(3.14/3)
-set variable :x = math.atanh(3.14/3)
-set variable :x = string.length("Test")
-set variable :x = string.upper("test")
-set variable :x = string.lower("TEST")
-set variable :x = string.substring(:text, 1, 5)
+set variable :x = math.atanh(0.25)
+set variable :x = string.length("Testing text functions")
+set variable :x = string.upper("Testing text functions")
+set variable :x = string.lower("TESTING TEXT FUNCTIONS")
+set variable :x = string.substring(:text, 6)
+set variable :x = string.substring(:text, 6, 5)
+set variable :x = string.substring(:text, -10, 5)
+set variable :x = string.substring(:text, -4)
+set variable :x = string.format("Hi {0}, the color is {2} and number is {1}", "John", 4, #ffccdd)
 set variable :x = color.hsl(255,255,255)
 set variable :x = color.hsla(1.0,1.0,1.0,1.0)
 set variable :x = color.hsla(255,255,255,255)
@@ -767,33 +892,105 @@ set variable :x = color.hsv(255,255,255)
 set variable :x = color.hsva(1.0,1.0,1.0,1.0)
 set variable :x = color.hsva(255,255,255,255)
 set variable :x = color.rgb(1.0,1.0,1.0)
-set variable :x = color.rgb(360,255,255)
-set variable :x = color.rgba(1.0,1.0,1.0,1.0)
-set variable :x = color.rgba(360,255,255,255)
-set variable :x = color.cmyk(1.0,1.0,1.0,1.0)
-set variable :x = color.cmyk(255,255,255,255)
+set variable :x = color.rgb(255,255,255)
+set variable :x = color.rgba(1.0,1.0,1.0,0.9)
+set variable :x = color.rgba(255,255,255,250)
+set variable :x = color.cmyk(1.0,1.0,0.5,0.5)
+set variable :x = color.cmyk(255, 0, 255, 191)
 set variable :x = color.cmyka(1.0,1.0,1.0,1.0,1.0)
 set variable :x = color.cmyka(255,255,255,255,255)
+set variable :x = color.red(#55364347)
+set variable :x = color.green(#55364347)
+set variable :x = color.blue(#55364347)
+set variable :x = color.cyan(#55364347)
+set variable :x = color.magenta(#55364347)
+set variable :x = color.yellow(#55364347)
+set variable :x = color.black(#55364347)
+set variable :x = color.hue(#55364347)
+set variable :x = color.saturation(#55364347)
+set variable :x = color.value(#55364347)
+set variable :x = color.lightness(#55364347)
+set variable :x = color.opacity(#55364347)
 set variable :x = list.length([1,2,3])
+set variable :x = list.join([1,2,3])
 set variable :x = list.join([1,2,3], ";")
+set variable :x = string.split("1,2,3")
 set variable :x = string.split("1;2;3", ";")
-set variable :x = list.rotate(-1)
+set variable :x = list.rotate([1,2,3,4], -1)
+set variable :x = list.rotate([1,2,3,4], 1)
+set variable :x = list.rotate([1,2,3,4], 10)
+set variable :x = list.revert([1,2,3])
+set variable :x = list.sort([1,8,4,3,5,7], ON)
+set variable :x = list.sort([1,8,4,3,5,7], OFF)
 set variable :x = list.sort([1,8,4,3,5,7])
 set variable :x = list.unique([1,2,4,7,1,2,4,2,1])
 set variable :x = list.shuffle([1,
                                 2,
                                 3,
-                                4])
-set variable :x = list.push(:v, 25)
-set variable :x = list.pop(:v)
+                                4,5,6,7,8])
+set variable :x = list.index([1,2,3,4], 1)
+set variable :x = list.index([1,2,3,4], -1)
+set variable :x = list.index([1,2,3,4], 4)
+set variable :x = list.index([1,2,3,4], 0, '--')
+set variable :x = list.index([1,2,3,4], 25, '--')
+
 set variable :x = boolean.isString(:text)
 set variable :x = boolean.isNumber(:numInt)
 set variable :x = boolean.isInteger(:numInt)
 set variable :x = boolean.isDecimal(:numDec)
-set variable :x = boolean.isBoolean(:bool)
+set variable :x = boolean.isBoolean(:boolean)
 set variable :x = boolean.isColor(:color)
 set variable :x = boolean.isList(:list)
 
 # ------------------------------------------------------------------------------
 # testing expressions
 # ------------------------------------------------------------------------------
+
+
+
+
+set variable :text = "Test" " multiple"
+    ' string'
+        ` lines`
+
+set variable :z = 10
+set variable :x = 2 * :z
+set variable :x = 2 * (3 + :z)
+set variable :x = (2 * (3 + :z))/4
+set variable :x = :z%3
+set variable :x = :z//3
+set variable :x = (2 - 3) * (10 + 5)
+set variable :x = :z > 10
+set variable :x = :z >= 10
+set variable :x = :z < 10
+set variable :x = :z <= 10
+set variable :x = :z = 10
+set variable :x = :z <> 10
+set variable :x = ON xor ON
+set variable :x = OFF xor OFF
+set variable :x = OFF and OFF
+set variable :x = not OFF or OFF
+
+
+print ":math.phi" :math.phi
+print ":math.pi" :math.pi
+print ":math.e" :math.e
+print ":script.execution.verbose" :script.execution.verbose
+print ":script.randomize.seed" :script.randomize.seed
+
+
+
+print "-------------------------------------------------------"
+
+set variable :x = 44 + :z / 0
+
+
+#push value :z into list :x
+#pop value from list :x and store result into variable :z
+
+# ------------------------------------------------------------------------------
+# flow stop
+# ------------------------------------------------------------------------------
+stop script
+
+print "Should not be executed!"
