@@ -89,24 +89,24 @@ class WSearchInput(QWidget):
 
         +---------------------------------------------------------------------------  search text entry
         |
-        |                            +----------------------------------------------  information about current search
-        |                            |
-        |                            |            +---------------------------------  OPTION_SHOW_BUTTON_REGEX
-        |                            |            |
-        |                            |            |     +---------------------------  OPTION_SHOW_BUTTON_CASESENSITIVE
-        |                            |            |     |
-        |                            |            |     |     +---------------------  OPTION_SHOW_BUTTON_WHOLEWORD
-        |                            |            |     |     |
-        |                            |            |     |     |     +---------------  OPTION_SHOW_BUTTON_BACKWARD
-        |                            |            |     |     |     |
-        |                            |            |     |     |     |     +---------  OPTION_SHOW_BUTTON_HIGHLIGHTALL
-        |                            |            |     |     |     |     |
-        |                            |            |     |     |     |     |
-        |                            |            |     |     |     |     |
-        |                            |            |     |     |     |     |
-        |                            V            V     V     V     V     V
+        |      +---------------------+----------------------------------------------  information about current search
+        |      |                     |
+        |      |                     |            +---------------------------------  OPTION_SHOW_BUTTON_REGEX
+        |      |                     |            |
+        |      |                     |            |     +---------------------------  OPTION_SHOW_BUTTON_CASESENSITIVE
+        |      |                     |            |     |
+        |      |                     |            |     |     +---------------------  OPTION_SHOW_BUTTON_WHOLEWORD
+        |      |                     |            |     |     |
+        |      |                     |            |     |     |     +---------------  OPTION_SHOW_BUTTON_BACKWARD
+        |      |                     |            |     |     |     |
+        |      |                     |            |     |     |     |     +---------  OPTION_SHOW_BUTTON_HIGHLIGHTALL
+        |      |                     |            |     |     |     |     |
+        |      |                     |            |     |     |     |     |
+        |      |                     |            |     |     |     |     |
+        |      |                     |            |     |     |     |     |
+        |      V                     V            V     V     V     V     V
         |                                       +---+ +---+ +---+ +---+ +---+
-        |                      xxxxxxxxxxxxxx   |   | |   | |   | |   | |   |
+        |  xxxxxxxxxxx         xxxxxxxxxxxxxx   |   | |   | |   | |   | |   |
         V                                       +---+ +---+ +---+ +---+ +---+
     +-----------------------------------------------+ +---------+ +---------+
     | xxxx                                          | | Search  | | S.All   |<-+----  OPTION_SHOW_BUTTON_ALL
@@ -498,6 +498,7 @@ class WSearchInput(QWidget):
 
     def setResultsInformation(self, text):
         self.__foundResultsInfo.setText(text)
+
 
 class SearchFromPlainTextEdit:
     """Provide high level method to search ocurences in a QPlainTextEdit"""
