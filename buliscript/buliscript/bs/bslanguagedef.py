@@ -29,6 +29,7 @@ import re
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.languagedef import LanguageDef
 from buliscript.pktk.modules.parser import (
+        GrammarRules,
         GrammarRule,
         GROne,
         GROptional,
@@ -36,10 +37,12 @@ from buliscript.pktk.modules.parser import (
         GROneOrMore,
         GRToken,
         GRRule,
-        GROperatorPrecedence
+        GROperatorPrecedence,
+        ASTItem
     )
 
 from buliscript.pktk.modules.tokenizer import (
+        Token,
         Tokenizer,
         TokenizerRule,
         TokenType
@@ -64,7 +67,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_SET_CANVAS_BACKGROUND = ('setCanvasBackground', 'A <SET CANVAS POSITION> action')
         ACTION_SET_LAYER = ('setLayer', 'A <SET LAYER> action')
         ACTION_SET_SELECTION = ('setSelection', 'A <SET SELECTION> action')
-        ACTION_SET_EXECUTION = ('setExecution', 'A <SET EXECUTION> action')
+        ACTION_SET_SCRIPT = ('setExecution', 'A <SET EXECUTION> action')
 
         ACTION_DRAW_SHAPE = ('drawShape', 'A <DRAW shape> action')
         ACTION_DRAW_MISC = ('drawMisc', 'A draw <misc> action')
@@ -92,7 +95,6 @@ class BSLanguageDef(LanguageDef):
         FLOW_WITH_PARAMETERS = ('flowWithParameters', 'A <WITH PARAMETER> flow')
         FLOW_DO = ('flowDo', 'A <DO> flow')
         FLOW_AS = ('flowAs', 'A <AS> flow')
-        FLOW_IN = ('flowin', 'A <IN> flow')
         FLOW_FOREACH = ('flowForEach', 'A <FOREACH> flow')
         FLOW_CALL = ('flowCall', 'A <CALL> flow')
         FLOW_DEFMACRO = ('flowDefMacro', 'A <DEFINE MACRO> flow')
@@ -908,7 +910,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, r"^\x20*\bset\s+script\s+execution\s+(?:verbose)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, r"^\x20*\bset\s+script\s+(?:execution\s+(?:verbose)|randomize\s+(?:seed))\b",
                                                                     'Settings/Script',
                                                                     [('set script execution verbose \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -924,6 +926,18 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text italic ON`**\n\n'
                                                                                 'Will define text as italic')),
+                                                                    ('set script randomize seed \x01<SEED>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define execution randomize seed for random numbers]',
+                                                                                # description
+                                                                                'Set seed used to generate randomized numbers\n'
+                                                                                'Given *<SEED>* can be:\n'
+                                                                                ' - **`int`**: any integer number; if negative, a random number will be used as seed\n'
+                                                                                ' - **`string`**: any string value',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set script randomize seed 999`**\n\n'
+                                                                                'Will define value `999` as seed used to generate random numbers')),
                                                                     ],
                                                                     'A'),
 
@@ -2000,9 +2014,9 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_FOREACH, r"^\x20*\bfor\s+each\s+item\s+from\b",
                                                                     'Flow/Loops',
-                                                                    [('for each \x01:variable \x01 in \x01<LIST>\x01 do',
+                                                                    [('for each item from \x01<LIST>\x01 as \x01:variable\x01 do',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Flow [Loop over items in a list]',
                                                                                 # description
@@ -2013,7 +2027,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`string`**: a string is in this case considered as a list of characters'
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`for each :character in "test"`**\n'
+                                                                                '**`for each item from "test" as :character do`**\n'
                                                                                 '**`    draw text :character`**\n'
                                                                                 '**`    move forward 40`**\n\n'
                                                                                 'Will iterate over all characters in string "test", draw character and move forward from 40 pixels')),
@@ -2028,11 +2042,6 @@ class BSLanguageDef(LanguageDef):
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_AS, r"\x20*\bas\b",
                                                                     None,
                                                                     ['as'],
-                                                                    'F',
-                                                                    ignoreIndent=True),
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IN, r"\x20*\bin\b",
-                                                                    None,
-                                                                    ['in'],
                                                                     'F',
                                                                     ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_DO, r"\x20*\bdo\b",
@@ -2057,17 +2066,26 @@ class BSLanguageDef(LanguageDef):
                                                                     ignoreIndent=True),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, r"^\x20*\bset\s+variable\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, r"^\x20*\bset(?:\s+global)?\s+variable\b",
                                                                     'Flow/Variables',
                                                                     [('set variable \x01:variable = <VALUE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set value for a variable]',
+                                                                                'Flow [Set value for a variable]',
                                                                                 # description
                                                                                 'Set value <VALUE> for given user defined `:variable`',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set variable :test = 100`**\n\n'
                                                                                 'Will define user defined variable `:test` with integer value `100`')),
+                                                                    ('set global variable \x01:variable = <VALUE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Set value for a global variable]',
+                                                                                # description
+                                                                                'Set value <VALUE> for given user defined `:variable`, defined as a global variable: when used in a macro, variable will be available outside macro scope',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set global variable :test = 100`**\n\n'
+                                                                                'Will define user defined global variable `:test` with integer value `100`')),
                                                                     ],
                                                                     'F'),
 
@@ -2100,7 +2118,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script)))"
+                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script\s+randomize|script)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
                                                                        r"|(?:clear|apply(?:\s+to)?)"
@@ -2115,8 +2133,9 @@ class BSLanguageDef(LanguageDef):
                                                                        # (?:combobox|radio)(?:\s+(?:button)?)?
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"|(?:stop|call|define|for)"
+                                                                       r"|(?:stop|call|define|for(?:\s+(?:each(?:\s+(?:item))?))?)"
                                                                        r"|(?:import(?:\s+(?:macro|image))?)"
+                                                                       r"|(?:set\s+global)"
                                                                        r"|(?:and\s+store(?:\s+(?:result(?:\s+(?:into))?))?)"
                                                                        r")\b"
                                                                        ),
@@ -2149,9 +2168,9 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:abs|even|odd|sign)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:absolute|even|odd|sign)\b",
                                                                     'Functions/Math/Numbers',
-                                                                    [('math.abs(\x01<VALUE>\x01)',
+                                                                    [('math.absolute(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *absolute* value for a given number]',
                                                                                 # description
@@ -2160,10 +2179,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is a number',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`math.abs(-4)`**\n\n'
+                                                                                '**`math.absolute(-4)`**\n\n'
                                                                                 'Will return value **`4`**\n\n'
                                                                                 'Following instruction:\n'
-                                                                                '**`math.abs(-4.0)`**\n\n'
+                                                                                '**`math.absolute(-4.0)`**\n\n'
                                                                                 'Will return value **`4.0`**')),
                                                                     ('math.sign(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2207,7 +2226,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:exp|logn?|power|square_root)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_NUMBER, r"\bmath\.(?:exp|logn?|power|squareRoot)\b",
                                                                     'Functions/Math/Power and Logarithmic',
                                                                     [('math.exp(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2231,7 +2250,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`math.power(4, 2)`**\n\n'
                                                                                 'Will return value *`4`* to the power of `2` (4^2)')),
-                                                                    ('math.square_root(\x01<VALUE>\x01)',
+                                                                    ('math.squareRoot(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Function [Return *square root* value for a given number]',
                                                                                 # description
@@ -2240,7 +2259,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<VALUE>* is a number',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`math.square_root(4)`**\n\n'
+                                                                                '**`math.squareRoot(4)`**\n\n'
                                                                                 'Will return value **`2.00`**')),
                                                                     ('math.logn(\x01<VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2638,7 +2657,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\bstring\.(?:upper|lower|substring)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_STRING, r"\bstring\.(?:upper|lower|substring|format)\b",
                                                                     'Functions/String',
                                                                     [('string.upper(\x01<TEXT>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2689,12 +2708,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`string.character("HELLO!", 4, 15)`**\n'
                                                                                 '**`string.character("HELLO!", -3, 15)`**\n\n'
                                                                                 'Will return value **`LLO!`**')),
+                                                                    ('string.format(\x01<FORMAT>[, <VALUE>]\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return formatted string using given format for provided]',
+                                                                                # description
+                                                                                'Format provided <VALUE> (from 0 to N) in a string using given <FORMAT>\n'
+                                                                                'The format specification follows the Python *(format specification mini language)[https://docs.python.org/3/library/string.html#format-specification-mini-language]*\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`string.uppercase("Hi {0}, this is an example!", :name)`**\n\n'
+                                                                                'Will return (if **`:name`** is defined as `"John"`) value **`Hi John, this is an example!`**')),
 
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgba?|hsla?|hsva?|cmyka?)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FUNCTION_COLOR, r"\bcolor\.(?:rgba?|hsla?|hsva?|cmyka?|red|green|blue|hue|saturation|value|lightness|cyan|magenta|yellow|black|opacity)\b",
                                                                     'Functions/Color',
                                                                     [('color.rgb(\x01<R-VALUE>, <G-VALUE>, <B-VALUE>\x01)',
                                                                             TokenizerRule.formatDescription(
@@ -2812,6 +2841,114 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`color.cmyk(255, 0, 255, 191, 127)`**\n'
                                                                                 '**`color.hsv(1.0, 0.0, 1.0, 0.75, 0.5)`**\n\n'
                                                                                 'Will both return a green color equivalent to rgb(0,64,0), with 50% opacity')),
+                                                                    ('color.red(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *red* value for given color]',
+                                                                                # description
+                                                                                'Return red value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.red(#55364347)`**\n\n'
+                                                                                'Will return value 54')),
+                                                                    ('color.green(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *green* value for given color]',
+                                                                                # description
+                                                                                'Return green value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.green(#55364347)`**\n\n'
+                                                                                'Will return value 67')),
+                                                                    ('color.blue(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *blue* value for given color]',
+                                                                                # description
+                                                                                'Return blue value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.blue(#55364347)`**\n\n'
+                                                                                'Will return value 71')),
+                                                                    ('color.cyan(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *cyan* value for given color]',
+                                                                                # description
+                                                                                'Return cyan value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.cyan(#55364347)`**\n\n'
+                                                                                'Will return value 61')),
+                                                                    ('color.magenta(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *magenta* value for given color]',
+                                                                                # description
+                                                                                'Return magenta value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.magenta(#55364347)`**\n\n'
+                                                                                'Will return value 14')),
+                                                                    ('color.black(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *black* value for given color]',
+                                                                                # description
+                                                                                'Return black value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.black(#55364347)`**\n\n'
+                                                                                'Will return value 184')),
+                                                                    ('color.yellow(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *yellow* value for given color]',
+                                                                                # description
+                                                                                'Return yellow value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.yellow(#55364347)`**\n\n'
+                                                                                'Will return value 0')),
+                                                                    ('color.hue(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *hue* value for given color]',
+                                                                                # description
+                                                                                'Return hue value (0-360) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.hue(#55364347)`**\n\n'
+                                                                                'Will return value 194')),
+                                                                    ('color.saturation(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *saturation* value for given color]',
+                                                                                # description
+                                                                                'Return saturation value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.saturation(#55364347)`**\n\n'
+                                                                                'Will return value 61')),
+                                                                    ('color.value(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *value* value for given color]',
+                                                                                # description
+                                                                                'Return value value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.value(#55364347)`**\n\n'
+                                                                                'Will return value 71')),
+                                                                    ('color.lightness(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *lightness* value for given color]',
+                                                                                # description
+                                                                                'Return lightness value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.lightness(#55364347)`**\n\n'
+                                                                                'Will return value 62')),
+                                                                    ('color.opacity(\x01<COLOR>\x01)',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Function [Return *opacity* value for given color]',
+                                                                                # description
+                                                                                'Return opacity value (0-255) from given color <COLOR> \n\n',
+                                                                                # example
+                                                                                'Following instructions:\n'
+                                                                                '**`color.opacity(#55364347)`**\n\n'
+                                                                                'Will return value 85')),
                                                                     ],
                                                                     'f',
                                                                     onInitValue=self.__initTokenLower),
@@ -3464,6 +3601,30 @@ class BSLanguageDef(LanguageDef):
                                                                     onInitValue=self.__initTokenUpper),
 
 
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bmath\.(?:pi|e|phi)\b",
+                                                                    'Variables/Math',
+                                                                    [(':math.pi',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Mathematical constant: Pi]',
+                                                                                # description
+                                                                                'The mathematical constant *π*=3.141592…\n'
+                                                                                'See (Pi)[https://en.wikipedia.org/wiki/Pi]')),
+                                                                    (':math.e',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Mathematical constant: e]',
+                                                                                # description
+                                                                                'The mathematical constant *e*=2.718281…\n'
+                                                                                'See (Euler\'s number)[https://en.wikipedia.org/wiki/E_(mathematical_constant)]')),
+                                                                    (':math.phi',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Mathematical constant: Phi]',
+                                                                                # description
+                                                                                'The mathematical constant *phi*=1.618033…\n'
+                                                                                'See (Euler\'s number)[https://en.wikipedia.org/wiki/E_(mathematical_constant)]')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bposition\.(?:x|y)\b",
                                                                     'Variables/Position',
                                                                     [(':position.x',
@@ -3863,39 +4024,44 @@ class BSLanguageDef(LanguageDef):
                                                                     onInitValue=self.__initTokenLower),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\script\.bexecution\.(?:verbose)\b",
-                                                                    'Variables/Script/Execution',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bscript\.(?:execution\.(?:verbose)|randomize\.(?:seed))\b",
+                                                                    'Variables/Script',
                                                                     [(':script.execution.verbose',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current verbose status]',
                                                                                 # description
                                                                                 'Current verbose status for script execution\n'
                                                                                 'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                    (':script.randomize.seed',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Randomize seed]',
+                                                                                # description
+                                                                                'Seed used to generate randomized number')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brepeat\.(?:current|total|incAngle|currentAngle|first|last)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brepeat\.(?:currentIteration|totalIteration|incAngle|currentAngle|isFirstIteration|isLastIteration)\b",
                                                                     'Variables/Flow/Loops/Repeat',
-                                                                    [(':repeat.current',
+                                                                    [(':repeat.currentIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration number in *`repeat`* loop]',
                                                                                  # description
                                                                                  'Current iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':repeat.total',
+                                                                    (':repeat.totalIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Total iteration number in *`repeat`* loop]',
                                                                                  # description
                                                                                  'Total iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':repeat.first',
+                                                                    (':repeat.isFirstIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is first iteration in *`repeat`* loop]',
                                                                                  # description
                                                                                  'Define if current iteration is first iteration in loop\n'
                                                                                  'Returned as boolean value')),
-                                                                    (':repeat.last',
+                                                                    (':repeat.isLastIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is last iteration in *`repeat`* loop]',
                                                                                  # description
@@ -3916,27 +4082,27 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bforeach\.(?:current|total|incAngle|currentAngle|first|last)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bforeach\.(?:currentIteration|totalIteration|incAngle|currentAngle|isFirstIteration|isLastIteration)\b",
                                                                     'Variables/Flow/Loops/For each',
-                                                                    [(':foreach.current',
+                                                                    [(':foreach.currentIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration number in *`for each`* loop]',
                                                                                  # description
                                                                                  'Current iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':foreach.total',
+                                                                    (':foreach.totalIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Total iteration number in *`for each`* loop]',
                                                                                  # description
                                                                                  'Total iteration number in loop\n'
                                                                                  'Returned as integer value, starting from 1')),
-                                                                    (':foreach.first',
+                                                                    (':foreach.isFirstIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is first iteration in *`for each`* loop]',
                                                                                  # description
                                                                                  'Define if current iteration is first iteration in loop\n'
                                                                                  'Returned as boolean value')),
-                                                                    (':foreach.last',
+                                                                    (':foreach.isLastIteration',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current iteration is last iteration in *`for each`* loop]',
                                                                                  # description
@@ -3961,7 +4127,7 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_USER, r":\b[a-z]+(?:[a-z0-9]|\.[a-z]|_+[a-z])*\b", onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\band\b|\bor\b|\bxor\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.BINARY_OPERATOR, r"\+|\*|//|/|%|<=|<>|<|>=|>|=|\bin\b|\band\b|\bor\b|\bxor\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.UNARY_OPERATOR, r"\bnot\b", ignoreIndent=True, onInitValue=self.__initTokenLower),
             TokenizerRule(BSLanguageDef.ITokenType.DUAL_OPERATOR, r"-", ignoreIndent=True),
             TokenizerRule(BSLanguageDef.ITokenType.SEPARATOR, r","),
@@ -3994,7 +4160,6 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_AS, '#ffffff', True, False),
-            (BSLanguageDef.ITokenType.FLOW_IN, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_DO, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_FOREACH, '#ffffff', True, False),
             (BSLanguageDef.ITokenType.FLOW_CALL, '#ffffff', True, False),
@@ -4020,7 +4185,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#e5dd82', True, False),
@@ -4090,7 +4255,6 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.FLOW_AND_STORE_RESULT, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_WITH_PARAMETERS, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_AS, '#000044', True, False),
-            (BSLanguageDef.ITokenType.FLOW_IN, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_DO, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_FOREACH, '#000044', True, False),
             (BSLanguageDef.ITokenType.FLOW_CALL, '#000044', True, False),
@@ -4115,7 +4279,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#c278da', True, False),
@@ -4181,16 +4345,16 @@ class BSLanguageDef(LanguageDef):
 
         """
         self.__grammarRules.setOperatorPrecedence(
-                GROperatorPrecedence(90, BSLanguageDef.ITokenType.UNARY_OPERATOR,  False, 'not'),
-                GROperatorPrecedence(89, BSLanguageDef.ITokenType.DUAL_OPERATOR,   False, '-'),
-                GROperatorPrecedence(80, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '*', '/', '//', '%'),
-                GROperatorPrecedence(70, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '+'),
-                GROperatorPrecedence(70, BSLanguageDef.ITokenType.DUAL_OPERATOR,   True, '-'),
-                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '<', '>', '<=', '>='),
-                GROperatorPrecedence(60, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, '=', '<>'),
-                GROperatorPrecedence(40, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'and'),
-                GROperatorPrecedence(30, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'xor'),
-                GROperatorPrecedence(20, BSLanguageDef.ITokenType.BINARY_OPERATOR, True, 'or')
+                GROperatorPrecedence(95, ASTItem,  GrammarRules.OPERATOR_INDEX,  'List_Index_Expression'),
+                GROperatorPrecedence(90, Token,    GrammarRules.OPERATOR_UNARY,  'not'),
+                GROperatorPrecedence(89, Token,    GrammarRules.OPERATOR_UNARY,  '-'),
+                GROperatorPrecedence(80, Token,    GrammarRules.OPERATOR_BINARY, '*', '/', '//', '%'),
+                GROperatorPrecedence(70, Token,    GrammarRules.OPERATOR_BINARY, '+'),
+                GROperatorPrecedence(70, Token,    GrammarRules.OPERATOR_BINARY, '-'),
+                GROperatorPrecedence(60, Token,    GrammarRules.OPERATOR_BINARY, '<', '>', '<=', '>=', '=', '<>', 'in'),
+                GROperatorPrecedence(40, Token,    GrammarRules.OPERATOR_BINARY, 'and'),
+                GROperatorPrecedence(30, Token,    GrammarRules.OPERATOR_BINARY, 'xor'),
+                GROperatorPrecedence(20, Token,    GrammarRules.OPERATOR_BINARY, 'or')
             )
 
 
@@ -4263,6 +4427,7 @@ class BSLanguageDef(LanguageDef):
                       #'Action_Set_Layer',
                       #'Action_Set_Selection',
                       'Action_Set_Script_Execution_Verbose',
+                      'Action_Set_Script_Randomize_Seed',
                       'Action_Draw_Shape_Square',
                       'Action_Draw_Shape_Round_Square',
                       'Action_Draw_Shape_Rect',
@@ -4633,7 +4798,15 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Action_Set_Script_Execution_Verbose',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_EXECUTION, 'set script execution verbose', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, 'set script execution verbose', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Script_Randomize_Seed',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, 'set script randomize seed', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -5145,7 +5318,7 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Flow_Set_Variable',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE, False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_SET_VARIABLE),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '=', False),
                 'Any_Expression',
@@ -5272,10 +5445,10 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.FLOW_FOREACH, False),
+                'Any_Expression',
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
-                GRToken(BSLanguageDef.ITokenType.FLOW_IN, False),
-                'Any_Expression',
                 GRToken(BSLanguageDef.ITokenType.FLOW_DO, False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRToken(BSLanguageDef.ITokenType.INDENT, False),
@@ -5307,7 +5480,8 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
                       'List_Value',
-                    )
+                    ),
+                GRNoneOrMore('List_Index_Expression')
             )
 
         GrammarRule('String_Value',
@@ -5345,10 +5519,11 @@ class BSLanguageDef(LanguageDef):
                 # use the evaluation expression with OPTION_OPERATOR_PRECEDENCE here as we're in an another level of evaluation
                 'Evaluation_Expression',
                 GRToken(BSLanguageDef.ITokenType.PARENTHESIS_CLOSE, False),
+                GROptional('List_Index_Expression')
             )
 
         GrammarRule('Evaluation_Expression_Binary_Operator',
-                GROne(GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '+', '*', '/', '//', '%', 'and', 'or', 'xor', '<=', '<>', '<', '>', '>=', '='),
+                GROne(GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '+', '*', '/', '//', '%', 'and', 'or', 'xor', '<=', '<>', '<', '>', '>=', '=', 'in'),
                       GRToken(BSLanguageDef.ITokenType.DUAL_OPERATOR, '-')),
                 'Evaluation_Expression__noop',
                 GROptional('Evaluation_Expression_Binary_Operator')
@@ -5363,14 +5538,6 @@ class BSLanguageDef(LanguageDef):
                       'Evaluation_Expression_Parenthesis',
                       'Any_Value'),
                 GROptional('Evaluation_Expression_Binary_Operator')
-            )
-
-        GrammarRule('Evaluation_Expression_Comparison',
-                #GrammarRule.OPTION_AST|GrammarRule.OPTION_OPERATOR_PRECEDENCE,
-                # --
-                #'Any_Expression',
-                GRToken(BSLanguageDef.ITokenType.BINARY_OPERATOR, '<=', '<>', '<', '>', '>=', '='),
-                'Any_Expression',
             )
 
         GrammarRule('List_Value',
@@ -5389,6 +5556,14 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('List_Value_Next_Item',
                 GRToken(BSLanguageDef.ITokenType.SEPARATOR, False),
                 'Any_Expression',
+            )
+
+        GrammarRule('List_Index_Expression',
+                GrammarRule.OPTION_AST | GrammarRule.OPTION_NOT_PRECEDED_BY_SPACE,
+                # --
+                GRToken(BSLanguageDef.ITokenType.BRACKET_OPEN, False),
+                'Evaluation_Expression',
+                GRToken(BSLanguageDef.ITokenType.BRACKET_CLOSE, False)
             )
 
         GrammarRule('Variable',

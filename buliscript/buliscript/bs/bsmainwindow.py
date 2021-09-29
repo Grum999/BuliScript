@@ -53,19 +53,12 @@ from buliscript.pktk.modules.menuutils import buildQMenuTree
 from buliscript.pktk.modules.parser import Parser
 from buliscript.pktk.modules.tokenizer import TokenizerRule
 
+from buliscript.pktk.widgets.wseparator import WVLine
+
 from buliscript.pktk.pktk import (
         EInvalidType,
         EInvalidValue
     )
-
-
-class WVLine(QFrame):
-    """A vertical line widget that can be used as a separator"""
-
-    def __init__(self):
-        super(WVLine, self).__init__()
-        self.setFrameShape(self.VLine|self.Sunken)
-
 
 
 class WMenuForCommand(QWidgetAction):
@@ -156,6 +149,10 @@ class BSMainWindow(QMainWindow):
 
         self.setDockOptions(QMainWindow.AllowTabbedDocks|QMainWindow.AllowNestedDocks)
         self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
+        self.setCorner(Qt.TopLeftCorner, Qt.LeftDockWidgetArea)
+        self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
+        self.setCorner(Qt.TopRightCorner, Qt.RightDockWidgetArea)
+        self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
         self.setDocumentMode(False)
 
         self.__initStatusBar()

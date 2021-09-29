@@ -42,8 +42,11 @@ from ..modules.languagedef import LanguageDef
 from ..modules.tokenizer import (
         TokenStyle,
         TokenType,
-        Tokenizer
+        Tokenizer,
+        Token
     )
+
+from .wsearchinput import SearchFromPlainTextEdit
 
 from ..pktk import *
 
@@ -208,6 +211,9 @@ class WCodeEditor(QPlainTextEdit):
 
         self.__completerLastSelectedIndex = None
 
+        # ---- search object
+        self.__search=SearchFromPlainTextEdit(self)
+
         # default values
         self.__updateLineNumberAreaWidth()
         self.__highlightCurrentLine()
@@ -362,7 +368,16 @@ class WCodeEditor(QPlainTextEdit):
     def __highlightCurrentLine(self):
         """When the cursor position changes, highlight the current line (the line containing the cursor)"""
         # manage
-        extraSelections = []
+        extraSelections = self.extraSelections()
+
+        # remove current selection from extra selection list
+        # => can't clear selection as maybe, there's other extra selection
+        for selection in extraSelections:
+            if selection.format.boolProperty(QTextFormat.FullWidthSelection):
+                # found, remove it and exit, no need to continue to search there's normaly only
+                # one extra selection like this one
+                extraSelections.remove(selection)
+                break
 
         if self.__optionMultiLine and not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
@@ -371,13 +386,9 @@ class WCodeEditor(QPlainTextEdit):
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()
 
-            # QPlainTextEdit gives the possibility to have more than one selection at the same time.
-            # We can set the character format (QTextCharFormat) of these selections.
-            # We clear the cursors selection before setting the new new QPlainTextEdit.ExtraSelection, else several
-            # lines would get highlighted when the user selects multiple lines with the mouse
-            selection.cursor.clearSelection()
-
-            extraSelections.append(selection)
+            # insert at beginning, must be the first extra selection rendered
+            # especially if there's extra selection from "search"
+            extraSelections.insert(0, selection)
 
         self.setExtraSelections(extraSelections)
         self.__updateCurrentPositionAndToken(False)
@@ -718,25 +729,6 @@ class WCodeEditor(QPlainTextEdit):
                 if self.__shortCuts[key][modifiers]==action:
                     return (key, modifiers)
         return None
-
-
-    def indentWidth(self):
-        """Return current indentation width"""
-        return self.__indent
-
-
-    def setIndentWidth(self, value):
-        """Set current indentation width
-
-        Must be a value greater than 0
-        """
-        if isinstance(value, int):
-            if value>0:
-                self.__indent=value
-            else:
-                raise EInvalidType("Given `value`must be an integer greater than 0")
-        else:
-            raise EInvalidType("Given `value`must be an integer greater than 0")
 
 
     def doAutoIndent(self):
@@ -1308,7 +1300,7 @@ class WCodeEditor(QPlainTextEdit):
         if numberOfRows is None:
             self.setminimumHeight(0)
             self.setMaximumHeight(16777215)
-        elif numberOfRows>0:
+        elif isinstance(numberOfRows, int) and numberOfRows>0:
             if not self.__optionMultiLine:
                 numberOfRows = 1
 
@@ -1341,14 +1333,34 @@ class WCodeEditor(QPlainTextEdit):
     def cursorToken(self, starting=True):
         """Return token currently under cursor
 
-        If cursor is on first character of token, by default reutnr current token
+        If cursor is on first character of token, by default return current token
         But if option `starting` is False, in this case consider that we want the previous token
+
+        Note: token position is relative to current line (row position=1, positionStart is relative to start of row)
         """
         if self.__cursorToken:
             if starting==False and self.__cursorToken.column() == (self.__cursorCol+1):
                 return self.__cursorToken.previous()
 
         return self.__cursorToken
+
+
+    def tokenCursor(self):
+        """Return a QTextCursor matching current token on which cursor is"""
+        token=self.cursorToken()
+
+        if not isinstance(token, Token):
+            return None
+
+        cursor=QTextCursor(self.document())
+        cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
+        if self.__cursorRow>0:
+            cursor.movePosition(QTextCursor.Down, QTextCursor.MoveAnchor, self.__cursorRow)
+        if token.column()>1:
+            cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, token.column()-1)
+        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, token.length())
+
+        return cursor
 
 
     def insertLanguageText(self, text):
@@ -1363,6 +1375,87 @@ class WCodeEditor(QPlainTextEdit):
             cursor.insertText("".join(texts[1:]))
             cursor.setPosition(p, QTextCursor.MoveAnchor)
         self.setTextCursor(cursor)
+
+
+    def replaceTokenText(self, text, token=None):
+        """Replace given `token` with given `text`
+
+        If no token is provided, replace current token
+        """
+        if token is None:
+            token=self.cursorToken()
+
+        if not isinstance(token, Token):
+            raise EInvalidType('Given `token` must be None or a <Token>')
+
+        cursor=self.tokenCursor()
+        cursor.insertText(text)
+
+        cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, len(text))
+        self.setTextCursor(cursor)
+
+
+    def scrollToLine(self, lineNumber, centered=True, nearest=True):
+        """Scroll to given `lineNumber`
+
+        If line number is not valid, scroll to top/bottom of document if `nearest` is True
+        Otherwise, does nothing
+        """
+        # first block start to 0, but editor start from 1
+        lineNumber-=1
+
+        if lineNumber < 0:
+            if nearest:
+                block=self.document().firstBlock()
+            else:
+                return None
+        elif lineNumber >= self.blockCount():
+            if nearest:
+                block=self.document().lastBlock()
+            else:
+                return None
+        else:
+            block=self.document().findBlockByNumber(lineNumber)
+
+        cursor=QTextCursor(block)
+
+        self.setTextCursor(cursor)
+        if centered:
+            self.centerCursor()
+        else:
+            self.ensureCursorVisible()
+
+
+
+    def selection(self, fromRow, fromCol=None, toRow=None, toCol=None):
+        """Convenience method to select text in code editor
+
+        Given `fromRow` is mandatory and must be valid <int> values
+
+        fromRow   fromCol  -  toRow  toCol  -   Result
+        -------   -------     -----  -----      -------------------------------------------------------------------------
+        <int>     None        None   None       move cursor to start of given `fromRow`
+        <int>     <int>       None   None       move cursor to given `fromCol` of `fromRow`
+        <int>     None        <int>  None       select rows from `fromRow` to `toRow`
+        <int>     <int>       <int>  None       select text from given `fromCol` of `fromRow` to end of `toRow`
+        <int>     <int>       <int>  <int>      select text from given `fromCol` of `fromRow` to given `toCol` of `toRow`
+
+        if ` fromRow`/`toRow` is not valid:
+        - <0        ==> forced to 0
+        - >nbrows   ==> forced to nbrows
+
+        if ` fromCol`/`toCol` is not valid:
+        - <0            ==> forced to 0
+        - >row length   ==> forced to row length
+
+        return a QTextCursor matching the selection
+        """
+        pass
+
+
+    def search(self):
+        """Return search object"""
+        return self.__search
 
 
 class WCELineNumberArea(QWidget):

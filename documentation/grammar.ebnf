@@ -196,7 +196,10 @@ Action_Set_Selection
 */
 
 Action_Set_Script_Execution
-        ::= 'set' 'script' 'execution' 'verbose' Evaluate_Boolean_Expression
+        ::= 'set' 'script' (
+                ('execution' 'verbose' Evaluate_Boolean_Expression) |
+                ('randomize' 'seed' (Evaluate_String_Expression | Evaluate_Number_Expression) )
+            )
 
 
 Action_Draw_Shape
@@ -344,7 +347,7 @@ Flow    ::= (
 
 
 Flow_Set_Variable
-        ::= 'set' 'variable' User_Variable '=' Any_Expression
+        ::= 'set' 'global'? 'variable' User_Variable '=' Any_Expression
 
 
 Flow_Import
@@ -401,7 +404,7 @@ Flow_Repeat
                 DEDENT
 
 Flow_ForEach
-        ::= 'for' 'each' User_Variable 'in' List_Expression 'do'
+        ::= 'for' 'each' 'item' 'from' (List_Expression|String_Expression) 'as' User_Variable 'do'
                 INDENT
                 ScriptBlock
                 DEDENT
@@ -415,9 +418,9 @@ Flow_ForEach
 */
 Any_Expression
         ::= Evaluation_Number_Expression |
-            Evaluation_String_Expression |
+            Evaluation_String_Expression ListIndex_Expression? |
             Evaluation_Boolean_Expression |
-            Evaluation_List_Expression |
+            Evaluation_List_Expression ListIndex_Expression? |
             Color_Expression |
             Number_Expression |
             String_Expression |
@@ -441,7 +444,8 @@ Color_Expression
 
 Number_Expression
         ::= ([0-9]+ | [0-9]* '.' [0-9]+) |
-            Function | Variable
+            Function |
+            Variable
 
 String_Expression
         ::= (String_Value (String_Value)* ) |
@@ -457,6 +461,10 @@ List_Expression
         ::= ('[' ( Any_Expression (',' Any_Expression )* )? ']') |
             Function |
             Variable
+
+
+ListIndex_Expression
+        ::= '[' Number_Expression ']'
 
 
 Unit_M_Expression
@@ -550,6 +558,8 @@ Evaluation_Boolean_Expression
             )
             |
             ( Any_Expression ( '<' | '<=' | '>' | '>=' | '=' | '<>' ) Any_Expression )
+            |
+            ( Any_Expression 'in' Evaluation_List_Expression )
             )
             ( ( 'and' | 'or' | 'xor' ) Evaluation_Boolean_Expression )?
 
@@ -578,7 +588,19 @@ Function
                 ( 'hsv' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
                 ( 'hsva' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
                 ( 'cmyk' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
-                ( 'cmyka' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' )
+                ( 'cmyka' '(' Evaluation_Number_Expression ','  Evaluation_Number_Expression ',' Evaluation_Number_Expression ',' Evaluation_Number_Expression ','  Evaluation_Number_Expression ')' ) |
+                ( 'red' '(' Color_Expression ')' ) |
+                ( 'green' '(' Color_Expression ')' ) |
+                ( 'blue' '(' Color_Expression ')' ) |
+                ( 'cyan' '(' Color_Expression ')' ) |
+                ( 'magenta' '(' Color_Expression ')' ) |
+                ( 'yellow' '(' Color_Expression ')' ) |
+                ( 'black' '(' Color_Expression ')' ) |
+                ( 'hue' '(' Color_Expression ')' ) |
+                ( 'saturation' '(' Color_Expression ')' ) |
+                ( 'lightness' '(' Color_Expression ')' ) |
+                ( 'value' '(' Color_Expression ')' ) |
+                ( 'opacity' '(' Color_Expression ')' )
             )
             |
             'string' '.' (
@@ -586,7 +608,8 @@ Function
                 ( 'upper' '(' Evaluation_String_Expression ')' ) |
                 ( 'lower' '(' Evaluation_String_Expression ')' ) |
                 ( 'substring' '(' Evaluation_String_Expression ',' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |
-                ( 'split' '(' Evaluation_String_Expression (',' Evaluation_String_Expression)? ')' )
+                ( 'split' '(' Evaluation_String_Expression (',' Evaluation_String_Expression)? ')' ) |
+                ( 'format' '(' Evaluation_String_Expression ( ',' Any_Expression)* ')' )
             )
             |
             'list' '.' (
@@ -602,12 +625,12 @@ Function
             |
             'math' '.' (
                 ( 'random' '(' ( Evaluation_Number_Expression ',' Evaluation_Number_Expression )?  ')' ) |
-                ( 'abs' '(' Evaluation_Number_Expression ')' ) |
+                ( 'absolute' '(' Evaluation_Number_Expression ')' ) |
                 ( 'sign' '(' Evaluation_Number_Expression ')' ) |
                 ( 'even' '(' Evaluation_Number_Expression ')' ) |
                 ( 'odd' '(' Evaluation_Number_Expression ')' ) |
                 ( 'exp' '(' Evaluation_Number_Expression ')' ) |
-                ( 'square_root' '(' Evaluation_Number_Expression ')' ) |
+                ( 'squareRoot' '(' Evaluation_Number_Expression ')' ) |
                 ( 'power' '(' Evaluation_Number_Expression ',' Evaluation_Number_Expression ')' ) |
                 ( 'logn' '(' Evaluation_Number_Expression ')' ) |
                 ( 'log' '(' Evaluation_Number_Expression ( ',' Evaluation_Number_Expression )? ')' ) |
@@ -650,10 +673,6 @@ Function
 
 
 
-
-
-
-
 /*
     ----------------------------------------------------------------------------
     Define values
@@ -687,9 +706,10 @@ Reserved_Variable
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
             ) |
-            ( 'script' '.' 'execution' '.' 'verbose' ) |
-            ( 'repeat' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) ) |
-            ( 'foreach' '.' ( 'current' | 'total' | 'first' | 'last' | 'incAngle' | 'currentAngle' ) )
+            ( 'script' '.' ('execution' '.' 'verbose' | 'randomize' '.' 'seed' ) ) |
+            ( 'repeat' '.' ( 'currentIteration' | 'totalIteration' | 'isFirstIteration' | 'isLastIteration' | 'incAngle' | 'currentAngle' ) ) |
+            ( 'foreach' '.' ( 'currentIteration' | 'totalIteration' | 'isFirstIteration' | 'isLastIteration' | 'incAngle' | 'currentAngle' ) ) |
+            ( 'math' '.' ( 'pi' | 'e' | 'phi' ) )
         )
 
 /*

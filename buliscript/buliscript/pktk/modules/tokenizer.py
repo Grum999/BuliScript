@@ -419,6 +419,7 @@ class TokenizerRule(object):
         *XXX* => italic
         --- => separator
         `` => monospace
+        (xx)[yy] => hyperlink <a href='yy'>xx</a>
         """
         def parsedText(text):
             text=text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -426,6 +427,7 @@ class TokenizerRule(object):
             text=re.sub(r'\*([^*]+)\*', r'<i>\1</i>', text)
             text=re.sub(r'`([^`]+)`', r'<span style="font-family:monospace">\1</span>', text)
             text=re.sub(r'\n*---\n*', '<hr>', text)
+            text=re.sub(r'\((.+)\)\[(.+)\]', r'<a href="\2">\1</a>', text)
             text=text.replace('\n', '<br>')
             return text
 
@@ -1017,8 +1019,8 @@ class Tokenizer(object):
                                         previousToken=tokenIndent
 
                                 elif previousIndent>token.indent():
-                                    # token indent is greater than previous indent value
-                                    # need to add INDENT token
+                                    # token indent is lower than previous indent value
+                                    # need to add DEDENT token
                                     nbIndent, nbWrongIndent=divmod(previousIndent - token.indent(), indent)
 
                                     for numIndent in range(nbIndent):

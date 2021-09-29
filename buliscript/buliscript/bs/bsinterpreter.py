@@ -25,6 +25,9 @@ import re
 import uuid
 import random
 import math
+import time
+
+from enum import Enum
 
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
@@ -56,6 +59,10 @@ from buliscript.pktk.modules.parser import (
         ASTItem
     )
 
+from buliscript.pktk.widgets.wconsole import (
+        WConsoleType,
+        WConsole
+    )
 from buliscript.pktk.widgets.wcolorselector import (
         WColorPicker,
         WColorComplementary
@@ -101,6 +108,7 @@ class EInterpreter(Exception):
         """Return error level for exception"""
         return self.__errorLevel
 
+
 class EInterpreterInternalError(EInterpreter):
     """An error occured during execution
 
@@ -116,6 +124,8 @@ class BSInterpreter(QObject):
     actionExecuted = Signal(str)
     executionStarted = Signal()
     executionFinished = Signal()
+
+    output = Signal(str, WConsoleType, dict, bool)
 
     CONST_MEASURE_UNIT=['PX', 'PCT', 'MM', 'INCH']
     CONST_MEASURE_UNIT_RPCT=['PX', 'PCT', 'MM', 'INCH', 'RPCT']
@@ -192,56 +202,114 @@ class BSInterpreter(QObject):
     # --------------------------------------------------------------------------
     # utils methods
     # --------------------------------------------------------------------------
-    def __verbose(self, text, ast=None):
+    def __escapeText(self, text, fmtCode=''):
+        """Return escaped text"""
+        returned=text
+
+        if fmtCode=='':
+            return returned
+        else:
+            lines=returned.split("\n")
+            returned=[]
+            for line in lines:
+                tmpFmtCode=fmtCode
+                if '***' in tmpFmtCode:
+                    line=f"***{line}***"
+                elif '**' in tmpFmtCode:
+                    line=f"**{line}**"
+                elif '*' in tmpFmtCode:
+                    line=f"*{line}*"
+
+                tmpFmtCode=tmpFmtCode.replace('*','')
+                if tmpFmtCode!='':
+                    line=f"#{tmpFmtCode}#{line}#"
+
+                returned.append(line)
+
+            return "\n".join(returned)
+
+    def __formatVarName(self, value):
+        """Format given variable name
+
+        Example:
+            'TEST'
+            will return:
+            '***&lt;TEST&gt;***'
+        """
+        return f'***&lt;{value}&gt;***'
+
+    def __formatStoreResult(self, *values):
+        """Format given variable name
+
+        Examples:
+            ':v1'
+            will return:
+            '#lk#*(Stored as variable **:v1**)*#'
+
+            ':v1', ':v2'
+            will return:
+            '#lk#*(Stored as variables **:v1**, **:v2**)*#'
+        """
+        returned=[f"**{value}**" for value in values]
+        if len(returned)>1:
+            return f" #lk#*(Stored as variables {', '.join(returned)})*#"
+        else:
+            return f" #lk#*(Stored as variable {', '.join(returned)})*#"
+
+    def __formatPosition(self, ast=None, lineNumber=None, endLine=' '):
+        if not ast is None:
+            position=ast.position()
+            if position["from"]["row"]==position["to"]["row"]:
+                return f"#w#line# #y#{position['from']['row']}#{endLine}"
+            else:
+                return f"#w#lines# #y#{position['from']['row']}##w#-##y#{position['to']['row']}#{endLine}"
+
+        elif not lineNumber is None:
+            return f"#w#line# #y#{lineNumber}#{endLine}"
+        else:
+            return ''
+
+
+    def verbose(self, text, ast=None, cReturn=True):
         """If execution is defined as verbose, will print given text"""
         if not self.__optionVerboseMode:
             return
 
-        if ast is None:
-            msg=f'Verbose [---:----->---:-----] >> {text}'
-        else:
-            position=ast.position()
+        msg=f'#c#Verbose# {self.__formatPosition(ast)}#lw#>># {self.__escapeText(text)}'
+        data={}
+        if isinstance(ast, ASTItem):
+            data={'position': ast.position()}
+        self.print(msg, WConsoleType.INFO, data, cReturn=cReturn)
 
-            if position["from"]["column"]==position["to"]["column"] and position["from"]["row"]==position["to"]["row"]:
-                msg=f'Verbose [---:----->---:-----] >> {text}'
-            else:
-                msg=f'Verbose [{position["from"]["column"]:03}:{position["from"]["row"]:05}>{position["to"]["column"]:03}:{position["to"]["row"]:05}] >> {text}'
-        # need to review print... (callback, signal?)
-        self.__print(msg)
-
-    def __warning(self, text, ast=None):
+    def warning(self, text, ast=None, cReturn=True):
         """Even if execution is not defined as verbose, will print given text as warning"""
-        if ast is None:
-            msg=f'Warning [---:----->---:-----] >> {text}'
-        else:
-            position=ast.position()
+        msg=f'#y#Warning# {self.__formatPosition(ast)}#lw#>># {self.__escapeText(text, "y*")}'
+        data={}
+        if isinstance(ast, ASTItem):
+            data={'position': ast.position()}
+        self.print(msg, WConsoleType.WARNING, data, cReturn=cReturn)
 
-            if position["from"]["column"]==position["to"]["column"] and position["from"]["row"]==position["to"]["row"]:
-                msg=f'Warning [---:----->---:-----] >> {text}'
-            else:
-                msg=f'Warning [{position["from"]["column"]:03}:{position["from"]["row"]:05}>{position["to"]["column"]:03}:{position["to"]["row"]:05}] >> {text}'
-
-        # need to review print... (callback, signal?)
-        self.__print(msg)
-
-    def __error(self, text, ast=None):
+    def error(self, text, ast=None, cReturn=True):
         """Even if execution is not defined as verbose, will print given text as error"""
-        if ast is None:
-            msg=f'Error   [---:----->---:-----] >> {text}'
-        else:
-            position=ast.position()
+        msg=f'#r#Error# {self.__formatPosition(ast)}#lw#>># {self.__escapeText(text, "r*")}'
+        data={}
+        if isinstance(ast, ASTItem):
+            data={'position': ast.position()}
+        self.print(msg, WConsoleType.ERROR, data, cReturn=cReturn)
 
-            if position["from"]["column"]==position["to"]["column"] and position["from"]["row"]==position["to"]["row"]:
-                msg=f'Error   [---:----->---:-----] >> {text}'
-            else:
-                msg=f'Error   [{position["from"]["column"]:03}:{position["from"]["row"]:05}>{position["to"]["column"]:03}:{position["to"]["row"]:05}] >> {text}'
+    def valid(self, text, ast=None, cReturn=True):
+        """Even if execution is not defined as verbose, will print given text as valid"""
+        msg=f'#g#Information# {self.__formatPosition(ast)}#lw#>># {self.__escapeText(text, "g*")}'
+        data={}
+        if isinstance(ast, ASTItem):
+            data={'position': ast.position()}
+        self.print(msg, WConsoleType.VALID, data, cReturn=cReturn)
 
-        # need to review print... (callback, signal?)
-        self.__print(msg)
-
-    def __print(self, text):
+    def print(self, text, type=WConsoleType.NORMAL, data={}, cReturn=True):
         """Print text to console"""
-        print(text)
+        if not isinstance(data, dict):
+            data={}
+        self.output.emit(self.__escapeText(text), type, data, cReturn)
 
     def __delay(self):
         """Do a pause in execution"""
@@ -280,15 +348,15 @@ class BSInterpreter(QObject):
     def __checkParamType(self, currentAst, fctLabel, name, value, *types):
         """raise an exception if value is not of given type"""
         if not isinstance(value, types):
-            raise EInterpreter(f"{fctLabel}: invalid type for argument {name}", currentAst)
+            raise EInterpreter(f"{fctLabel}: invalid type for argument {self.__formatVarName(name)}", currentAst)
 
     def __checkParamDomain(self, currentAst, fctLabel, name, controlOk, msg, raiseException=True):
         """raise an exception if value is not in expected domain"""
         if not controlOk:
             if raiseException:
-                raise EInterpreter(f"{fctLabel}: invalid domain for argument {name}, {msg}", currentAst)
+                raise EInterpreter(f"{fctLabel}: invalid domain for argument {self.__formatVarName(name)}, {msg}", currentAst)
             else:
-                self.__warning(f"{fctLabel}: invalid domain for argument {name}, {msg}", currentAst)
+                self.warning(f"{fctLabel}: invalid domain for argument {self.__formatVarName(name)}, {msg}", currentAst)
         return controlOk
 
     def __checkOption(self, currentAst, fctLabel, value, forceRaise=False):
@@ -298,9 +366,7 @@ class BSInterpreter(QObject):
 
     def __strValue(self, variableValue):
         """Return formatted string value"""
-        if isinstance(variableValue, str):
-            return f'"{variableValue}"'
-        elif isinstance(variableValue, QColor):
+        if isinstance(variableValue, QColor):
             if variableValue.alpha()==0xff:
                 return variableValue.name(QColor.HexRgb)
             else:
@@ -313,6 +379,43 @@ class BSInterpreter(QObject):
         else:
             return variableValue
 
+    def __valueTypeFromName(self, name):
+        """Return value type"""
+        if name=='str':
+            return "STRING"
+        elif name=='int':
+            return "INTEGER"
+        elif name=='float':
+            return "DECIMAL"
+        elif name=='list':
+            return "LIST"
+        elif name=='bool':
+            return "SWITCH"
+        elif name=='QColor':
+            return "COLOR"
+        elif name is None or name=='NoneType':
+            return "NONE"
+        else:
+            return "UNKNOWN"
+
+    def __valueType(self, value):
+        """Return value type"""
+        if isinstance(value, str):
+            return "STRING"
+        elif isinstance(value, int):
+            return "INTEGER"
+        elif isinstance(value, float):
+            return "DECIMAL"
+        elif isinstance(value, list):
+            return "LIST"
+        elif isinstance(value, bool):
+            return "SWITCH"
+        elif isinstance(value, QColor):
+            return "COLOR"
+        elif value is None:
+            return "NONE"
+        else:
+            return "UNKNOWN"
 
     # --------------------------------------------------------------------------
     # Script execution methods
@@ -335,9 +438,21 @@ class BSInterpreter(QObject):
         #self.__currentLayer=self.__currentDocument.activeNode()
         #self.__currentLayerBounds=self.__currentLayer.bounds()
 
-
+        self.valid(f"**Start script execution**# #w#[##lw#*{time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}*##w#]")
         if self.__astRoot.id()==ASTSpecialItemType.ROOT:
-            return self.__executeAst(self.__astRoot)
+            startTime=time.time()
+            try:
+                returned=self.__executeAst(self.__astRoot)
+                totalTime=round(time.time()-startTime,4)
+                self.valid(f"**Script executed**# #w#[Executed in# #lw#*{totalTime}s*##w#]")
+                return returned
+            except EInterpreter as e:
+                if e.errorLevel()==EInterpreter.ERROR_LEVEL_STOP:
+                    totalTime=round(time.time()-startTime, 4)
+                    raise EInterpreter(f"{str(e)}\nInformation# #lw#>># #lg#**Script executed **# #w#[Executed in# #lw#*{totalTime}s*##w#]", e.ast(), EInterpreter.ERROR_LEVEL_STOP)
+                raise e
+            except Exception as e:
+                raise e
 
         raise EInterpreterInternalError("Invalid ROOT", self.__astRoot)
 
@@ -349,7 +464,18 @@ class BSInterpreter(QObject):
         # ----
         if currentAst.id() == ASTSpecialItemType.ROOT:
             # given AST is the main block of instructions
-            return self.__executeScriptBlock(currentAst, True, "Main script")
+            random.seed()
+            randSeed=random.randint(0,999999999)
+            random.seed(randSeed)
+
+            predefinedVariables={
+                    ':math.pi': math.pi,
+                    ':math.e': math.e,
+                    ':math.phi': 1.618033988749895,
+                    ':script.randomize.seed': randSeed,
+                    ':script.execution.verbose': self.__optionVerboseMode
+                }
+            return self.__executeScriptBlock(currentAst, True, "Main script", predefinedVariables)
 
         # ----------------------------------------------------------------------
         # Flows
@@ -460,6 +586,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Execution_Verbose':
             return self.__executeActionSetExecutionVerbose(currentAst)
+        elif currentAst.id() == 'Action_Set_Script_Randomize_Seed':
+            return self.__executeActionSetRandomizeSeed(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Square':
             return self.__executeActionDrawShapeSquare(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Round_Square':
@@ -568,6 +696,8 @@ class BSInterpreter(QObject):
             return self.__executeStringValue(currentAst)
         elif currentAst.id() == 'List_Value':
             return self.__executeListValue(currentAst)
+        elif currentAst.id() == 'List_Index_Expression':
+            return self.__executeListIndexExpression(currentAst)
 
         # ----------------------------------------------------------------------
         # Operators
@@ -576,6 +706,8 @@ class BSInterpreter(QObject):
             return self.__executeUnaryOperator(currentAst)
         elif currentAst.id() == ASTSpecialItemType.BINARY_OPERATOR:
             return self.__executeBinaryOperator(currentAst)
+        elif currentAst.id() == ASTSpecialItemType.INDEX_OPERATOR:
+            return self.__executeIndexOperator(currentAst)
 
         # ----------------------------------------------------------------------
         # Forgotten to implement something?
@@ -599,15 +731,13 @@ class BSInterpreter(QObject):
         """
         returned=None
 
-        self.__verbose(f"Enter scriptblock: '{name}'", currentAst)
+        self.verbose(f"Enter scriptblock: '{name}'", currentAst)
         self.__scriptBlockStack.push(currentAst, allowLocalVariable, name)
-
-        scriptBlock=self.__scriptBlockStack.current()
 
         if isinstance(createLocalVariables, dict):
             # create local variables if any provided before starting block execution
             for variableName in createLocalVariables:
-                scriptBlock.setVariable(variableName, createLocalVariables[variableName], True, True)
+                self.__scriptBlockStack.setVariable(variableName, createLocalVariables[variableName], BSVariableScope.LOCAL)
 
         for ast in currentAst.nodes():
             # execute all instructions from current script block
@@ -624,7 +754,7 @@ class BSInterpreter(QObject):
 
         #Debug.print("Variables: {0}", scriptBlock.variables(True))
         self.__scriptBlockStack.pop()
-        self.__verbose(f"Exit scriptblock: '{name}'", currentAst)
+        self.verbose(f"Exit scriptblock: '{name}'", currentAst)
 
         return returned
 
@@ -634,17 +764,26 @@ class BSInterpreter(QObject):
     # --------------------------------------------------------------------------
     def __executeFlowSetVariable(self, currentAst):
         """Set a variable in current script block"""
-        scriptBlock=self.__scriptBlockStack.current()
-
         # Defined by 2 nodes:
-        #   0: variable name (<Token>)
-        #   1: variable value (<Token> or <ASTItem>)
-        variableName=currentAst.node(0).value()
-        variableValue=self.__evaluate(currentAst.node(1))
+        #   0: global/local variable
+        #   1: variable name (<Token>)
+        #   2: variable value (<Token> or <ASTItem>)
+        variableLocalScope=(currentAst.node(0).value()=='set variable')
+        variableName=currentAst.node(1).value()
+        variableValue=self.__evaluate(currentAst.node(2))
 
-        self.__verbose(f"set variable {variableName}={self.__strValue(variableValue)}", currentAst)
+        if not variableLocalScope:
+            globalVar='global '
+            scope=BSVariableScope.GLOBAL
+        else:
+            globalVar=''
+            scope=BSVariableScope.CURRENT
 
-        scriptBlock.setVariable(variableName, variableValue, True)
+
+
+        self.verbose(f"set {globalVar}variable {variableName}={self.__strValue(variableValue)}", currentAst)
+
+        self.__scriptBlockStack.setVariable(variableName, variableValue, scope)
 
         self.__delay()
         return None
@@ -674,12 +813,12 @@ class BSInterpreter(QObject):
             macroName='None'
 
         if len(variables)==0:
-            self.__verbose(f"Define macro '{macroName}'", currentAst)
+            self.verbose(f"Define macro '{macroName}'", currentAst)
         else:
-            self.__verbose(f"Define macro '{macroName}' with parameters {' '.join(variables)}", currentAst)
+            self.verbose(f"Define macro '{macroName}' with parameters {' '.join(variables)}", currentAst)
 
         if self.__macroDefinitions.alreadyDefined(macroName):
-            self.__warning(f"Macro with name '{macroName}' has been overrided", self.__macroDefinitions.get(macroName).ast())
+            self.warning(f"Macro with name '{macroName}' has been overrided", self.__macroDefinitions.get(macroName).ast())
 
         self.__macroDefinitions.add(BSScriptBlockMacro(sourceFile, macroName, scriptBlock, *variables))
 
@@ -698,7 +837,7 @@ class BSInterpreter(QObject):
 
         Call defined and execute it
         """
-        fctLabel='Flow `call macro`'
+        fctLabel='Flow ***call macro***'
 
         if len(currentAst.nodes())<1:
             # at least, must have one parameter (macro name to call)
@@ -719,10 +858,10 @@ class BSInterpreter(QObject):
                 variablesAsParameter.append(self.__evaluate(node))
 
 
-        self.__checkParamType(currentAst, fctLabel, '<MACRO>', macroName, str)
+        self.__checkParamType(currentAst, fctLabel, 'MACRO', macroName, str)
 
         macroDefinition=self.__macroDefinitions.get(macroName)
-        self.__checkParamDomain(currentAst, fctLabel, '<MACRO>', not macroDefinition is None, f"no macro matching given name '{macroName}' found")
+        self.__checkParamDomain(currentAst, fctLabel, 'MACRO', not macroDefinition is None, f"no macro matching given name '{macroName}' found")
 
         nbExpectedArgs=len(macroDefinition.argumentsName())
         nbProvidedArgs=len(variablesAsParameter)
@@ -741,12 +880,12 @@ class BSInterpreter(QObject):
             verboseText+="with parameters"+' '.join([f'{key}={localVariables[key]}' for key in localVariables])+' '
         if not storeResultName is None:
             verboseText+='and store result into variable '+storeResultName
-        self.__verbose(verboseText, currentAst)
+        self.verbose(verboseText, currentAst)
 
         storeResultValue=self.__executeScriptBlock(macroDefinition.ast(), True, f"Macro: {macroName}", localVariables)
 
         if isinstance(storeResultName, str):
-            self.__scriptBlockStack.current().setVariable(storeResultName, storeResultValue, True)
+            self.__scriptBlockStack.setVariable(storeResultName, storeResultValue, BSVariableScope.CURRENT)
 
         return storeResultValue
 
@@ -755,7 +894,7 @@ class BSInterpreter(QObject):
 
         Return given value or False if no value is provided
         """
-        fctLabel='Flow `return`'
+        fctLabel='Flow ***return***'
         self.__checkParamNumber(currentAst, fctLabel, 0, 1)
 
         returned=False
@@ -763,7 +902,7 @@ class BSInterpreter(QObject):
         if len(currentAst.nodes())>0:
             returned=self.__evaluate(currentAst.node(0))
 
-        self.__verbose(f"return {self.__strValue(returned)}", currentAst)
+        self.verbose(f"return {self.__strValue(returned)}", currentAst)
 
         #self.__delay()
         return returned
@@ -773,7 +912,7 @@ class BSInterpreter(QObject):
 
         Execute a scriptblock if condition is met
         """
-        fctLabel='Flow `if ... then`'
+        fctLabel='Flow ***if ... then***'
 
         # 1st parameter: condition
         # 2nd parameter: scriptblock to execute
@@ -820,7 +959,7 @@ class BSInterpreter(QObject):
         else:
             verboseText=f'{mode} (condition not validated) then ...'
 
-        self.__verbose(verboseText, currentAst)
+        self.verbose(verboseText, currentAst)
 
         if execFct=='__executeScriptBlock':
             self.__executeScriptBlock(astScriptBlock, False, astBlockName)
@@ -838,12 +977,12 @@ class BSInterpreter(QObject):
 
         Execute a scriptblock
         """
-        fctLabel='Flow `else ...`'
+        fctLabel='Flow ***else ...***'
 
         # 1st parameter: scriptblock to execute
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
-        self.__verbose('else ...', currentAst)
+        self.verbose('else ...', currentAst)
         self.__executeScriptBlock(currentAst.node(0), False, 'else')
 
         #self.__delay()
@@ -854,7 +993,7 @@ class BSInterpreter(QObject):
 
         Execute a repeat loop
         """
-        fctLabel='Flow `repeat <COUNT> times`'
+        fctLabel='Flow ***repeat *<COUNT>* times***'
 
         # 1st parameter: number of repetition
         # 2nd parameter: scriptblock to execute
@@ -869,9 +1008,9 @@ class BSInterpreter(QObject):
                 # a float value without decimals (4.0 for exsample => convert to <int>)
                 repeatTotal=asInt
 
-        self.__checkParamType(currentAst, fctLabel, '<COUNT>', repeatTotal, int)
+        self.__checkParamType(currentAst, fctLabel, 'COUNT', repeatTotal, int)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<COUNT>', repeatTotal>=0, f"Can't repeat negative value (count={repeatTotal})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'COUNT', repeatTotal>=0, f"Can't repeat negative value (count={repeatTotal})", False):
             return None
 
         scriptBlockName=f'repeat {repeatTotal} times'
@@ -885,10 +1024,10 @@ class BSInterpreter(QObject):
         repeatCurrentAngle=0
         for repeatCurrent in range(repeatTotal):
             loopVariables={
-                    ':repeat.total': repeatTotal,
-                    ':repeat.current': repeatCurrent+1,
-                    ':repeat.first': (repeatCurrent==0),
-                    ':repeat.last': (repeatCurrent==repeatTotal-1),
+                    ':repeat.totalIteration': repeatTotal,
+                    ':repeat.currentIteration': repeatCurrent+1,
+                    ':repeat.isFirstIteration': (repeatCurrent==0),
+                    ':repeat.isLastIteration': (repeatCurrent==repeatTotal-1),
                     ':repeat.incAngle': repeatIncAngle,
                     ':repeat.currentAngle': repeatCurrentAngle
                 }
@@ -902,29 +1041,29 @@ class BSInterpreter(QObject):
     def __executeFlowForEach(self, currentAst):
         """for each <variable> in <list>
 
-        Do llop over items in list
+        Do loop over items in list
         """
-        fctLabel='Flow `for each ... in ...`'
+        fctLabel='Flow ***for each ... in ...***'
 
-        # 1st parameter: target variable
-        # 2nd parameter: source list
+        # 1st parameter: source list
+        # 2nd parameter: target variable
         # 3rd parameter: scriptblock to execute
         self.__checkParamNumber(currentAst, fctLabel, 3)
 
-        forVarName=currentAst.node(0).value()
-        forEachList=self.__evaluate(currentAst.node(1))
+        forEachList=self.__evaluate(currentAst.node(0))
+        forVarName=currentAst.node(1).value()
         astScriptBlock=currentAst.node(2)
 
 
-        self.__checkParamType(currentAst, fctLabel, '<LIST>', forEachList, list, str)
+        self.__checkParamType(currentAst, fctLabel, 'LIST', forEachList, list, str)
 
         if isinstance(forEachList, str):
             forEachList=[c for c in forEachList]
 
         if len(forEachList)>5:
-            scriptBlockName=f'for {forVarName} in {forEachList[0:5]}'.replace(']', ', ...]')
+            scriptBlockName=f'for each item from {forEachList[0:5]} as {forVarName} do'.replace(']', ', ...]')
         else:
-            scriptBlockName=f'for {forVarName} in {forEachList}'
+            scriptBlockName=f'for each item from {forEachList} as {forVarName} do'
 
         # define loop variable
         forEachTotal=len(forEachList)
@@ -936,10 +1075,10 @@ class BSInterpreter(QObject):
         forEachCurrentAngle=0
         for index, forEachCurrentValue in enumerate(forEachList):
             loopVariables={
-                    ':foreach.total': forEachTotal,
-                    ':foreach.current': index+1,
-                    ':foreach.first': (index==0),
-                    ':foreach.last': (index==forEachTotal-1),
+                    ':foreach.totalIteration': forEachTotal,
+                    ':foreach.currentIteration': index+1,
+                    ':foreach.isFirstIteration': (index==0),
+                    ':foreach.isLastIteration': (index==forEachTotal-1),
                     ':foreach.incAngle': forEachIncAngle,
                     ':foreach.currentAngle': forEachCurrentAngle,
                     forVarName: forEachCurrentValue
@@ -952,7 +1091,6 @@ class BSInterpreter(QObject):
         return None
 
 
-
     # --------------------------------------------------------------------------
     # Actions
     # --------------------------------------------------------------------------
@@ -963,15 +1101,15 @@ class BSInterpreter(QObject):
 
         :unit.canvas
         """
-        fctLabel='Action `set unit canvas`'
+        fctLabel='Action ***set unit canvas***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', value in BSInterpreter.CONST_MEASURE_UNIT, f"coordinates & measures unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', value in BSInterpreter.CONST_MEASURE_UNIT, f"coordinates & measures unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"set unit canvas {self.__strValue(value)}      => :unit.canvas", currentAst)
+        self.verbose(f"set unit canvas {self.__strValue(value)}{self.__formatStoreResult(':unit.canvas')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':unit.canvas', value, True)
+        self.__scriptBlockStack.setVariable(':unit.canvas', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -981,15 +1119,15 @@ class BSInterpreter(QObject):
 
         :unit.rotation
         """
-        fctLabel='Action `set unit rotation`'
+        fctLabel='Action ***set unit rotation***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', value in BSInterpreter.CONST_ROTATION_UNIT, f"angle unit value for rotation can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', value in BSInterpreter.CONST_ROTATION_UNIT, f"angle unit value for rotation can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
 
-        self.__verbose(f"set unit rotation {self.__strValue(value)}      => :unit.rotation", currentAst)
+        self.verbose(f"set unit rotation {self.__strValue(value)}{self.__formatStoreResult(':unit.rotation')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':unit.rotation', value, True)
+        self.__scriptBlockStack.setVariable(':unit.rotation', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -999,15 +1137,15 @@ class BSInterpreter(QObject):
 
         :pen.color
         """
-        fctLabel='Action `set pen color`'
+        fctLabel='Action ***set pen color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.__verbose(f"set pen color {self.__strValue(value)}      => :pen.color", currentAst)
+        self.verbose(f"set pen color {self.__strValue(value)}{self.__formatStoreResult(':pen.color')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.color', value, True)
+        self.__scriptBlockStack.setVariable(':pen.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1017,24 +1155,24 @@ class BSInterpreter(QObject):
 
         :pen.size
         """
-        fctLabel='Action `set pen size`'
+        fctLabel='Action ***set pen size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1))
 
-        self.__checkParamType(currentAst, fctLabel, '<SIZE>', value, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<SIZE>', value>0, f"a positive number is expected (current={value})", False):
+        self.__checkParamType(currentAst, fctLabel, 'SIZE', value, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'SIZE', value>0, f"a positive number is expected (current={value})", False):
             # if value<=0, force to 0.1 (non blocking)
             value=max(0.1, value)
 
         if unit:
-            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-            self.__verbose(f"set pen size {self.__strValue(value)} {self.__strValue(unit)}     => :pen.size", currentAst)
+            self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.verbose(f"set pen size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':pen.size')}", currentAst)
         else:
-            self.__verbose(f"set pen size {self.__strValue(value)}      => :pen.size", currentAst)
+            self.verbose(f"set pen size {self.__strValue(value)}{self.__formatStoreResult(':pen.size')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.size', value, True)
+        self.__scriptBlockStack.setVariable(':pen.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1044,16 +1182,16 @@ class BSInterpreter(QObject):
 
         :pen.style
         """
-        fctLabel='Action `set pen style`'
+        fctLabel='Action ***set pen style***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<STYLE>', value in BSInterpreter.CONST_PEN_STYLE, f"style value for pen can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE', value in BSInterpreter.CONST_PEN_STYLE, f"style value for pen can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.__verbose(f"set pen style {self.__strValue(value)}      => :pen.style", currentAst)
+        self.verbose(f"set pen style {self.__strValue(value)}{self.__formatStoreResult(':pen.style')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.style', value, True)
+        self.__scriptBlockStack.setVariable(':pen.style', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1063,16 +1201,16 @@ class BSInterpreter(QObject):
 
         :pen.cap
         """
-        fctLabel='Action `set pen cap`'
+        fctLabel='Action ***set pen cap***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<CAP>', value in BSInterpreter.CONST_PEN_CAP, f"cap value for pen can be: {', '.join(BSInterpreter.CONST_PEN_CAP)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'CAP', value in BSInterpreter.CONST_PEN_CAP, f"cap value for pen can be: {', '.join(BSInterpreter.CONST_PEN_CAP)}")
 
-        self.__verbose(f"set pen cap {self.__strValue(value)}      => :pen.cap", currentAst)
+        self.verbose(f"set pen cap {self.__strValue(value)}{self.__formatStoreResult(':pen.cap')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.cap', value, True)
+        self.__scriptBlockStack.setVariable(':pen.cap', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1082,16 +1220,16 @@ class BSInterpreter(QObject):
 
         :pen.join
         """
-        fctLabel='Action `set pen join`'
+        fctLabel='Action ***set pen join***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<JOIN>', value in BSInterpreter.CONST_PEN_JOIN, f"join value for pen can be: {', '.join(BSInterpreter.CONST_PEN_JOIN)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'JOIN', value in BSInterpreter.CONST_PEN_JOIN, f"join value for pen can be: {', '.join(BSInterpreter.CONST_PEN_JOIN)}")
 
-        self.__verbose(f"set pen join {self.__strValue(value)}      => :pen.join", currentAst)
+        self.verbose(f"set pen join {self.__strValue(value)}{self.__formatStoreResult(':pen.join')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.join', value, True)
+        self.__scriptBlockStack.setVariable(':pen.join', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1101,21 +1239,21 @@ class BSInterpreter(QObject):
 
         :pen.color
         """
-        fctLabel='Action `set pen opacity`'
+        fctLabel='Action ***set pen opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set pen opacity {self.__strValue(value)}      => :pen.color", currentAst)
+        self.verbose(f"set pen opacity {self.__strValue(value)}{self.__formatStoreResult(':pen.color')}", currentAst)
 
         color=self.__scriptBlockStack.current().variable(':pen.color', QColor(0,0,0))
         if isinstance(value, int):
@@ -1123,7 +1261,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':pen.color', color, True)
+        self.__scriptBlockStack.setVariable(':pen.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1133,15 +1271,15 @@ class BSInterpreter(QObject):
 
         :fill.color
         """
-        fctLabel='Action `set fill color`'
+        fctLabel='Action ***set fill color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.__verbose(f"set fill color {self.__strValue(value)}      => :fill.color", currentAst)
+        self.verbose(f"set fill color {self.__strValue(value)}{self.__formatStoreResult(':fill.color')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.color', value, True)
+        self.__scriptBlockStack.setVariable(':fill.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1151,16 +1289,16 @@ class BSInterpreter(QObject):
 
         :fill.rule
         """
-        fctLabel='Action `set fill rule`'
+        fctLabel='Action ***set fill rule***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<RULE>', value in BSInterpreter.CONST_FILL_RULE, f"rule value for fill can be: {', '.join(BSInterpreter.CONST_FILL_RULE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'RULE', value in BSInterpreter.CONST_FILL_RULE, f"rule value for fill can be: {', '.join(BSInterpreter.CONST_FILL_RULE)}")
 
-        self.__verbose(f"set fill rule {self.__strValue(value)}      => :fill.rule", currentAst)
+        self.verbose(f"set fill rule {self.__strValue(value)}{self.__formatStoreResult(':fill.rule')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.rule', value, True)
+        self.__scriptBlockStack.setVariable(':fill.rule', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1170,21 +1308,21 @@ class BSInterpreter(QObject):
 
         :fill.color
         """
-        fctLabel='Action `set fill opacity`'
+        fctLabel='Action ***set fill opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set fill opacity {self.__strValue(value)}      => :fill.color", currentAst)
+        self.verbose(f"set fill opacity {self.__strValue(value)}{self.__formatStoreResult(':fill.color')}", currentAst)
 
         color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
         if isinstance(value, int):
@@ -1192,7 +1330,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':fill.color', color, True)
+        self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1202,15 +1340,15 @@ class BSInterpreter(QObject):
 
         :text.color
         """
-        fctLabel='Action `set text color`'
+        fctLabel='Action ***set text color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.__verbose(f"set text color {self.__strValue(value)}      => :text.color", currentAst)
+        self.verbose(f"set text color {self.__strValue(value)}{self.__formatStoreResult(':text.color')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.color', value, True)
+        self.__scriptBlockStack.setVariable(':text.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1220,21 +1358,21 @@ class BSInterpreter(QObject):
 
         :text.color
         """
-        fctLabel='Action `set text opacity`'
+        fctLabel='Action ***set text opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set text opacity {self.__strValue(value)}      => :text.color", currentAst)
+        self.verbose(f"set text opacity {self.__strValue(value)}{self.__formatStoreResult(':text.color')}", currentAst)
 
         color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
         if isinstance(value, int):
@@ -1242,7 +1380,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':text.color', color, True)
+        self.__scriptBlockStack.setVariable(':text.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1252,15 +1390,15 @@ class BSInterpreter(QObject):
 
         :text.font
         """
-        fctLabel='Action `set text font`'
+        fctLabel='Action ***set text font***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<FONT>', value, str)
+        self.__checkParamType(currentAst, fctLabel, 'FONT', value, str)
 
-        self.__verbose(f"set text font {self.__strValue(value)}      => :text.font", currentAst)
+        self.verbose(f"set text font {self.__strValue(value)}{self.__formatStoreResult(':text.font')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.font', value, True)
+        self.__scriptBlockStack.setVariable(':text.font', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1270,24 +1408,24 @@ class BSInterpreter(QObject):
 
         :text.size
         """
-        fctLabel='Action `set text size`'
+        fctLabel='Action ***set text size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1))
 
-        self.__checkParamType(currentAst, fctLabel, '<SIZE>', value, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<SIZE>', value>0, f"a positive number is expected (current={value})", False):
+        self.__checkParamType(currentAst, fctLabel, 'SIZE', value, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'SIZE', value>0, f"a positive number is expected (current={value})", False):
             # if value<=0, force to 0.1 (non blocking)
             value=max(0.1, value)
 
         if unit:
-            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-            self.__verbose(f"set text size {self.__strValue(value)} {self.__strValue(unit)}     => :text.size", currentAst)
+            self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.verbose(f"set text size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':text.size')}", currentAst)
         else:
-            self.__verbose(f"set text size {self.__strValue(value)}      => :text.size", currentAst)
+            self.verbose(f"set text size {self.__strValue(value)}{self.__formatStoreResult(':text.size')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.size', value, True)
+        self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1297,15 +1435,15 @@ class BSInterpreter(QObject):
 
         :text.bold
         """
-        fctLabel='Action `set text bold`'
+        fctLabel='Action ***set text bold***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.__verbose(f"set text bold {self.__strValue(value)}      => :text.bold", currentAst)
+        self.verbose(f"set text bold {self.__strValue(value)}{self.__formatStoreResult(':text.bold')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.bold', value, True)
+        self.__scriptBlockStack.setVariable(':text.bold', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1315,15 +1453,15 @@ class BSInterpreter(QObject):
 
         :text.italic
         """
-        fctLabel='Action `set text italic`'
+        fctLabel='Action ***set text italic***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.__verbose(f"set text italic {self.__strValue(value)}      => :text.italic", currentAst)
+        self.verbose(f"set text italic {self.__strValue(value)}{self.__formatStoreResult(':text.italic')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.italic', value, True)
+        self.__scriptBlockStack.setVariable(':text.italic', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1333,15 +1471,15 @@ class BSInterpreter(QObject):
 
         :text.outline
         """
-        fctLabel='Action `set text outline`'
+        fctLabel='Action ***set text outline***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.__verbose(f"set text outline {self.__strValue(value)}      => :text.outline", currentAst)
+        self.verbose(f"set text outline {self.__strValue(value)}{self.__formatStoreResult(':text.outline')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.outline', value, True)
+        self.__scriptBlockStack.setVariable(':text.outline', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1352,25 +1490,25 @@ class BSInterpreter(QObject):
         :text.letterSpacing.spacing
         :text.letterSpacing.unit
         """
-        fctLabel='Action `set text letter spacing`'
+        fctLabel='Action ***set text letter spacing***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<SPACING>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'SPACING', value, int, float)
 
         if unit=='PCT':
             # in this case, relative to text letter spacing base (not document dimension)
-            if not self.__checkParamDomain(currentAst, fctLabel, '<SPACING>', value>0, f"a non-zero positive number is expected when expressed in percentage (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'SPACING', value>0, f"a non-zero positive number is expected when expressed in percentage (current={value})", False):
                 # if value<=0, force to 0.1 (non blocking)
                 value=max(1, value)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"letter spacing unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}     => :text.letterSpacing.spacing, text.letterSpacing.unit ", currentAst)
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"letter spacing unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':text.letterSpacing.spacing', 'text.letterSpacing.unit')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.letterspacing.spacing', value, True)
-        self.__scriptBlockStack.current().setVariable(':text.letterspacing.unit', unit, True)
+        self.__scriptBlockStack.setVariable(':text.letterspacing.spacing', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':text.letterspacing.unit', unit, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1380,23 +1518,23 @@ class BSInterpreter(QObject):
 
         :text.stretch
         """
-        fctLabel='Action `set text stretch`'
+        fctLabel='Action ***set text stretch***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<STRETCH>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'STRETCH', value, int, float)
 
         if isinstance(value, int):
             # from 1 to 4000
-            if not self.__checkParamDomain(currentAst, fctLabel, '<STRETCH>', value>0 and value<=4000, f"allowed stretch value when provided as an integer number is range [1;4000] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'STRETCH', value>0 and value<=4000, f"allowed stretch value when provided as an integer number is range [1;4000] (current={value})", False):
                 value=min(4000, max(1, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<STRETCH>', value>0 and value<=40, f"allowed stretch value when provided as a decimal number is range [0.01;40] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'STRETCH', value>0 and value<=40, f"allowed stretch value when provided as a decimal number is range [0.01;40] (current={value})", False):
                 value=min(40.0, max(1.0, value))
             value=round(value*100)
 
-        self.__scriptBlockStack.current().setVariable(':text.stretch', value, True)
+        self.__scriptBlockStack.setVariable(':text.stretch', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1406,15 +1544,15 @@ class BSInterpreter(QObject):
 
         :text.alignment.horizontal
         """
-        fctLabel='Action `set text horizontal alignment`'
+        fctLabel='Action ***set text horizontal alignment***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<H-ALIGNMENT>', value in BSInterpreter.CONST_HALIGN, f"text horizontal alignment value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'H-ALIGNMENT', value in BSInterpreter.CONST_HALIGN, f"text horizontal alignment value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
 
-        self.__verbose(f"set text horizontal alignment {self.__strValue(value)}      => :text.alignment.horizontal", currentAst)
+        self.verbose(f"set text horizontal alignment {self.__strValue(value)}{self.__formatStoreResult(':text.alignment.horizontal')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.alignment.horizontal', value, True)
+        self.__scriptBlockStack.setVariable(':text.alignment.horizontal', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1424,15 +1562,15 @@ class BSInterpreter(QObject):
 
         :text.alignment.vertical
         """
-        fctLabel='Action `set text vertical alignment`'
+        fctLabel='Action ***set text vertical alignment***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<V-ALIGNMENT>', value in BSInterpreter.CONST_VALIGN, f"text vertical alignment value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'V-ALIGNMENT', value in BSInterpreter.CONST_VALIGN, f"text vertical alignment value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
 
-        self.__verbose(f"set text vertical alignment {self.__strValue(value)}      => :text.alignment.vertical", currentAst)
+        self.verbose(f"set text vertical alignment {self.__strValue(value)}{self.__formatStoreResult(':text.alignment.vertical')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':text.alignment.vertical', value, True)
+        self.__scriptBlockStack.setVariable(':text.alignment.vertical', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1442,15 +1580,15 @@ class BSInterpreter(QObject):
 
         :draw.antialiasing
         """
-        fctLabel='Action `set draw antialiasing`'
+        fctLabel='Action ***set draw antialiasing***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.__verbose(f"set draw antialiasing {self.__strValue(value)}      => :draw.antialiasing", currentAst)
+        self.verbose(f"set draw antialiasing {self.__strValue(value)}{self.__formatStoreResult(':draw.antialiasing')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.antialiasing', value, True)
+        self.__scriptBlockStack.setVariable(':draw.antialiasing', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1460,15 +1598,15 @@ class BSInterpreter(QObject):
 
         :draw.blendingMode
         """
-        fctLabel='Action `set draw blending mode`'
+        fctLabel='Action ***set draw blending mode***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<BLENDING-MODE>', value in BSInterpreter.CONST_DRAW_BLENDING_MODE, f"blending mode value can be: {', '.join(BSInterpreter.CONST_DRAW_BLENDING_MODE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'BLENDING-MODE', value in BSInterpreter.CONST_DRAW_BLENDING_MODE, f"blending mode value can be: {', '.join(BSInterpreter.CONST_DRAW_BLENDING_MODE)}")
 
-        self.__verbose(f"set draw blending mode {self.__strValue(value)}      => :draw.blendingMode", currentAst)
+        self.verbose(f"set draw blending mode {self.__strValue(value)}{self.__formatStoreResult(':draw.blendingMode')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.blendingmode', value, True)
+        self.__scriptBlockStack.setVariable(':draw.blendingmode', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1478,15 +1616,15 @@ class BSInterpreter(QObject):
 
         :canvas.grid.color
         """
-        fctLabel='Action `set canvas grid color`'
+        fctLabel='Action ***set canvas grid color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.__verbose(f"set canvas grid color {self.__strValue(value)}      => :canvas.grid.color", currentAst)
+        self.verbose(f"set canvas grid color {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.color', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1496,16 +1634,16 @@ class BSInterpreter(QObject):
 
         :canvas.grid.style
         """
-        fctLabel='Action `set canvas grid style`'
+        fctLabel='Action ***set canvas grid style***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<STYLE>', value in BSInterpreter.CONST_PEN_STYLE, f"style value for grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE', value in BSInterpreter.CONST_PEN_STYLE, f"style value for grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.__verbose(f"set canvas grid style {self.__strValue(value)}      => :canvas.grid.style", currentAst)
+        self.verbose(f"set canvas grid style {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.style')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.style', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.style', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1515,21 +1653,21 @@ class BSInterpreter(QObject):
 
         :canvas.grid.color
         """
-        fctLabel='Action `set canvas grid opacity`'
+        fctLabel='Action ***set canvas grid opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set canvas grid opacity {self.__strValue(value)}      => :canvas.grid.color", currentAst)
+        self.verbose(f"set canvas grid opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
 
         color=self.__scriptBlockStack.current().variable(':canvas.grid.color', QColor(60,60,128))
         if isinstance(value, int):
@@ -1537,7 +1675,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.color', color, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1549,7 +1687,7 @@ class BSInterpreter(QObject):
         :canvas.grid.size.minor
         :canvas.grid.size.unit
         """
-        fctLabel='Action `set canvas grid size`'
+        fctLabel='Action ***set canvas grid size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2, 3)
 
         major=self.__evaluate(currentAst.node(0))
@@ -1573,29 +1711,29 @@ class BSInterpreter(QObject):
             minor=p2
             unit=p3
 
-        self.__checkParamType(currentAst, fctLabel, '<MAJOR>', major, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<MINOR>', minor, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'MAJOR', major, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'MINOR', minor, int, float)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<MAJOR>', major>0, f"a positive number is expected (current={major})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'MAJOR', major>0, f"a positive number is expected (current={major})", False):
             # let default value being applied in this case
             major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', major, True)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<MINOR>', minor>=0, f"a zero or positive number is expected (current={minor})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'MINOR', minor>=0, f"a zero or positive number is expected (current={minor})", False):
             # let default value being applied in this case
             minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', minor, True)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<MINOR>', minor<major, f"size for minor grid must be lower than major grid size (current={minor}>{major})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'MINOR', minor<major, f"size for minor grid must be lower than major grid size (current={minor}>{major})", False):
             # force minor grid to be lower than major grid
             minor=major/2
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"grid unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"grid unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"set canvas grid size {self.__strValue(major)} {self.__strValue(minor)} {self.__strValue(unit)}     => :canvas.grid.size.major, :canvas.grid.size.minor, :canvas.grid.size.unit", currentAst)
+        self.verbose(f"set canvas grid size {self.__strValue(major)} {self.__strValue(minor)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.grid.size.major', ':canvas.grid.size.minor', ':canvas.grid.size.unit')}", currentAst)
 
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.major', major, True)
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.minor', minor, True)
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.size.unit', unit, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.major', major, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.minor', minor, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.unit', unit, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1605,15 +1743,15 @@ class BSInterpreter(QObject):
 
         :canvas.origin.color
         """
-        fctLabel='Action `set canvas origin color`'
+        fctLabel='Action ***set canvas origin color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.__verbose(f"set canvas origin color {self.__strValue(value)}      => :canvas.origin.color", currentAst)
+        self.verbose(f"set canvas origin color {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.color', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1623,16 +1761,16 @@ class BSInterpreter(QObject):
 
         :canvas.origin.style
         """
-        fctLabel='Action `set canvas origin style`'
+        fctLabel='Action ***set canvas origin style***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<STYLE>', value in BSInterpreter.CONST_PEN_STYLE, f"style value for origin can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE', value in BSInterpreter.CONST_PEN_STYLE, f"style value for origin can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.__verbose(f"set canvas origin style {self.__strValue(value)}      => :canvas.origin.style", currentAst)
+        self.verbose(f"set canvas origin style {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.style')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.style', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1642,21 +1780,21 @@ class BSInterpreter(QObject):
 
         :canvas.origin.color
         """
-        fctLabel='Action `set canvas origin opacity`'
+        fctLabel='Action ***set canvas origin opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set canvas origin opacity {self.__strValue(value)}      => :canvas.origin.color", currentAst)
+        self.verbose(f"set canvas origin opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
 
         color=self.__scriptBlockStack.current().variable(':canvas.origin.color', QColor(60,60,128))
         if isinstance(value, int):
@@ -1664,7 +1802,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.color', color, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1674,24 +1812,24 @@ class BSInterpreter(QObject):
 
         :canvas.origin.size
         """
-        fctLabel='Action `set canvas origin size`'
+        fctLabel='Action ***set canvas origin size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1))
 
-        self.__checkParamType(currentAst, fctLabel, '<SIZE>', value, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<SIZE>', value>0, f"a positive number is expected (current={value})", False):
+        self.__checkParamType(currentAst, fctLabel, 'SIZE', value, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'SIZE', value>0, f"a positive number is expected (current={value})", False):
             # if value<=0, force to 0.1 (non blocking)
             value=max(0.1, value)
 
         if unit:
-            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-            self.__verbose(f"set canvas origin size {self.__strValue(value)} {self.__strValue(unit)}     => :canvas.origin.size", currentAst)
+            self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.verbose(f"set canvas origin size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.origin.size')}", currentAst)
         else:
-            self.__verbose(f"set canvas origin size {self.__strValue(value)}      => :canvas.origin.size", currentAst)
+            self.verbose(f"set canvas origin size {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.size')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.size', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1702,19 +1840,19 @@ class BSInterpreter(QObject):
         :canvas.origin.position.absissa
         :canvas.origin.position.ordinate
         """
-        fctLabel='Action `set canvas origin position`'
+        fctLabel='Action ***set canvas origin position***'
         self.__checkParamNumber(currentAst, fctLabel, 2)
 
         absissa=self.__evaluate(currentAst.node(0))
         ordinate=self.__evaluate(currentAst.node(1))
 
-        self.__checkParamDomain(currentAst, fctLabel, '<ABSISSA>', absissa in BSInterpreter.CONST_HALIGN, f"absissa position value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
-        self.__checkParamDomain(currentAst, fctLabel, '<ORDINATE>', ordinate in BSInterpreter.CONST_VALIGN, f"ordinate position value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ABSISSA', absissa in BSInterpreter.CONST_HALIGN, f"absissa position value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ORDINATE', ordinate in BSInterpreter.CONST_VALIGN, f"ordinate position value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
 
-        self.__verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}     => :canvas.origin.position.absissa, canvas.origin.position.ordinate", currentAst)
+        self.verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}{self.__formatStoreResult(':canvas.origin.position.absissa', 'canvas.origin.position.ordinate')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.position.absissa', absissa, True)
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.position.ordinate', ordinate, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1724,15 +1862,15 @@ class BSInterpreter(QObject):
 
         :canvas.position.color
         """
-        fctLabel='Action `set canvas position color`'
+        fctLabel='Action ***set canvas position color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<COLOR>', value, QColor)
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.__verbose(f"set canvas position color {self.__strValue(value)}      => :canvas.position.color", currentAst)
+        self.verbose(f"set canvas position color {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.color', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1742,21 +1880,21 @@ class BSInterpreter(QObject):
 
         :canvas.position.color
         """
-        fctLabel='Action `set canvas position opacity`'
+        fctLabel='Action ***set canvas position opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set canvas position opacity {self.__strValue(value)}      => :canvas.position.color", currentAst)
+        self.verbose(f"set canvas position opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
 
         color=self.__scriptBlockStack.current().variable(':canvas.position.color', QColor(60,60,128))
         if isinstance(value, int):
@@ -1764,7 +1902,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.color', color, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1774,24 +1912,24 @@ class BSInterpreter(QObject):
 
         :canvas.position.size
         """
-        fctLabel='Action `set canvas position size`'
+        fctLabel='Action ***set canvas position size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1))
 
-        self.__checkParamType(currentAst, fctLabel, '<SIZE>', value, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<SIZE>', value>0, f"a positive number is expected (current={value})", False):
+        self.__checkParamType(currentAst, fctLabel, 'SIZE', value, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'SIZE', value>0, f"a positive number is expected (current={value})", False):
             # if value<=0, force to 0.1 (non blocking)
             value=max(0.1, value)
 
         if unit:
-            self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-            self.__verbose(f"set canvas position size {self.__strValue(value)} {self.__strValue(unit)}     => :canvas.position.size", currentAst)
+            self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+            self.verbose(f"set canvas position size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.position.size')}", currentAst)
         else:
-            self.__verbose(f"set canvas position size {self.__strValue(value)}      => :canvas.position.size", currentAst)
+            self.verbose(f"set canvas position size {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.size')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.size', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1801,15 +1939,15 @@ class BSInterpreter(QObject):
 
         :canvas.position.fulfill
         """
-        fctLabel='Action `set canvas position fulfilled`'
+        fctLabel='Action ***set canvas position fulfilled***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.__verbose(f"set canvas position fulfilled {self.__strValue(value)}      => :canvas.position.fulfill", currentAst)
+        self.verbose(f"set canvas position fulfilled {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.fulfill')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.fulfill', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
@@ -1819,43 +1957,69 @@ class BSInterpreter(QObject):
 
         :canvas.background.opacity
         """
-        fctLabel='Action `set canvas background opacity`'
+        fctLabel='Action ***set canvas background opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<OPACITY>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
 
         if isinstance(value, int):
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0 and value<=255, f"allowed opacity value when provided as an integer number is range [0;255] (current={value})", False):
                 value=min(255, max(0, value))
             value/=255
         else:
-            if not self.__checkParamDomain(currentAst, fctLabel, '<OPACITY>', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
+            if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.__verbose(f"set canvas background opacity {self.__strValue(value)}      => :canvas.background.opacity", currentAst)
+        self.verbose(f"set canvas background opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.opacity')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.background.opacity', value, True)
+        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.CURRENT)
 
         self.__delay()
         return None
 
     def __executeActionSetExecutionVerbose(self, currentAst):
-        """Set execution verbose
+        """Set script execution verbose
 
         :script.execution.verbose
         """
-        fctLabel='Action `set execution verbose`'
+        fctLabel='Action ***set script execution verbose***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<SWITCH>', value, bool)
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.__verbose(f"set execution verbose {self.__strValue(value)}      => :script.execution.verbose", currentAst)
+        self.verbose(f"set script execution verbose {self.__strValue(value)}{self.__formatStoreResult(':script.execution.verbose')}", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':script.execution.verbose', value, True)
+        self.__scriptBlockStack.setVariable(':script.execution.verbose', value, BSVariableScope.CURRENT)
         self.__optionVerboseMode=value
+
+        self.__delay()
+        return None
+
+    def __executeActionSetRandomizeSeed(self, currentAst):
+        """Set script randomize seed
+
+        :script.randomize.seed
+        """
+        fctLabel='Action ***set script randomize seed***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, 'SEED', value, int, str)
+
+        self.verbose(f"set script randomize seed {self.__strValue(value)}{self.__formatStoreResult(':script.randomize.seed')}", currentAst)
+
+        if isinstance(value, int) and value<0:
+            random.seed()
+            randSeed=random.randint(0,999999999)
+        else:
+            randSeed=value
+        random.seed(randSeed)
+
+        self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.CURRENT)
+
 
         self.__delay()
         return None
@@ -1864,21 +2028,21 @@ class BSInterpreter(QObject):
     # ----
     def __executeActionDrawShapeSquare(self, currentAst):
         """Draw square"""
-        fctLabel='Action `draw square`'
+        fctLabel='Action ***draw square***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         width=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # if value<=0, exit
-            self.__verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}      => Cancelled", currentAst)
+            self.verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}", currentAst)
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -1887,7 +2051,7 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeRoundSquare(self, currentAst):
         """Draw square"""
-        fctLabel='Action `draw round square`'
+        fctLabel='Action ***draw round square***'
         self.__checkParamNumber(currentAst, fctLabel, 2, 3, 4)
 
         width=self.__evaluate(currentAst.node(0))
@@ -1917,22 +2081,22 @@ class BSInterpreter(QObject):
             unitRadius=p4
 
 
-        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # if value<=0, exit
-            self.__verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
+            self.verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<W-UNIT>', unitWidth in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'W-UNIT', unitWidth in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__checkParamType(currentAst, fctLabel, '<RADIUS>', radius, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<RADIUS>', radius>=0, f"a zero or positive number is expected (current={radius})", False):
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'RADIUS', radius>=0, f"a zero or positive number is expected (current={radius})", False):
             radius=0
 
-        self.__checkParamDomain(currentAst, fctLabel, '<R-UNIT>', unitRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'R-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
 
-        self.__verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
+        self.verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -1941,30 +2105,30 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeRect(self, currentAst):
         """Draw rect"""
-        fctLabel='Action `draw rect`'
+        fctLabel='Action ***draw rect***'
         self.__checkParamNumber(currentAst, fctLabel, 2, 3)
 
         width=self.__evaluate(currentAst.node(0))
         height=self.__evaluate(currentAst.node(1))
         unit=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<HEIGHT>', height, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'HEIGHT', height, int, float)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # if value<=0, exit
-            self.__verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<HEIGHT>', height>0, f"a positive number is expected (current={height})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'HEIGHT', height>0, f"a positive number is expected (current={height})", False):
             # if value<=0, exit
-            self.__verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -1973,7 +2137,7 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeRoundRect(self, currentAst):
         """Draw square"""
-        fctLabel='Action `draw round square`'
+        fctLabel='Action ***draw round square***'
         self.__checkParamNumber(currentAst, fctLabel, 3, 4, 5)
 
         width=self.__evaluate(currentAst.node(0))
@@ -2004,30 +2168,30 @@ class BSInterpreter(QObject):
             unitRadius=p5
 
 
-        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<HEIGHT>', height, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'HEIGHT', height, int, float)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # if value<=0, exit
-            self.__verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
+            self.verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<HEIGHT>', height>0, f"a positive number is expected (current={height})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'HEIGHT', height>0, f"a positive number is expected (current={height})", False):
             # if value<=0, exit
-            self.__verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
+            self.verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<S-UNIT>', unitDimension in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'S-UNIT', unitDimension in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__checkParamType(currentAst, fctLabel, '<RADIUS>', radius, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<RADIUS>', radius>=0, f"a zero or positive number is expected (current={radius})", False):
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'RADIUS', radius>=0, f"a zero or positive number is expected (current={radius})", False):
             radius=0
 
-        self.__checkParamDomain(currentAst, fctLabel, '<R-UNIT>', unitRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'R-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
 
-        self.__verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
+        self.verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2036,21 +2200,21 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeCircle(self, currentAst):
         """Draw circle"""
-        fctLabel='Action `draw circle`'
+        fctLabel='Action ***draw circle***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         radius=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<RADIUS>', radius, int, float)
-        if not self.__checkParamDomain(currentAst, fctLabel, '<RADIUS>', radius>0, f"a positive number is expected (current={radius})", False):
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'RADIUS', radius>0, f"a positive number is expected (current={radius})", False):
             # if value<=0, exit
-            self.__verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}      => Cancelled", currentAst)
+            self.verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}", currentAst)
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2059,30 +2223,30 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeEllipse(self, currentAst):
         """Draw ellipse"""
-        fctLabel='Action `draw ellipse`'
+        fctLabel='Action ***draw ellipse***'
         self.__checkParamNumber(currentAst, fctLabel, 2, 3)
 
         hRadius=self.__evaluate(currentAst.node(0))
         vRadius=self.__evaluate(currentAst.node(1))
         unit=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<H-RADIUS>', hRadius, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<V-RADIUS>', vRadius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'H-RADIUS', hRadius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'V-RADIUS', vRadius, int, float)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<H-RADIUS>', hRadius>0, f"a positive number is expected (current={hRadius})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'H-RADIUS', hRadius>0, f"a positive number is expected (current={hRadius})", False):
             # if value<=0, exit
-            self.__verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<V-RADIUS>', vRadius>0, f"a positive number is expected (current={vRadius})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'V-RADIUS', vRadius>0, f"a positive number is expected (current={vRadius})", False):
             # if value<=0, exit
-            self.__verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}", currentAst)
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2091,10 +2255,10 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeDot(self, currentAst):
         """Draw dot"""
-        fctLabel='Action `draw dot`'
+        fctLabel='Action ***draw dot***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"draw dot", currentAst)
+        self.verbose(f"draw dot", currentAst)
 
         # TODO: implement canvas render
 
@@ -2103,10 +2267,10 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapePixel(self, currentAst):
         """Draw pixel"""
-        fctLabel='Action `draw pixel`'
+        fctLabel='Action ***draw pixel***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"draw pixel", currentAst)
+        self.verbose(f"draw pixel", currentAst)
 
         # TODO: implement canvas render
 
@@ -2115,23 +2279,23 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeImage(self, currentAst):
         """Draw image"""
-        fctLabel='Action `draw image`'
+        fctLabel='Action ***draw image***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         fileName=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<IMAGE>', fileName, str)
+        self.__checkParamType(currentAst, fctLabel, 'IMAGE', fileName, str)
 
         # TODO: implement file management
         fileIsValid=True
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<IMAGE>', fileIsValid, f"image can't be found: {fileName}", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'IMAGE', fileIsValid, f"image can't be found: {fileName}", False):
             # if value<=0, exit
-            self.__verbose(f"draw image {self.__strValue(fileName)}     => Cancelled", currentAst)
+            self.verbose(f"draw image {self.__strValue(fileName)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__verbose(f"draw image {self.__strValue(fileName)}", currentAst)
+        self.verbose(f"draw image {self.__strValue(fileName)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2140,7 +2304,7 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeScaledImage(self, currentAst):
         """Draw scaled image"""
-        fctLabel='Action `draw scaled image`'
+        fctLabel='Action ***draw scaled image***'
         self.__checkParamNumber(currentAst, fctLabel, 3, 4)
 
         fileName=self.__evaluate(currentAst.node(0))
@@ -2148,35 +2312,35 @@ class BSInterpreter(QObject):
         height=self.__evaluate(currentAst.node(2))
         unit=self.__evaluate(currentAst.node(3, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<IMAGE>', fileName, str)
-        self.__checkParamType(currentAst, fctLabel, '<WIDTH>', width, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<HEIGHT>', height, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'IMAGE', fileName, str)
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'HEIGHT', height, int, float)
 
         # TODO: implement file management
         fileIsValid=True
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<IMAGE>', fileIsValid, f"image can't be found: {fileName}", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'IMAGE', fileIsValid, f"image can't be found: {fileName}", False):
             # if value<=0, exit
-            self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<WIDTH>', width>0, f"a positive number is expected (current={width})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # if value<=0, exit
-            self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<HEIGHT>', height>0, f"a positive number is expected (current={height})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'HEIGHT', height>0, f"a positive number is expected (current={height})", False):
             # if value<=0, exit
-            self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+            self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
 
 
-        self.__verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2185,14 +2349,14 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeText(self, currentAst):
         """Draw text"""
-        fctLabel='Action `draw text`'
+        fctLabel='Action ***draw text***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         text=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<TEXT>', text, str)
+        self.__checkParamType(currentAst, fctLabel, 'TEXT', text, str)
 
-        self.__verbose(f"draw text {self.__strValue(text)}", currentAst)
+        self.verbose(f"draw text {self.__strValue(text)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2201,7 +2365,7 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawShapeStar(self, currentAst):
         """Draw star"""
-        fctLabel='Action `draw star`'
+        fctLabel='Action ***draw star***'
         self.__checkParamNumber(currentAst, fctLabel, 3, 4, 5)
 
         branches=self.__evaluate(currentAst.node(0))
@@ -2231,30 +2395,30 @@ class BSInterpreter(QObject):
             unitORadius=p3
             unitIRadius=p5
 
-        self.__checkParamType(currentAst, fctLabel, '<BRANCHES>', branches, int)
-        self.__checkParamType(currentAst, fctLabel, '<O-RADIUS>', oRadius, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<I-RADIUS>', iRadius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'BRANCHES', branches, int)
+        self.__checkParamType(currentAst, fctLabel, 'O-RADIUS', oRadius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'I-RADIUS', iRadius, int, float)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<BRANCHES>', branches>=3, f"a positive integer greater or equal than 3 is expected (current={branches})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'BRANCHES', branches>=3, f"a positive integer greater or equal than 3 is expected (current={branches})", False):
             # force minimum
             branches=3
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<O-RADIUS>', oRadius>0, f"a positive number is expected (current={oRadius})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'O-RADIUS', oRadius>0, f"a positive number is expected (current={oRadius})", False):
             # if value<=0, exit
-            self.__verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}      => Cancelled", currentAst)
+            self.verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, '<I-RADIUS>', iRadius>0, f"a positive number is expected (current={iRadius})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'I-RADIUS', iRadius>0, f"a positive number is expected (current={iRadius})", False):
             # if value<=0, exit
-            self.__verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}      => Cancelled", currentAst)
+            self.verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}      => Cancelled", currentAst)
             self.__delay()
             return None
 
-        self.__checkParamDomain(currentAst, fctLabel, '<OR-UNIT>', unitORadius in BSInterpreter.CONST_MEASURE_UNIT, f"outer radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-        self.__checkParamDomain(currentAst, fctLabel, '<IR-UNIT>', unitIRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"inter radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'OR-UNIT', unitORadius in BSInterpreter.CONST_MEASURE_UNIT, f"outer radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'IR-UNIT', unitIRadius in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"inter radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
 
-        self.__verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}", currentAst)
+        self.verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2263,10 +2427,10 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMiscClearCanvas(self, currentAst):
         """Clear canvas"""
-        fctLabel='Action `clear canvas`'
+        fctLabel='Action ***clear canvas***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"clear canvas", currentAst)
+        self.verbose(f"clear canvas", currentAst)
 
         # TODO: implement canvas render
 
@@ -2275,10 +2439,10 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMiscApplyToLayer(self, currentAst):
         """Apply to layer"""
-        fctLabel='Action `apply to layer`'
+        fctLabel='Action ***apply to layer***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"apply to layer", currentAst)
+        self.verbose(f"apply to layer", currentAst)
 
         # TODO: implement canvas render
 
@@ -2290,12 +2454,12 @@ class BSInterpreter(QObject):
 
         :draw.shape.status
         """
-        fctLabel='Action `start to draw shape`'
+        fctLabel='Action ***start to draw shape***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"start to draw shape", currentAst)
+        self.verbose(f"start to draw shape", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.shape.status', True, True)
+        self.__scriptBlockStack.setVariable(':draw.shape.status', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2307,12 +2471,12 @@ class BSInterpreter(QObject):
 
         :draw.shape.status
         """
-        fctLabel='Action `stop to draw shape`'
+        fctLabel='Action ***stop to draw shape***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"stop to draw shape", currentAst)
+        self.verbose(f"stop to draw shape", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':draw.shape.status', False, True)
+        self.__scriptBlockStack.setVariable(':draw.shape.status', False, BSVariableScope.CURRENT)
         # TODO: implement canvas render
 
         self.__delay()
@@ -2323,12 +2487,12 @@ class BSInterpreter(QObject):
 
         :fill.status
         """
-        fctLabel='Action `activate fill`'
+        fctLabel='Action ***activate fill***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"activate fill", currentAst)
+        self.verbose(f"activate fill", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.status', True, True)
+        self.__scriptBlockStack.setVariable(':fill.status', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2340,12 +2504,12 @@ class BSInterpreter(QObject):
 
         :fill.status
         """
-        fctLabel='Action `deactivate fill`'
+        fctLabel='Action ***deactivate fill***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"deactivate fill", currentAst)
+        self.verbose(f"deactivate fill", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':fill.status', False, True)
+        self.__scriptBlockStack.setVariable(':fill.status', False, BSVariableScope.CURRENT)
         # TODO: implement canvas render
 
         self.__delay()
@@ -2356,12 +2520,12 @@ class BSInterpreter(QObject):
 
         :pen.status
         """
-        fctLabel='Action `pen up`'
+        fctLabel='Action ***pen up***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"pen up", currentAst)
+        self.verbose(f"pen up", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.status', False, True)
+        self.__scriptBlockStack.setVariable(':pen.status', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2373,12 +2537,12 @@ class BSInterpreter(QObject):
 
         :pen.status
         """
-        fctLabel='Action `pen down`'
+        fctLabel='Action ***pen down***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"pen down", currentAst)
+        self.verbose(f"pen down", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':pen.status', True, True)
+        self.__scriptBlockStack.setVariable(':pen.status', True, BSVariableScope.CURRENT)
         # TODO: implement canvas render
 
         self.__delay()
@@ -2386,10 +2550,10 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMoveHome(self, currentAst):
         """Move home"""
-        fctLabel='Action `move home`'
+        fctLabel='Action ***move home***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"move home", currentAst)
+        self.verbose(f"move home", currentAst)
 
         # TODO: implement canvas render
 
@@ -2398,17 +2562,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMoveForward(self, currentAst):
         """Move forward"""
-        fctLabel='Action `move forward`'
+        fctLabel='Action ***move forward***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"move forward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"move forward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2417,17 +2581,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMoveBackward(self, currentAst):
         """Move backward"""
-        fctLabel='Action `move backward`'
+        fctLabel='Action ***move backward***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"move backward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"move backward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2436,17 +2600,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMoveLeft(self, currentAst):
         """Move left"""
-        fctLabel='Action `move left`'
+        fctLabel='Action ***move left***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"move left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"move left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2455,17 +2619,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMoveRight(self, currentAst):
         """Move right"""
-        fctLabel='Action `move right`'
+        fctLabel='Action ***move right***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"move right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"move right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2474,19 +2638,19 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawMoveTo(self, currentAst):
         """Move to"""
-        fctLabel='Action `move to`'
+        fctLabel='Action ***move to***'
         self.__checkParamNumber(currentAst, fctLabel, 2, 3)
 
         valueX=self.__evaluate(currentAst.node(0))
         valueY=self.__evaluate(currentAst.node(1))
         unit=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, '<X>', valueX, int, float)
-        self.__checkParamType(currentAst, fctLabel, '<Y>', valueY, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'X', valueX, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'Y', valueY, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_MEASURE_UNIT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.__verbose(f"move to {self.__strValue(valueX)} {self.__strValue(valueY)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"move to {self.__strValue(valueX)} {self.__strValue(valueY)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2495,17 +2659,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawTurnLeft(self, currentAst):
         """Turn left"""
-        fctLabel='Action `turn left`'
+        fctLabel='Action ***turn left***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
 
-        self.__verbose(f"turn left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"turn left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2514,17 +2678,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawTurnRight(self, currentAst):
         """Turn right"""
-        fctLabel='Action `turn right`'
+        fctLabel='Action ***turn right***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
 
-        self.__verbose(f"turn right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"turn right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2533,17 +2697,17 @@ class BSInterpreter(QObject):
 
     def __executeActionDrawTurnTo(self, currentAst):
         """Turn to"""
-        fctLabel='Action `turn to`'
+        fctLabel='Action ***turn to***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
         unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
-        self.__checkParamDomain(currentAst, fctLabel, '<UNIT>', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_ROTATION_UNIT, f"value unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
 
-        self.__verbose(f"turn to {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"turn to {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2552,10 +2716,10 @@ class BSInterpreter(QObject):
 
     def __executeActionStatePush(self, currentAst):
         """Push state"""
-        fctLabel='Action `push state`'
+        fctLabel='Action ***push state***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"push state", currentAst)
+        self.verbose(f"push state", currentAst)
 
         # TODO: implement canvas render
 
@@ -2564,10 +2728,10 @@ class BSInterpreter(QObject):
 
     def __executeActionStatePop(self, currentAst):
         """Push state"""
-        fctLabel='Action `pop state`'
+        fctLabel='Action ***pop state***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"pop state", currentAst)
+        self.verbose(f"pop state", currentAst)
 
         # TODO: implement canvas render
 
@@ -2579,12 +2743,12 @@ class BSInterpreter(QObject):
 
         :canvas.grid.visibility
         """
-        fctLabel='Action `show canvas grid`'
+        fctLabel='Action ***show canvas grid***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"show canvas grid", currentAst)
+        self.verbose(f"show canvas grid", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2596,12 +2760,12 @@ class BSInterpreter(QObject):
 
         :canvas.grid.visibility
         """
-        fctLabel='Action `hide canvas grid`'
+        fctLabel='Action ***hide canvas grid***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"hide canvas grid", currentAst)
+        self.verbose(f"hide canvas grid", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.grid.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2613,12 +2777,12 @@ class BSInterpreter(QObject):
 
         :canvas.origin.visibility
         """
-        fctLabel='Action `show canvas origin`'
+        fctLabel='Action ***show canvas origin***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"show canvas origin", currentAst)
+        self.verbose(f"show canvas origin", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2630,12 +2794,12 @@ class BSInterpreter(QObject):
 
         :canvas.origin.visibility
         """
-        fctLabel='Action `hide canvas origin`'
+        fctLabel='Action ***hide canvas origin***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"hide canvas origin", currentAst)
+        self.verbose(f"hide canvas origin", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.origin.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2647,12 +2811,12 @@ class BSInterpreter(QObject):
 
         :canvas.position.visibility
         """
-        fctLabel='Action `show canvas position`'
+        fctLabel='Action ***show canvas position***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"show canvas position", currentAst)
+        self.verbose(f"show canvas position", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2664,12 +2828,12 @@ class BSInterpreter(QObject):
 
         :canvas.position.visibility
         """
-        fctLabel='Action `hide canvas position`'
+        fctLabel='Action ***hide canvas position***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"hide canvas position", currentAst)
+        self.verbose(f"hide canvas position", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.position.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2681,12 +2845,12 @@ class BSInterpreter(QObject):
 
         :canvas.background.visibility
         """
-        fctLabel='Action `show canvas background`'
+        fctLabel='Action ***show canvas background***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"show canvas background", currentAst)
+        self.verbose(f"show canvas background", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.background.visibility', True, True)
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', True, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2698,12 +2862,12 @@ class BSInterpreter(QObject):
 
         :canvas.background.visibility
         """
-        fctLabel='Action `hide canvas background`'
+        fctLabel='Action ***hide canvas background***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.__verbose(f"hide canvas background", currentAst)
+        self.verbose(f"hide canvas background", currentAst)
 
-        self.__scriptBlockStack.current().setVariable(':canvas.background.visibility', False, True)
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', False, BSVariableScope.CURRENT)
 
         # TODO: implement canvas render
 
@@ -2712,7 +2876,7 @@ class BSInterpreter(QObject):
 
     def __executeActionUIConsolePrint(self, currentAst):
         """Print"""
-        fctLabel='Action `print`'
+        fctLabel='Action ***print***'
 
         if len(currentAst.nodes())<1:
             # at least need one parameter
@@ -2722,7 +2886,7 @@ class BSInterpreter(QObject):
         for node in currentAst.nodes():
             printed.append(str(self.__strValue(self.__evaluate(node))))
 
-        self.__print(' '.join(printed))
+        self.print(' '.join(printed))
 
         #self.__delay()
         return None
@@ -2733,12 +2897,12 @@ class BSInterpreter(QObject):
         Return optional message for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with message`'
+        fctLabel='Option ***with message***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         text=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<TEXT>', text, str)
+        self.__checkParamType(currentAst, fctLabel, 'TEXT', text, str)
 
         return text
 
@@ -2748,12 +2912,12 @@ class BSInterpreter(QObject):
         Return optional title for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with title`'
+        fctLabel='Option ***with title***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         text=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<TEXT>', text, str)
+        self.__checkParamType(currentAst, fctLabel, 'TEXT', text, str)
 
         return text
 
@@ -2763,12 +2927,12 @@ class BSInterpreter(QObject):
         Return optional default for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with default value`'
+        fctLabel='Option ***with default value***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, type)
 
         return value
 
@@ -2778,12 +2942,12 @@ class BSInterpreter(QObject):
         Return optional minimum value for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with minimum value`'
+        fctLabel='Option ***with minimum value***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, type)
 
         return value
 
@@ -2793,12 +2957,12 @@ class BSInterpreter(QObject):
         Return optional minimum value for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with maximum value`'
+        fctLabel='Option ***with maximum value***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, type)
 
         return value
 
@@ -2808,12 +2972,12 @@ class BSInterpreter(QObject):
         Return optional default index for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with default index`'
+        fctLabel='Option ***with default index***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, type)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, type)
 
         return value
 
@@ -2823,19 +2987,19 @@ class BSInterpreter(QObject):
         Return optional list of choices for a dialog box
         Not aimed to be called directly from __executeAst() method
         """
-        fctLabel='Option `with combobox choices`'
+        fctLabel='Option ***with combobox choices***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, list)
+        self.__checkParamType(currentAst, fctLabel, 'VALUE', value, list)
         value=[str(item) for item in value]
 
         return value
 
     def __executeActionUIDialogMessage(self, currentAst):
         """Open dialog for message"""
-        fctLabel='Action `open dialog for message`'
+        fctLabel='Action ***open dialog for message***'
 
         # there's no control about number of parameter: just, each parameter MUSt be a ACTION_UIDIALOG_OPTION
 
@@ -2861,7 +3025,7 @@ class BSInterpreter(QObject):
 
     def __executeActionUIDialogBooleanInput(self, currentAst):
         """Open dialog for boolean input"""
-        fctLabel='Action `open dialog for boolean input`'
+        fctLabel='Action ***open dialog for boolean input***'
 
         if len(currentAst.nodes())<1:
             # at least need one parameter
@@ -2889,14 +3053,14 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogBooleanInput.display(title, message), True)
+        scriptBlock.setVariable(variableName, WDialogBooleanInput.display(title, message), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
 
     def __executeActionUIDialogStringInput(self, currentAst):
         """Open dialog for string input"""
-        fctLabel='Action `open dialog for string input`'
+        fctLabel='Action ***open dialog for string input***'
 
         if len(currentAst.nodes())<1:
             # at least need one parameter
@@ -2927,14 +3091,14 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogStrInput.display(title, message, defaultValue=defaultValue), True)
+        scriptBlock.setVariable(variableName, WDialogStrInput.display(title, message, defaultValue=defaultValue), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
 
     def __executeActionUIDialogIntegerInput(self, currentAst):
         """Open dialog for integer input"""
-        fctLabel='Action `open dialog for integer input`'
+        fctLabel='Action ***open dialog for integer input***'
 
         if len(currentAst.nodes())<1:
             # at least need one parameter
@@ -2971,14 +3135,14 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogIntInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), True)
+        scriptBlock.setVariable(variableName, WDialogIntInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
 
     def __executeActionUIDialogDecimalInput(self, currentAst):
         """Open dialog for decimal input"""
-        fctLabel='Action `open dialog for decimal input`'
+        fctLabel='Action ***open dialog for decimal input***'
 
         if len(currentAst.nodes())<1:
             # at least need one parameter
@@ -3015,14 +3179,14 @@ class BSInterpreter(QObject):
                 self.__checkOption(currentAst, fctLabel, node, True)
 
         scriptBlock=self.__scriptBlockStack.current()
-        scriptBlock.setVariable(variableName, WDialogFloatInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), True)
+        scriptBlock.setVariable(variableName, WDialogFloatInput.display(title, message, defaultValue=defaultValue, minValue=minimumValue, maxValue=maximumValue), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
 
     def __executeActionUIDialogColorInput(self, currentAst):
         """Open dialog for color input"""
-        fctLabel='Action `open dialog for color input`'
+        fctLabel='Action ***open dialog for color input***'
 
         if len(currentAst.nodes())<1:
             # at least need one parameter
@@ -3068,43 +3232,14 @@ class BSInterpreter(QObject):
                                              f'colorCombination:{WColorComplementary.COLOR_COMBINATION_TETRADIC}',
                                              f'layoutOrientation:{WColorPicker.OPTION_ORIENTATION_HORIZONTAL}']
                                     },
-                                minSize=minSize), True)
-
-        #self.__delay()
-        return None
-
-
-
-
-
-
-
-        #choiceList=['Item A', 'Item B', 'Item C', 'Item D']
-
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg, inputLabel='Please make a choice', choicesValue=choiceList, defaultChecked=[1,3], minimumChecked=2))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg2, choicesValue=choiceList))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', inputLabel='Your choice', choicesValue=choiceList))
-
-
-        #print(WDialogColorInput.display('test checkbox', msg, inputLabel='Please choose a color'))
-        #print(WDialogColorInput.display('test checkbox', inputLabel='Choose', defaultValue='#ffff00', options={"menu":WColorPicker.OPTION_MENU_ALL, "layout": ['layoutOrientation:1', 'colorWheel', 'colorRGB']}, minSize=QSize(300,700)))
-        #print(WDialogColorInput.display('test checkbox', msg2, defaultValue=QColor('#ff00ff'), options={"layout": ['colorpalette', 'colorWheel', 'colorRGB', 'colorHSL']}))
-
+                                minSize=minSize), BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
 
     def __executeActionUIDialogSingleChoiceInput(self, currentAst):
         """Open dialog for single choice input"""
-        fctLabel='Action `open dialog for single choice input`'
+        fctLabel='Action ***open dialog for single choice input***'
 
         if len(currentAst.nodes())<2:
             # at least need 2 parameters (variable + option choices)
@@ -3160,14 +3295,14 @@ class BSInterpreter(QObject):
         if isinstance(value, int):
             # +1 because in BuliScript, index in list start from 1, not 0
             value+=1
-        scriptBlock.setVariable(variableName, value, True)
+        scriptBlock.setVariable(variableName, value, BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
 
     def __executeActionUIDialogMultipleChoiceInput(self, currentAst):
         """Open dialog for multiple choice input"""
-        fctLabel='Action `open dialog for multiple choice input`'
+        fctLabel='Action ***open dialog for multiple choice input***'
 
         if len(currentAst.nodes())<2:
             # at least need 2 parameters (variable + option choices)
@@ -3221,43 +3356,10 @@ class BSInterpreter(QObject):
         if isinstance(value, list):
             # +1 because in BuliScript, index in list start from 1, not 0
             value=[item+1 for item in value]
-        scriptBlock.setVariable(variableName, value, True)
+        scriptBlock.setVariable(variableName, value, BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
-
-
-
-
-
-
-
-
-        #choiceList=['Item A', 'Item B', 'Item C', 'Item D']
-
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogComboBoxChoiceInput.display('test combobox', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg, inputLabel='Please make a choice', choicesValue=choiceList))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', msg2, choicesValue=choiceList, defaultIndex=2))
-        #print(WDialogRadioButtonChoiceInput.display('test radiobutton', inputLabel='Your choice', choicesValue=choiceList))
-
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg, inputLabel='Please make a choice', choicesValue=choiceList, defaultChecked=[1,3], minimumChecked=2))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', msg2, choicesValue=choiceList))
-        #print(WDialogCheckBoxChoiceInput.display('test checkbox', inputLabel='Your choice', choicesValue=choiceList))
-
-
-        #print(WDialogColorInput.display('test checkbox', msg, inputLabel='Please choose a color'))
-        #print(WDialogColorInput.display('test checkbox', inputLabel='Choose', defaultValue='#ffff00', options={"menu":WColorPicker.OPTION_MENU_ALL, "layout": ['layoutOrientation:1', 'colorWheel', 'colorRGB']}, minSize=QSize(300,700)))
-        #print(WDialogColorInput.display('test checkbox', msg2, defaultValue=QColor('#ff00ff'), options={"layout": ['colorpalette', 'colorWheel', 'colorRGB', 'colorHSL']}))
-
-
-        #self.__delay()
-        return None
-
-
-
 
 
     # --------------------------------------------------------------------------
@@ -3296,8 +3398,8 @@ class BSInterpreter(QObject):
                 minValue=self.__evaluate(currentAst.node(1))
                 maxValue=self.__evaluate(currentAst.node(2))
 
-                self.__checkParamType(currentAst, fctLabel, '<MIN>', minValue, int, float)
-                self.__checkParamType(currentAst, fctLabel, '<MAX>', maxValue, int, float)
+                self.__checkParamType(currentAst, fctLabel, 'MIN', minValue, int, float)
+                self.__checkParamType(currentAst, fctLabel, 'MAX', maxValue, int, float)
 
                 if minValue>maxValue:
                     # switch values
@@ -3310,12 +3412,12 @@ class BSInterpreter(QObject):
                     # at least one decimal value, return decimal value
                     return random.uniform(minValue, maxValue)
 
-        elif fctName=='math.abs':
+        elif fctName=='math.absolute':
             self.__checkFctParamNumber(currentAst, fctLabel, 1)
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return abs(value)
         elif fctName=='math.even':
@@ -3323,7 +3425,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return (value%2)==0
         elif fctName=='math.odd':
@@ -3331,7 +3433,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return (value%2)==1
         elif fctName=='math.sign':
@@ -3339,7 +3441,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             if isinstance(value, int):
                 if value==0:
@@ -3360,7 +3462,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.exp(value)
         elif fctName=='math.power':
@@ -3368,17 +3470,17 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             power=self.__evaluate(currentAst.node(2))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<POWER>', power, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'POWER', power, int, float)
 
             return math.pow(value, power)
-        elif fctName=='math.square_root':
+        elif fctName=='math.squareroot':
             self.__checkFctParamNumber(currentAst, fctLabel, 1)
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>=0, f'must be a zero or positive numeric value (current={value})')
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>=0, f'must be a zero or positive numeric value (current={value})')
 
 
             return math.sqrt(value)
@@ -3387,8 +3489,8 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>0, f'must be a positive numeric value (current={value})')
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>0, f'must be a positive numeric value (current={value})')
 
             return math.log(value)
         elif fctName=='math.log':
@@ -3397,11 +3499,11 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             base=self.__evaluate(currentAst.node(2, 10))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<BASE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'BASE', value, int, float)
 
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>0, f'must be a positive numeric value (current={value})')
-            self.__checkParamDomain(currentAst, fctLabel, '<BASE>', base>0 and base!=1, f'must be a positive numeric value not equal to 1  (current={base})')
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>0, f'must be a positive numeric value (current={value})')
+            self.__checkParamDomain(currentAst, fctLabel, 'BASE', base>0 and base!=1, f'must be a positive numeric value not equal to 1  (current={base})')
 
             return math.log(value, base)
         elif fctName=='math.convert':
@@ -3412,47 +3514,47 @@ class BSInterpreter(QObject):
             convertTo=self.__evaluate(currentAst.node(3))
             refPct=self.__evaluate(currentAst.node(4))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<F-UNIT>', convertFrom, str)
-            self.__checkParamType(currentAst, fctLabel, '<T-UNIT>', convertTo, str)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'F-UNIT', convertFrom, str)
+            self.__checkParamType(currentAst, fctLabel, 'T-UNIT', convertTo, str)
 
             # need to check consistency convertFrom->convertTo
             if convertFrom in ['PX', 'PCT', 'MM', 'INCH']:
-                self.__checkParamDomain(currentAst, fctLabel, '<T-UNIT>', convertTo in ['PX', 'PCT', 'MM', 'INCH'], 'conversion of a measure unit can only be converted to another measure unit (PC, PCT, MM, INCH)')
+                self.__checkParamDomain(currentAst, fctLabel, 'T-UNIT', convertTo in ['PX', 'PCT', 'MM', 'INCH'], 'conversion of a measure unit can only be converted to another measure unit (PC, PCT, MM, INCH)')
                 returned=BSConvertUnits.convert(value, convertFrom, convertTo, refPct)
             elif convertFrom in ['DEGREE','RADIAN']:
-                self.__checkParamDomain(currentAst, fctLabel, '<T-UNIT>', convertTo in ['DEGREE','RADIAN'], 'conversion of an angle unit can only be converted to another angle unit (DEGREE, RADIAN)')
+                self.__checkParamDomain(currentAst, fctLabel, 'T-UNIT', convertTo in ['DEGREE','RADIAN'], 'conversion of an angle unit can only be converted to another angle unit (DEGREE, RADIAN)')
                 returned=BSConvertUnits.convert(value, convertFrom, convertTo, refPct)
             else:
-                self.__checkParamDomain(currentAst, fctLabel, '<F-UNIT>', False, 'can only convert measures and angles units')
+                self.__checkParamDomain(currentAst, fctLabel, 'F-UNIT', False, 'can only convert measures and angles units')
 
             return returned
         elif fctName=='math.minimum':
             # no minimum  arguments
             values=flatten(map(self.__evaluate, currentAst.nodes()[1:]))
             for index, value in enumerate(values):
-                self.__checkParamType(currentAst, fctLabel, f'<VALUE[{index}]>', value, int, float)
+                self.__checkParamType(currentAst, fctLabel, f'VALUE[{index}]', value, int, float)
 
             return min(values)
         elif fctName=='math.maximum':
             # no minimum  arguments
             values=flatten(map(self.__evaluate, currentAst.nodes()[1:]))
             for index, value in enumerate(values):
-                self.__checkParamType(currentAst, fctLabel, f'<VALUE[{index}]>', value, int, float)
+                self.__checkParamType(currentAst, fctLabel, f'VALUE[{index}]', value, int, float)
 
             return max(values)
         elif fctName=='math.sum':
             # no minimum  arguments
             values=flatten(map(self.__evaluate, currentAst.nodes()[1:]))
             for index, value in enumerate(values):
-                self.__checkParamType(currentAst, fctLabel, f'<VALUE[{index}]>', value, int, float)
+                self.__checkParamType(currentAst, fctLabel, f'VALUE[{index}]', value, int, float)
 
             return sum(values)
         elif fctName=='math.average':
             # no minimum  arguments
             values=flatten(map(self.__evaluate, currentAst.nodes()[1:]))
             for index, value in enumerate(values):
-                self.__checkParamType(currentAst, fctLabel, f'<VALUE[{index}]>', value, int, float)
+                self.__checkParamType(currentAst, fctLabel, f'VALUE[{index}]', value, int, float)
 
             nbItems=len(values)
             if nbItems>0:
@@ -3462,7 +3564,7 @@ class BSInterpreter(QObject):
             # no minimum  arguments
             values=flatten(map(self.__evaluate, currentAst.nodes()[1:]))
             for index, value in enumerate(values):
-                self.__checkParamType(currentAst, fctLabel, f'<VALUE[{index}]>', value, int, float)
+                self.__checkParamType(currentAst, fctLabel, f'VALUE[{index}]', value, int, float)
 
             nbItems=len(values)
             if nbItems>0:
@@ -3473,7 +3575,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.ceil(value)
         elif fctName=='math.floor':
@@ -3481,7 +3583,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.floor(value)
         elif fctName=='math.round':
@@ -3490,9 +3592,9 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             roundValue=self.__evaluate(currentAst.node(2, 0))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<DECIMALS>', roundValue, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<DECIMALS>', roundValue>=0 and isinstance(roundValue, int), f"must be a zero or positive integer value (current={roundValue})")
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'DECIMALS', roundValue, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'DECIMALS', roundValue>=0 and isinstance(roundValue, int), f"must be a zero or positive integer value (current={roundValue})")
 
             if roundValue==0:
                 # because math.floor(x, 0) return a float
@@ -3505,7 +3607,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.cos(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.sin':
@@ -3513,7 +3615,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.sin(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.tan':
@@ -3521,7 +3623,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.tan(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.acos':
@@ -3529,8 +3631,8 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>=-1 and value<=1 , f"must be a numeric value in range [-1.0;1.0] (current={value})")
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>=-1 and value<=1 , f"must be a numeric value in range [-1.0;1.0] (current={value})")
 
             return math.acos(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.asin':
@@ -3538,8 +3640,8 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>=-1 and value<=1 , f"must be a numeric value in range [-1.0;1.0] (current={value})")
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>=-1 and value<=1 , f"must be a numeric value in range [-1.0;1.0] (current={value})")
 
             return math.asin(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.atan':
@@ -3547,7 +3649,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.atan(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.cosh':
@@ -3555,7 +3657,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.cosh(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.sinh':
@@ -3563,7 +3665,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.sinh(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.tanh':
@@ -3571,7 +3673,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.tanh(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.acosh':
@@ -3579,8 +3681,8 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>=1, f"must be a numeric value in range [1.0;infinite[ (current={value})")
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>=1, f"must be a numeric value in range [1.0;infinite[ (current={value})")
 
             return math.acosh(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.asinh':
@@ -3588,7 +3690,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
 
             return math.asinh(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='math.atanh':
@@ -3596,8 +3698,8 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', value, int, float)
-            self.__checkParamDomain(currentAst, fctLabel, '<VALUE>', value>-1 and value<1 , f"must be a numeric value in range ]-1.0;1.0[ (current={value})")
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', value, int, float)
+            self.__checkParamDomain(currentAst, fctLabel, 'VALUE', value>-1 and value<1 , f"must be a numeric value in range ]-1.0;1.0[ (current={value})")
 
             return math.atanh(BSConvertUnits.convertAngle(value, self.__scriptBlockStack.current().variable(':unit.rotation'), 'RADIAN'))
         elif fctName=='string.length':
@@ -3605,7 +3707,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<TEXT>', value, str)
+            self.__checkParamType(currentAst, fctLabel, 'TEXT', value, str)
 
             return len(value)
         elif fctName=='string.upper':
@@ -3613,7 +3715,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<TEXT>', value, str)
+            self.__checkParamType(currentAst, fctLabel, 'TEXT', value, str)
 
             return value.upper()
         elif fctName=='string.lower':
@@ -3621,14 +3723,14 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<TEXT>', value, str)
+            self.__checkParamType(currentAst, fctLabel, 'TEXT', value, str)
 
             return value.lower()
         elif fctName=='string.substring':
             self.__checkFctParamNumber(currentAst, fctLabel, 2,3)
 
             value=self.__evaluate(currentAst.node(1))
-            self.__checkParamType(currentAst, fctLabel, '<TEXT>', value, str)
+            self.__checkParamType(currentAst, fctLabel, 'TEXT', value, str)
 
             nbChar=len(value)
             if value=='':
@@ -3637,14 +3739,14 @@ class BSInterpreter(QObject):
 
 
             fromIndex=self.__evaluate(currentAst.node(2))
-            self.__checkParamType(currentAst, fctLabel, '<INDEX>', fromIndex, int)
+            self.__checkParamType(currentAst, fctLabel, 'INDEX', fromIndex, int)
             if fromIndex==0 or abs(fromIndex)>nbChar:
                 # invalid index, return empty string immediately
                 return ''
 
             countChar=self.__evaluate(currentAst.node(3))
             if countChar:
-                self.__checkParamType(currentAst, fctLabel, '<COUNT>', countChar, int)
+                self.__checkParamType(currentAst, fctLabel, 'COUNT', countChar, int)
 
             if fromIndex>0:
                 # positive value, start from beginning
@@ -3661,6 +3763,25 @@ class BSInterpreter(QObject):
                 else:
                     # return all characters
                     return value[fromIndex:]
+        elif fctName=='string.format':
+            if len(currentAst.nodes())<1:
+                # at least need one parameter
+                self.__checkParamNumber(currentAst, fctLabel, 1)
+
+            formatStr=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'FORMAT', formatStr, str)
+
+            values=[]
+            for index, node in enumerate(currentAst.nodes()):
+                if index>1:
+                    # 0 = function name
+                    # 1 = format str
+                    # 2+ = values
+                    values.append(str(self.__strValue(self.__evaluate(node))))
+
+            returned=formatStr.format(*values)
+
+            return returned
         elif fctName=='color.rgb':
             self.__checkFctParamNumber(currentAst, fctLabel, 3)
 
@@ -3669,29 +3790,29 @@ class BSInterpreter(QObject):
             bValue=self.__evaluate(currentAst.node(3))
 
 
-            self.__checkParamType(currentAst, fctLabel, '<R-VALUE>', rValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<G-VALUE>', gValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<B-VALUE>', bValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'R-VALUE', rValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'G-VALUE', gValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'B-VALUE', bValue, int, float)
 
             if isinstance(rValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<R-VALUE>', rValue>=0 and rValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={rValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'R-VALUE', rValue>=0 and rValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={rValue})", False):
                     rValue=min(255, max(0, rValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<R-VALUE>', rValue>=0.0 and rValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={rValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'R-VALUE', rValue>=0.0 and rValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={rValue})", False):
                     rValue=min(1.0, max(0.0, rValue))
 
             if isinstance(gValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<G-VALUE>', gValue>=0 and gValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={gValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'G-VALUE', gValue>=0 and gValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={gValue})", False):
                     gValue=min(255, max(0, gValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<G-VALUE>', gValue>=0.0 and gValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={gValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'G-VALUE', gValue>=0.0 and gValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={gValue})", False):
                     gValue=min(1.0, max(0.0, gValue))
 
             if isinstance(bValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<B-VALUE>', bValue>=0 and bValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={bValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'B-VALUE', bValue>=0 and bValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={bValue})", False):
                     bValue=min(255, max(0, bValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<B-VALUE>', bValue>=0.0 and bValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={bValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'B-VALUE', bValue>=0.0 and bValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={bValue})", False):
                     bValue=min(1.0, max(0.0, bValue))
 
             # convert all values as integer 0-255
@@ -3712,37 +3833,37 @@ class BSInterpreter(QObject):
             aValue=self.__evaluate(currentAst.node(4))
 
 
-            self.__checkParamType(currentAst, fctLabel, '<R-VALUE>', rValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<G-VALUE>', gValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<B-VALUE>', bValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<O-VALUE>', aValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'R-VALUE', rValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'G-VALUE', gValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'B-VALUE', bValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'O-VALUE', aValue, int, float)
 
             if isinstance(rValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<R-VALUE>', rValue>=0 and rValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={rValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'R-VALUE', rValue>=0 and rValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={rValue})", False):
                     rValue=min(255, max(0, rValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<R-VALUE>', rValue>=0.0 and rValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={rValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'R-VALUE', rValue>=0.0 and rValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={rValue})", False):
                     rValue=min(1.0, max(0.0, rValue))
 
             if isinstance(gValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<G-VALUE>', gValue>=0 and gValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={gValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'G-VALUE', gValue>=0 and gValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={gValue})", False):
                     gValue=min(255, max(0, gValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<G-VALUE>', gValue>=0.0 and gValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={gValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'G-VALUE', gValue>=0.0 and gValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={gValue})", False):
                     gValue=min(1.0, max(0.0, gValue))
 
             if isinstance(bValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<B-VALUE>', bValue>=0 and bValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={bValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'B-VALUE', bValue>=0 and bValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={bValue})", False):
                     bValue=min(255, max(0, bValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<B-VALUE>', bValue>=0.0 and bValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={bValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'B-VALUE', bValue>=0.0 and bValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={bValue})", False):
                     bValue=min(1.0, max(0.0, bValue))
 
             if isinstance(aValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
                     aValue=min(255, max(0, aValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
                     aValue=min(1.0, max(0.0, aValue))
 
             # convert all values as integer 0-255
@@ -3763,22 +3884,22 @@ class BSInterpreter(QObject):
             sValue=self.__evaluate(currentAst.node(2))
             lValue=self.__evaluate(currentAst.node(3))
 
-            self.__checkParamType(currentAst, fctLabel, '<H-VALUE>', hValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<S-VALUE>', sValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<L-VALUE>', lValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'H-VALUE', hValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'S-VALUE', sValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'L-VALUE', lValue, int, float)
 
             if isinstance(sValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
                     sValue=min(255, max(0, sValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
                     sValue=min(1.0, max(0.0, sValue))
 
             if isinstance(lValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<L-VALUE>', lValue>=0 and lValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={lValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'L-VALUE', lValue>=0 and lValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={lValue})", False):
                     lValue=min(255, max(0, lValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<L-VALUE>', lValue>=0.0 and lValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={lValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'L-VALUE', lValue>=0.0 and lValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={lValue})", False):
                     lValue=min(1.0, max(0.0, lValue))
 
 
@@ -3800,30 +3921,30 @@ class BSInterpreter(QObject):
             aValue=self.__evaluate(currentAst.node(4))
 
 
-            self.__checkParamType(currentAst, fctLabel, '<H-VALUE>', hValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<S-VALUE>', sValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<L-VALUE>', lValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<O-VALUE>', aValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'H-VALUE', hValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'S-VALUE', sValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'L-VALUE', lValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'O-VALUE', aValue, int, float)
 
             if isinstance(sValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
                     sValue=min(255, max(0, sValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
                     sValue=min(1.0, max(0.0, sValue))
 
             if isinstance(lValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<L-VALUE>', lValue>=0 and lValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={lValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'L-VALUE', lValue>=0 and lValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={lValue})", False):
                     lValue=min(255, max(0, lValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<L-VALUE>', lValue>=0.0 and lValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={lValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'L-VALUE', lValue>=0.0 and lValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={lValue})", False):
                     lValue=min(1.0, max(0.0, lValue))
 
             if isinstance(aValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
                     aValue=min(255, max(0, aValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
                     aValue=min(1.0, max(0.0, aValue))
 
             # convert all values as integer 255
@@ -3844,22 +3965,22 @@ class BSInterpreter(QObject):
             sValue=self.__evaluate(currentAst.node(2))
             vValue=self.__evaluate(currentAst.node(3))
 
-            self.__checkParamType(currentAst, fctLabel, '<H-VALUE>', hValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<S-VALUE>', sValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<V-VALUE>', vValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'H-VALUE', hValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'S-VALUE', sValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'V-VALUE', vValue, int, float)
 
             if isinstance(sValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
                     sValue=min(255, max(0, sValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
                     sValue=min(1.0, max(0.0, sValue))
 
             if isinstance(vValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<V-VALUE>', vValue>=0 and vValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={vValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'V-VALUE', vValue>=0 and vValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={vValue})", False):
                     vValue=min(255, max(0, vValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<V-VALUE>', vValue>=0.0 and vValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={vValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'V-VALUE', vValue>=0.0 and vValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={vValue})", False):
                     vValue=min(1.0, max(0.0, vValue))
 
             # convert all values as integer 255
@@ -3879,30 +4000,30 @@ class BSInterpreter(QObject):
             vValue=self.__evaluate(currentAst.node(3))
             aValue=self.__evaluate(currentAst.node(4))
 
-            self.__checkParamType(currentAst, fctLabel, '<H-VALUE>', hValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<S-VALUE>', sValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<V-VALUE>', vValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<O-VALUE>', aValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'H-VALUE', hValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'S-VALUE', sValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'V-VALUE', vValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'O-VALUE', aValue, int, float)
 
             if isinstance(sValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0 and sValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={sValue})", False):
                     sValue=min(255, max(0, sValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<S-VALUE>', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'S-VALUE', sValue>=0.0 and sValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={sValue})", False):
                     sValue=min(1.0, max(0.0, sValue))
 
             if isinstance(vValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<V-VALUE>', vValue>=0 and vValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={vValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'V-VALUE', vValue>=0 and vValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={vValue})", False):
                     vValue=min(255, max(0, vValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<V-VALUE>', vValue>=0.0 and vValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={vValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'V-VALUE', vValue>=0.0 and vValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={vValue})", False):
                     vValue=min(1.0, max(0.0, vValue))
 
             if isinstance(aValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
                     aValue=min(255, max(0, aValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
                     aValue=min(1.0, max(0.0, aValue))
 
             # convert all values as integer 255
@@ -3925,37 +4046,37 @@ class BSInterpreter(QObject):
             kValue=self.__evaluate(currentAst.node(4))
 
 
-            self.__checkParamType(currentAst, fctLabel, '<C-VALUE>', cValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<M-VALUE>', mValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<Y-VALUE>', yValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<K-VALUE>', kValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'C-VALUE', cValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'M-VALUE', mValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'Y-VALUE', yValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'K-VALUE', kValue, int, float)
 
             if isinstance(cValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<C-VALUE>', cValue>=0 and cValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={cValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'C-VALUE', cValue>=0 and cValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={cValue})", False):
                     cValue=min(255, max(0, cValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<C-VALUE>', cValue>=0.0 and cValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={cValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'C-VALUE', cValue>=0.0 and cValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={cValue})", False):
                     cValue=min(1.0, max(0.0, cValue))
 
             if isinstance(mValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<M-VALUE>', mValue>=0 and mValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={mValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'M-VALUE', mValue>=0 and mValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={mValue})", False):
                     mValue=min(255, max(0, mValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<M-VALUE>', mValue>=0.0 and mValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={mValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'M-VALUE', mValue>=0.0 and mValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={mValue})", False):
                     mValue=min(1.0, max(0.0, mValue))
 
             if isinstance(yValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<Y-VALUE>', yValue>=0 and yValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={yValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'Y-VALUE', yValue>=0 and yValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={yValue})", False):
                     yValue=min(255, max(0, yValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<Y-VALUE>', yValue>=0.0 and yValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={yValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'Y-VALUE', yValue>=0.0 and yValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={yValue})", False):
                     yValue=min(1.0, max(0.0, yValue))
 
             if isinstance(kValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<K-VALUE>', kValue>=0 and kValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={kValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'K-VALUE', kValue>=0 and kValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={kValue})", False):
                     kValue=min(255, max(0, kValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<K-VALUE>', kValue>=0.0 and kValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={kValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'K-VALUE', kValue>=0.0 and kValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={kValue})", False):
                     kValue=min(1.0, max(0.0, kValue))
 
             # convert all values as integer 0-255
@@ -3979,45 +4100,45 @@ class BSInterpreter(QObject):
             aValue=self.__evaluate(currentAst.node(5))
 
 
-            self.__checkParamType(currentAst, fctLabel, '<C-VALUE>', cValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<M-VALUE>', mValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<Y-VALUE>', yValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<K-VALUE>', kValue, int, float)
-            self.__checkParamType(currentAst, fctLabel, '<O-VALUE>', aValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'C-VALUE', cValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'M-VALUE', mValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'Y-VALUE', yValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'K-VALUE', kValue, int, float)
+            self.__checkParamType(currentAst, fctLabel, 'O-VALUE', aValue, int, float)
 
             if isinstance(cValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<C-VALUE>', cValue>=0 and cValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={cValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'C-VALUE', cValue>=0 and cValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={cValue})", False):
                     cValue=min(255, max(0, cValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<C-VALUE>', cValue>=0.0 and cValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={cValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'C-VALUE', cValue>=0.0 and cValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={cValue})", False):
                     cValue=min(1.0, max(0.0, cValue))
 
             if isinstance(mValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<M-VALUE>', mValue>=0 and mValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={mValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'M-VALUE', mValue>=0 and mValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={mValue})", False):
                     mValue=min(255, max(0, mValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<M-VALUE>', mValue>=0.0 and mValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={mValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'M-VALUE', mValue>=0.0 and mValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={mValue})", False):
                     mValue=min(1.0, max(0.0, mValue))
 
             if isinstance(yValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<Y-VALUE>', yValue>=0 and yValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={yValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'Y-VALUE', yValue>=0 and yValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={yValue})", False):
                     yValue=min(255, max(0, yValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<Y-VALUE>', yValue>=0.0 and yValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={yValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'Y-VALUE', yValue>=0.0 and yValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={yValue})", False):
                     yValue=min(1.0, max(0.0, yValue))
 
             if isinstance(kValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<K-VALUE>', kValue>=0 and kValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={kValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'K-VALUE', kValue>=0 and kValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={kValue})", False):
                     kValue=min(255, max(0, kValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<K-VALUE>', kValue>=0.0 and kValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={kValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'K-VALUE', kValue>=0.0 and kValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={kValue})", False):
                     kValue=min(1.0, max(0.0, kValue))
 
             if isinstance(aValue, int):
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0 and aValue<=255, f"allowed value when provided as an integer number is range [0;255] (current={aValue})", False):
                     aValue=min(255, max(0, aValue))
             else:
-                if not self.__checkParamDomain(currentAst, fctLabel, '<O-VALUE>', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
+                if not self.__checkParamDomain(currentAst, fctLabel, 'O-VALUE', aValue>=0.0 and aValue<=1.0, f"allowed value when provided as a decimal number is range [0.0;1.0] (current={aValue})", False):
                     aValue=min(1.0, max(0.0, aValue))
 
             # convert all values as integer 0-255
@@ -4033,12 +4154,84 @@ class BSInterpreter(QObject):
                 aValue=round(aValue*255)
 
             return QColor.fromCmyk(cValue, mValue, yValue, kValue, aValue)
+        elif fctName=='color.red':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.red()
+        elif fctName=='color.green':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.green()
+        elif fctName=='color.blue':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.blue()
+        elif fctName=='color.cyan':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.cyan()
+        elif fctName=='color.magenta':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.magenta()
+        elif fctName=='color.yellow':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.yellow()
+        elif fctName=='color.black':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.black()
+        elif fctName=='color.hue':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.hue()
+        elif fctName=='color.saturation':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.saturation()
+        elif fctName=='color.lightness':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.lightness()
+        elif fctName=='color.value':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.value()
+        elif fctName=='color.opacity':
+            self.__checkFctParamNumber(currentAst, fctLabel, 1)
+
+            color=self.__evaluate(currentAst.node(1))
+            self.__checkParamType(currentAst, fctLabel, 'COLOR', color, QColor)
+            return color.alpha()
         elif fctName=='list.length':
             self.__checkFctParamNumber(currentAst, fctLabel, 1)
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
 
             return len(value)
         elif fctName=='list.join':
@@ -4047,8 +4240,8 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             sepChar=self.__evaluate(currentAst.node(2, ','))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
-            self.__checkParamType(currentAst, fctLabel, '<SEPARATOR>', sepChar, str)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'SEPARATOR', sepChar, str)
 
             # do join; force string conversion of items
             return sepChar.join([item.name() if isinstance(item, QColor) and item.alpha()==255
@@ -4061,8 +4254,8 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             sepChar=self.__evaluate(currentAst.node(2, ','))
 
-            self.__checkParamType(currentAst, fctLabel, '<TEXT>', value, str)
-            self.__checkParamType(currentAst, fctLabel, '<SEPARATOR>', sepChar, str)
+            self.__checkParamType(currentAst, fctLabel, 'TEXT', value, str)
+            self.__checkParamType(currentAst, fctLabel, 'SEPARATOR', sepChar, str)
 
             return value.split(sepChar)
         elif fctName=='list.rotate':
@@ -4071,8 +4264,8 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             shiftValue=self.__evaluate(currentAst.node(2, 1))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
-            self.__checkParamType(currentAst, fctLabel, '<VALUE>', shiftValue, int)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'VALUE', shiftValue, int)
 
             return rotate(value, shiftValue)
         elif fctName=='list.sort':
@@ -4081,8 +4274,8 @@ class BSInterpreter(QObject):
             value=self.__evaluate(currentAst.node(1))
             ascending=self.__evaluate(currentAst.node(2, True))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
-            self.__checkParamType(currentAst, fctLabel, '<ASCENDING>', ascending, bool)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'ASCENDING', ascending, bool)
 
             return sorted(value, key=sortKey, reverse=not ascending)
         elif fctName=='list.revert':
@@ -4090,7 +4283,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
 
             return value[::-1]
         elif fctName=='list.unique':
@@ -4098,7 +4291,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
 
             return unique(value)
         elif fctName=='list.shuffle':
@@ -4106,7 +4299,7 @@ class BSInterpreter(QObject):
 
             value=self.__evaluate(currentAst.node(1))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
 
             return random.sample(value, len(value))
         elif fctName=='list.index':
@@ -4116,8 +4309,8 @@ class BSInterpreter(QObject):
             index=self.__evaluate(currentAst.node(2))
             default=self.__evaluate(currentAst.node(3, 0))
 
-            self.__checkParamType(currentAst, fctLabel, '<LIST>', value, list)
-            self.__checkParamType(currentAst, fctLabel, '<INDEX>', index, int)
+            self.__checkParamType(currentAst, fctLabel, 'LIST', value, list)
+            self.__checkParamType(currentAst, fctLabel, 'INDEX', index, int)
 
             if index>0 and index<=len(value):
                 return value[index-1]
@@ -4195,6 +4388,9 @@ class BSInterpreter(QObject):
 
         return returned
 
+    def __executeListIndexExpression(self, currentAst):
+        """return index value"""
+        return self.__evaluate(currentAst.node(0))
 
     # --------------------------------------------------------------------------
     # Operators
@@ -4229,6 +4425,222 @@ class BSInterpreter(QObject):
 
     def __executeBinaryOperator(self, currentAst):
         """return binary operation result"""
+
+        def raiseException(e, operator):
+            """Reformat operator/operand exception for interpeter"""
+            if isinstance(e, TypeError):
+                result=re.search("'([^']+)'\sand\s'([^']+)'", str(e))
+                if not result is None:
+                    operator=re.sub(r"'([^']+)'", r"'***\1***'", operator)
+                    raise EInterpreter(f"Unsupported operand types ***{self.__valueTypeFromName(result.groups()[0])}*** and ***{self.__valueTypeFromName(result.groups()[1])}*** for {operator}", currentAst)
+            raise EInterpreter(str(e), currentAst)
+
+        def applyAnd(leftValue, rightValue):
+            # Logical operator can be applied
+            # - between 2 boolean values
+            # - between 2 integer values
+            # - between boolean value and List
+            # - between integer value and List
+            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
+                return leftValue and rightValue
+            elif isinstance(rightValue, list):
+                return [applyAnd(leftValue, x) for x in rightValue]
+            elif isinstance(leftValue, list):
+                return [applyAnd(x, rightValue) for x in leftValue]
+            else:
+                return leftValue & rightValue
+
+        def applyOr(leftValue, rightValue):
+            # Logical operator can be applied
+            # - between 2 boolean values
+            # - between 2 integer values
+            # - between boolean value and List
+            # - between integer value and List
+            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
+                return leftValue or rightValue
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyOr(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyOr(x, rightValue) for x in leftValue]
+            else:
+                return leftValue | rightValue
+
+        def applyXOr(leftValue, rightValue):
+            # Logical operator can be applied
+            # - between 2 boolean values
+            # - between 2 integer values
+            # - between boolean value and List
+            # - between integer value and List
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyXOr(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyXOr(x, rightValue) for x in leftValue]
+            else:
+                return leftValue ^ rightValue
+
+        def applyMultiply(leftValue, rightValue):
+            # product operator can be applied
+            # - between 2 numeric values
+            # - between 1 numeric value and 1 string
+            # - between 1 numeric value and 1 list of (int, float)
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyMultiply(x, leftValue) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyMultiply(x, rightValue) for x in leftValue]
+            else:
+                return leftValue * rightValue
+
+        def applyDivide(leftValue, rightValue):
+            # divide operator can be applied
+            # - between 2 numeric values
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
+                if rightValue!=0:
+                    return leftValue / rightValue
+                raise EInterpreter(f"Division by zero", currentAst)
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyDivide(leftValue, x) for x in rightValue ]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyDivide(x, rightValue) for x in leftValue]
+            else:
+                return leftValue / rightValue
+
+        def applyFloorDivide(leftValue, rightValue):
+            # Floor division operator can be applied
+            # - between 2 numeric values
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
+                if rightValue!=0:
+                    return leftValue // rightValue
+                raise EInterpreter(f"Division by zero", currentAst)
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyFloorDivide(leftValue, x) for x in rightValue ]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyFloorDivide(x, rightValue) for x in leftValue]
+            else:
+                return leftValue // rightValue
+
+        def applyModulus(leftValue, rightValue):
+            # Modulus operator can be applied
+            # - between 2 numeric values
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
+                if rightValue!=0:
+                    return leftValue % rightValue
+                raise EInterpreter(f"Division by zero", currentAst)
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyModulus(leftValue, x) for x in rightValue ]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyModulus(x, rightValue) for x in leftValue]
+            else:
+                return leftValue % rightValue
+
+        def applyAddition(leftValue, rightValue):
+            # addition operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between a string and a numeric value
+            # - between a string and a color value
+            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
+                isinstance(leftValue, str) and isinstance(rightValue, str)):
+                return leftValue + rightValue
+            elif isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applyAddition(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applyAddition(x, rightValue) for x in leftValue]
+            elif isinstance(leftValue, str) and isinstance(rightValue, list):
+                return [applyAddition(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, str) and isinstance(leftValue, list):
+                return [applyAddition(x, rightValue) for x in leftValue]
+            elif (isinstance(leftValue, str) and isinstance(rightValue, (int, float)) or
+                  isinstance(leftValue, (int, float)) and isinstance(rightValue, str)):
+                return f"{leftValue}{rightValue}"
+            elif isinstance(leftValue, str) and isinstance(rightValue, QColor):
+                return leftValue+self.__strValue(rightValue)
+            elif isinstance(leftValue, QColor) and isinstance(rightValue, str):
+                return self.__strValue(leftValue)+rightValue
+            else:
+                return leftValue+rightValue
+
+        def applySubstraction(leftValue, rightValue):
+            # Subtraction operator can be applied
+            # - between 2 numeric values
+            if isinstance(leftValue, (int, float)) and isinstance(rightValue, list):
+                return [applySubstraction(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float)) and isinstance(leftValue, list):
+                return [applySubstraction(x, rightValue) for x in leftValue]
+            else:
+                return leftValue - rightValue
+
+        def applyCmpGT(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpGT(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpGT(x, rightValue) for x in leftValue]
+            else:
+                return leftValue > rightValue
+
+        def applyCmpGE(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpGE(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpGE(x, rightValue) for x in leftValue]
+            else:
+                return leftValue >= rightValue
+
+        def applyCmpLT(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpLT(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpLT(x, rightValue) for x in leftValue]
+            else:
+                return leftValue < rightValue
+
+        def applyCmpLE(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpLE(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpLE(x, rightValue) for x in leftValue]
+            else:
+                return leftValue <= rightValue
+
+        def applyCmpEQ(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpEQ(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpEQ(x, rightValue) for x in leftValue]
+            else:
+                return leftValue==rightValue
+
+        def applyCmpNE(leftValue, rightValue):
+            # Comparison operator can be applied
+            # - between 2 numeric values
+            # - between 2 string values
+            # - between 2 boolean values
+            if isinstance(leftValue, (int, float, str, bool)) and isinstance(rightValue, list):
+                return [applyCmpNE(leftValue, x) for x in rightValue]
+            elif isinstance(rightValue, (int, float, str, bool)) and isinstance(leftValue, list):
+                return [applyCmpNE(x, rightValue) for x in leftValue]
+            else:
+                return leftValue!=rightValue
+
         # Defined by 3 nodes:
         #   0: operator (<Token>)
         #   1: left value (<Token> or <ASTItem>)
@@ -4242,162 +4654,120 @@ class BSInterpreter(QObject):
         rightValue=self.__evaluate(currentAst.node(2))
 
         if operator=='*':
-            # product operator can be applied
-            # - between 2 numeric values
-            # - between 1 numeric value and 1 string
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float, str)) or
-                isinstance(leftValue, str) and isinstance(rightValue, (int, float))):
-                return leftValue * rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Multiply operator '*' can only be applied between:\n- 2 numeric values\n- 1 numeric value and 1 string value", currentAst)
+            try:
+                return applyMultiply(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "multiply operator '*'")
         elif operator=='/':
-            # divide operator can be applied
-            # - between 2 numeric values
-            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
-                if rightValue!=0:
-                    return leftValue / rightValue
-                raise EInterpreter(f"Division by zero", currentAst)
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Divide operator '/' can only be applied between 2 numeric values", currentAst)
+            try:
+                return applyDivide(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "divide operator '/'")
         elif operator=='//':
-            # Floor division operator can be applied
-            # - between 2 numeric values
-            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
-                if rightValue!=0:
-                    return leftValue // rightValue
-                raise EInterpreter(f"Division by zero", currentAst)
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Floor division operator '//' can only be applied between 2 numeric values", currentAst)
+            try:
+                return applyFloorDivide(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "floor division operator '//'")
         elif operator=='%':
-            # Modulus operator can be applied
-            # - between 2 numeric values
-            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
-                if rightValue!=0:
-                    return leftValue % rightValue
-                raise EInterpreter(f"Division by zero", currentAst)
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Modulus operator '%' can only be applied between 2 numeric values", currentAst)
+            try:
+                return applyModulus(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "modulus operator '%'")
         elif operator=='+':
-            # addition operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str)):
-                return leftValue + rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Addition operator '+' can only be applied between\n- 2 numeric values\n- 2 string values", currentAst)
+            try:
+                return applyAddition(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "addition operator '+'")
         elif operator=='-':
-            # Subtraction operator can be applied
-            # - between 2 numeric values
-            if isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)):
-                return leftValue - rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Subtraction operator '-' can only be applied between 2 numeric values", currentAst)
+            try:
+                return applySubstraction(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "substraction operator '-'")
         elif operator=='<':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue < rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Lower than comparison operator '<' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            try:
+                return applyCmpLT(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '<'")
         elif operator=='<=':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue <= rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Lower or equal than operator '<=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            try:
+                return applyCmpLE(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '<='")
         elif operator=='>':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue > rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Greater than operator '>' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            try:
+                return applyCmpGT(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '>'")
         elif operator=='>=':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue >= rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Greater or equal than operator '>=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            try:
+                return applyCmpGE(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '>='")
         elif operator=='=':
-            # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue == rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Equal comparison operator '=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            try:
+                return applyCmpEQ(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '='")
         elif operator=='<>':
+            try:
+                return applyCmpNE(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "comparison operator '<>'")
+        elif operator=='in':
             # Comparison operator can be applied
-            # - between 2 numeric values
-            # - between 2 string values
-            # - between 2 boolean values
-            if (isinstance(leftValue, (int, float)) and isinstance(rightValue, (int, float)) or
-                isinstance(leftValue, str) and isinstance(rightValue, str) or
-                isinstance(leftValue, bool) and isinstance(rightValue, bool)):
-                return leftValue != rightValue
+            # - between any value and a list
+            if isinstance(rightValue, list):
+                return leftValue in rightValue
 
             # not a valid operation, raise an error
-            raise EInterpreter(f"Not equal comparison operator '!=' can only be applied between\n- 2 numeric values\n- 2 string values\n- 2 boolean values", currentAst)
+            raise EInterpreter(f"In list operator 'in' can only be applied to a list", currentAst)
         elif operator=='and':
-            # Logical operator can be applied
-            # - between 2 boolean values
-            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
-                return leftValue and rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Logical operator 'AND' can only be applied between 2 boolean values", currentAst)
+            try:
+                return applyAnd(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "logical operator 'AND'")
         elif operator=='or':
-            # Logical operator can be applied
-            # - between 2 boolean values
-            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
-                return leftValue or rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Logical operator 'OR' can only be applied between 2 boolean values", currentAst)
+            try:
+                return applyOr(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "logical operator 'OR'")
         elif operator=='xor':
-            # Logical operator can be applied
-            # - between 2 boolean values
-            if isinstance(leftValue, bool) and isinstance(rightValue, bool):
-                return leftValue ^ rightValue
-
-            # not a valid operation, raise an error
-            raise EInterpreter(f"Logical operator 'XOR' can only be applied between 2 boolean values", currentAst)
+            try:
+                return applyXOr(leftValue, rightValue)
+            except Exception as e:
+                raiseException(e, "logical operator 'XOR'")
 
         # should not occurs
         raise EInterpreter(f"Unknown operator: {operator}", currentAst)
+
+    def __executeIndexOperator(self, currentAst):
+        """return unary operation result"""
+        fctLabel='list[index]'
+        # defined by 2 nodes (ASTItem)
+        # - 1st node= index value
+        # - 2nd node = list or string
+
+        indexValue=self.__evaluate(currentAst.node(0))
+        listValue=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, 'INDEX', indexValue, int)
+        self.__checkParamType(currentAst, fctLabel, 'LIST', listValue, list, str)
+
+        if isinstance(listValue, str):
+            lenOf='string'
+        else:
+            lenOf='list'
+
+        if not self.__checkParamDomain(currentAst, fctLabel, 'INDEX', abs(indexValue)>=1 and abs(indexValue)<=len(listValue), f"given index must be in range [1; length of {lenOf}] (current={indexValue})", False):
+            # if value<=0, exit
+            return None
+
+        if indexValue>0:
+            returned=listValue[indexValue - 1]
+        else:
+            returned=listValue[indexValue]
+
+        return returned
 
 
     # --------------------------------------------------------------------------
@@ -4416,15 +4786,36 @@ class BSInterpreter(QObject):
         # we have DEDENT in case of INDENT)
         script+="\n\n#<EOT>"
 
+        totalTime=None
+
+        self.valid("**Parse script** ")
         if script!=self.__script:
+            startTime=time.time()
             self.__script=script
             self.__astRoot=self.__parser.parse(self.__script)
+            totalTime=round(time.time()-startTime,4)
 
-        Debug.print('setScript/Errors: {0}', self.__parser.errors())
-        Debug.print('setScript/AST: {0}', self.__astRoot)
+        #Debug.print('setScript/AST: {0}', self.__astRoot)
 
         if len(self.__parser.errors())>0:
-            raise EInterpreterInternalError("Can't parse", self.__astRoot)
+            errMsgList=[]
+
+            for error in self.__parser.errors():
+                errMsgList.append(f"#r#{error.errorMessage()}#, *line* #y#***{error.errorToken().row()}***# ")
+
+                if error.errorGrammarRule():
+                    pass
+                if error.errorAst():
+                    pass
+
+            errMsg='\n'.join(errMsgList)
+
+            raise EInterpreter(f"Can't parse*#, {errMsg}*#w#", self.__astRoot)
+
+        if totalTime:
+            self.print(f"#w#[Parsed in# #lw#*{totalTime}s*##w#]#", cReturn=False)
+        else:
+            self.print(f"#w#[Already parsed]#", cReturn=False)
 
     def parserErrors(self):
         """Return parser errors"""
@@ -4508,13 +4899,21 @@ class BSInterpreter(QObject):
             raise EInterpreterInternalError("Interpreter is not in Debug Mode", None)
 
 
+class BSVariableScope(Enum):
+    CURRENT = 0
+    LOCAL = 1
+    GLOBAL = 2
+
 
 class BSScriptBlockProperties:
     """Define current script block properties"""
 
-    def __init__(self, parent, ast, allowLocalVariable, id=None):
+    def __init__(self, parent, ast, allowLocalVariable, id, rootStack):
         if not(parent is None or isinstance(parent, BSScriptBlockProperties)):
             raise EInvalidType("Given `parent` must be None or a <BSScriptBlockProperties>")
+
+        # keep a pointer to first stack block (root, used for global variables)
+        self.__rootStack=rootStack
 
         # keep parent, used to access to parents variables
         self.__parent=parent
@@ -4581,19 +4980,34 @@ class BSScriptBlockProperties:
         else:
             return default
 
-    def setVariable(self, name, value, localVariable, forceToBeLocal=False):
+    def setVariable(self, name, value, scope):
         """Set `value` for variable designed by given `name`
+
+        Given `scope` can be:
+        - BSVariableScope.CURRENT: if current scope allows local variable, set to current scope otherwise et to parent scope
+        - BSVariableScope.LOCAL:   force to be local even if local variables are not allowed
+        - BSVariableScope.GLOBAL:  force to be at global scope
 
         If variable doesn't exist in script block, create it
         """
         name=name.lower()
-        if localVariable and self.__allowLocalVariable or not localVariable or forceToBeLocal:
+        if scope==BSVariableScope.GLOBAL:
+            if self.__rootStack:
+                self.__rootStack.setVariable(name, value, BSVariableScope.GLOBAL)
+            else:
+                # occurs if current block is already root stack
+                self.__variables[name]=value
+        elif scope==BSVariableScope.LOCAL:
             self.__variables[name]=value
-        elif not self.__parent is None:
-            self.__parent.setVariable(name, value, localVariable)
         else:
-            # should not occurs, root scriptblock always allows user defined variable
-            pass
+            # current
+            if self.__allowLocalVariable:
+                self.__variables[name]=value
+            elif not self.__parent is None:
+                self.__parent.setVariable(name, value, scope)
+            else:
+                # should not occurs, root scriptblock always allows user defined variable
+                pass
 
     def variables(self, all=False):
         """Return dictionnary key/value of current variables
@@ -4614,14 +5028,17 @@ class BSScriptBlockStack:
     def __init__(self, maxStackSize=1000):
         self.__maxStackSize=maxStackSize
         self.__stack=[]
+        self.__current=None
 
     def push(self, ast, allowLocalVariable, name=None):
         if len(self.__stack)>0:
             parent=self.__stack[-1]
         else:
             parent=None
+
         if len(self.__stack)<self.__maxStackSize:
-            self.__stack.append(BSScriptBlockProperties(parent, ast, allowLocalVariable, name))
+            self.__stack.append(BSScriptBlockProperties(parent, ast, allowLocalVariable, name, self.__stack[0] if len(self.__stack)>0 else None))
+            self.__current=self.__stack[-1]
         else:
             raise EInvalidStatus(f"Current stack size limit ({self.__maxStackSize}) reached!")
 
@@ -4630,16 +5047,21 @@ class BSScriptBlockStack:
         # do not control if there's something to pop
         # normally this method is called only if stack is not empty
         # if called on an empty stack, must raise an error because it must never occurs
-        return self.__stack.pop()
+        returned=self.__stack.pop()
+
+        if len(self.__stack)>0:
+            self.__current=self.__stack[-1]
+        else:
+            self.__current=None
+
+        return returned
 
     def current(self):
         """Return current script block
 
         If nothing in stack, return None
         """
-        if len(self.__stack)>0:
-            return self.__stack[-1]
-        return None
+        return self.__current
 
     def count(self):
         """Return number of script block in stack"""
@@ -4648,6 +5070,18 @@ class BSScriptBlockStack:
     def clear(self):
         """Clear stack"""
         self.__stack.clear()
+
+    def variable(self, name, default=None):
+        """Shortcut to get variable from current block in stack"""
+        if self.__current:
+            return self.__current.variable(name, default)
+        else:
+            return default
+
+    def setVariable(self, name, value, scope):
+        """Shortcut to set variable from current block in stack"""
+        if self.__current:
+            self.__current.setVariable(name, value, scope)
 
 
 class BSScriptBlockMacro:
