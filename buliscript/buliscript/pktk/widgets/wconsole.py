@@ -254,9 +254,9 @@ class WConsole(QPlainTextEdit):
             return f'<i>{WConsole.unescape(regResult.groups()[0])}</i>'
 
         def formatText(text):
-            text=re.sub(r'(?<!\$)\*\*([^*]+)(?<!\$)\*\*', r'<b>\1</b>', text)
-            text=re.sub(r'(?<!\$)\*([^*]+)(?<!\$)\*', r'<i>\1</i>', text)
-            text=re.sub(r'(?<!\$)#(l?[rgbcmykw]|[A-F0-9]{6})(?<!\$)#([^#]+)(?<!\$)#', replaceColor, text)
+            text=re.sub(r'(?<!\$)\*\*(([^*]|\$\*)+)(?<!\$)\*\*', r'<b>\1</b>', text)
+            text=re.sub(r'(?<!\$)\*(([^*]|\$\*)+)(?<!\$)\*', r'<i>\1</i>', text)
+            text=re.sub(r'(?<!\$)#(l?[rgbcmykw]|[A-F0-9]{6})(?<!\$)#(([^#]|\$#)+)(?<!\$)#', replaceColor, text)
             return WConsole.unescape(text)
 
         texts=text.split("\n")
