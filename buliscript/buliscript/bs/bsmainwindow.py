@@ -291,8 +291,6 @@ class BSMainWindow(QMainWindow):
         # menu View > Language > ...
         # is built from uiController
 
-        self.actionViewShowConsole.triggered.connect(self.__uiController.commandViewShowConsoleVisible)
-
         # Menu SETTINGS
         # ----------------------------------------------------------------------
         self.actionSettingsPreferences.triggered.connect(self.__uiController.commandSettingsOpen)

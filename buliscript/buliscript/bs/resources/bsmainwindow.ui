@@ -37,50 +37,38 @@
       </property>
       <widget class="QWidget" name="wLeftArea" native="true">
        <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>6</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item>
-         <widget class="QSplitter" name="splSecondary">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
+         <widget class="BSDocuments" name="twDocuments">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <widget class="BSDocuments" name="twDocuments">
-           <property name="tabPosition">
-            <enum>QTabWidget::North</enum>
-           </property>
-           <property name="tabShape">
-            <enum>QTabWidget::Rounded</enum>
-           </property>
-           <property name="currentIndex">
-            <number>-1</number>
-           </property>
-           <property name="elideMode">
-            <enum>Qt::ElideNone</enum>
-           </property>
-           <property name="usesScrollButtons">
-            <bool>true</bool>
-           </property>
-           <property name="documentMode">
-            <bool>false</bool>
-           </property>
-           <property name="tabsClosable">
-            <bool>true</bool>
-           </property>
-           <property name="movable">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QWidget" name="wConsoleArea" native="true"/>
+          <property name="tabPosition">
+           <enum>QTabWidget::North</enum>
+          </property>
+          <property name="tabShape">
+           <enum>QTabWidget::Rounded</enum>
+          </property>
+          <property name="currentIndex">
+           <number>-1</number>
+          </property>
+          <property name="elideMode">
+           <enum>Qt::ElideNone</enum>
+          </property>
+          <property name="usesScrollButtons">
+           <bool>true</bool>
+          </property>
+          <property name="documentMode">
+           <bool>false</bool>
+          </property>
+          <property name="tabsClosable">
+           <bool>true</bool>
+          </property>
+          <property name="movable">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
        </layout>
@@ -194,7 +182,6 @@
     <addaction name="menuViewCanvas"/>
     <addaction name="menuViewLanguage"/>
     <addaction name="menuViewScript"/>
-    <addaction name="actionViewShowConsole"/>
    </widget>
    <widget class="QMenu" name="menuScript">
     <property name="title">
@@ -539,17 +526,6 @@
     <string>&amp;Canvas</string>
    </property>
   </action>
-  <action name="actionViewShowConsole">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>C&amp;onsole</string>
-   </property>
-  </action>
   <action name="actionSettingsSaveSessionOnExit">
    <property name="checkable">
     <bool>true</bool>
@@ -566,7 +542,7 @@
   </action>
   <action name="actionFileCloseAll">
    <property name="icon">
-    <iconset resource="../../pktk/resources/svg/light_icons.qrc">
+    <iconset resource="../../pktk/resources/svg/dark_icons.qrc">
      <normaloff>:/pktk/images/normal/file_close_all</normaloff>
      <disabledoff>:/pktk/images/disabled/file_close_all</disabledoff>
      <disabledon>:/pktk/images/disabled/file_close_all</disabledon>:/pktk/images/normal/file_close_all</iconset>

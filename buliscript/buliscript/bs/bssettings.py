@@ -79,7 +79,6 @@ class BSSettingsKey(SettingsKey):
     CONFIG_DOCKER_CONSOLE_BUFFERSIZE =                       'config.docker.console.bufferSize'
 
     SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION =              'session.mainwindow.splitter.main.position'
-    SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION =         'session.mainwindow.splitter.secondary.position'
     SESSION_MAINWINDOW_WINDOW_GEOMETRY =                     'session.mainwindow.window.geometry'
     SESSION_MAINWINDOW_WINDOW_MAXIMIZED =                    'session.mainwindow.window.maximized'
 
@@ -87,8 +86,6 @@ class BSSettingsKey(SettingsKey):
     SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN =                  'session.mainwindow.view.canvas.origin'
     SESSION_MAINWINDOW_VIEW_CANVAS_GRID =                    'session.mainwindow.view.canvas.grid'
     SESSION_MAINWINDOW_VIEW_CANVAS_POSITION =                'session.mainwindow.view.canvas.position'
-
-    SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE =                'session.mainwindow.view.console.visible'
 
     SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT =                 'session.mainwindow.view.dockers.layout'
 
@@ -161,7 +158,6 @@ class BSSettings(Settings):
 
 
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION,           [1000, 1000],             SettingsFmt(int), SettingsFmt(int)),
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION,      [700, 300],               SettingsFmt(int), SettingsFmt(int)),
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY,                  [-1,-1,-1,-1],            SettingsFmt(int), SettingsFmt(int), SettingsFmt(int), SettingsFmt(int)),
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED,                 False,                    SettingsFmt(bool)),
 
@@ -176,8 +172,6 @@ class BSSettings(Settings):
             # all layout properties...)
             # byte array is base64 encoded in configuration file
             SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT,              '',                       SettingsFmt(str)),
-
-            SettingsRule(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE,             True,                     SettingsFmt(bool)),
 
             SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE,                            0,                        SettingsFmt(int)),
             SettingsRule(BSSettingsKey.SESSION_DOCUMENTS_OPENED,                            [],                       SettingsFmt(list)),

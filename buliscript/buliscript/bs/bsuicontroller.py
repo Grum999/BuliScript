@@ -222,7 +222,7 @@ class BSUIController(QObject):
 
         self.__dwSearchReplace=BSDockWidgetSearchReplace(self.__window)
         self.__dwSearchReplace.setObjectName('__dwSearchReplace')
-        self.__dwSearchReplace.setAllowedAreas(Qt.BottomDockWidgetArea|Qt.TopDockWidgetArea)
+        #self.__dwSearchReplace.setAllowedAreas(Qt.BottomDockWidgetArea|Qt.TopDockWidgetArea)
         self.__dwSearchReplaceAction=self.__dwSearchReplace.toggleViewAction()
         self.__dwSearchReplaceAction.setText(i18n("Search & Replace"))
         self.__window.menuViewLanguage.addAction(self.__dwSearchReplaceAction)
@@ -267,13 +267,11 @@ class BSUIController(QObject):
         self.commandViewMainWindowGeometry(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_GEOMETRY))
         self.commandViewMainWindowMaximized(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_WINDOW_MAXIMIZED))
         self.commandViewMainSplitterPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_MAIN_POSITION))
-        self.commandViewSecondarySplitterPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION))
 
         self.commandViewShowCanvasVisible(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_VISIBLE))
         self.commandViewShowCanvasOrigin(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_ORIGIN))
         self.commandViewShowCanvasGrid(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_GRID))
         self.commandViewShowCanvasPosition(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION))
-        self.commandViewShowConsoleVisible(BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE))
 
         qtlayoutNfoB64=BSSettings.get(BSSettingsKey.SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT)
         if qtlayoutNfoB64!='':
@@ -586,13 +584,6 @@ class BSUIController(QObject):
 
             BSSettings.set(BSSettingsKey.SESSION_DOCUMENTS_OPENED, tmpList)
             BSSettings.set(BSSettingsKey.SESSION_DOCUMENTS_ACTIVE, self.__window.documents().currentIndex())
-
-
-            if self.__window.actionViewShowConsole.isChecked():
-                # if not checked, hidden panel size is 0 so, do not save it (splitter position is already properly defined)
-                BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
-
-            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CONSOLE_VISIBLE, self.__window.actionViewShowConsole.isChecked())
 
             qtlayoutNfoB64=self.__window.saveState()
             BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_DOCKERS_LAYOUT, base64.b64encode(qtlayoutNfoB64).decode())
@@ -1018,22 +1009,6 @@ class BSUIController(QObject):
 
         return positions
 
-    def commandViewSecondarySplitterPosition(self, positions=None):
-        """Set the mainwindow secondary splitter position
-
-        Given `positions` is a list [<panel0 size>,<panel1 size>]
-        If value is None, will define a default 50%-50%
-        """
-        if positions is None:
-            positions = [700, 300]
-
-        if not isinstance(positions, list) or len(positions) != 2:
-            raise EInvalidValue('Given `positions` must be a list [l,r]')
-
-        self.__window.splSecondary.setSizes(positions)
-
-        return positions
-
     def commandViewMainWindowMaximized(self, maximized=False):
         """Set the window state"""
         if not isinstance(maximized, bool):
@@ -1130,21 +1105,6 @@ class BSUIController(QObject):
         # updated in saveSettings()
         #BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_VIEW_CANVAS_POSITION, visible)
         Debug.print('TODO: update canvas (position)')
-
-    def commandViewShowConsoleVisible(self, visible=None):
-        """Display/Hide canvas"""
-        if visible is None:
-            visible = self.__window.actionViewShowConsole.isChecked()
-        elif isinstance(visible, bool):
-            self.__window.actionViewShowConsole.setChecked(visible)
-        else:
-            raise EInvalidValue('Given `visible` must be a <bool>')
-
-        if not visible:
-            # when hidden, canvas panel width is set to 0, then save current size now
-            BSSettings.set(BSSettingsKey.SESSION_MAINWINDOW_SPLITTER_SECONDARY_POSITION, self.__window.splSecondary.sizes())
-
-        self.__window.wConsoleArea.setVisible(visible)
 
 
     def commandViewDockLangageQuickHelpVisible(self, visible=None):
