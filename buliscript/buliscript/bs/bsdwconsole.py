@@ -65,7 +65,7 @@ class BSDockWidgetConsoleOutput(WDockWidget):
     OPTION_BUFFER_SIZE =             0b0001000000000000
     OPTION_AUTOCLEAR =               0b0000100000000000
 
-    def __init__(self, parent, name='Output'):
+    def __init__(self, parent, name='Script execution output'):
         super(BSDockWidgetConsoleOutput, self).__init__(name, parent)
 
         self.__widget=QWidget(self)
@@ -186,6 +186,7 @@ class BSConsoleTBar(QWidget):
         self.__siSearch.searchOptionModified.connect(self.__searchOptionModified)
         self.__siSearch.setToolTip(i18n('Search for text'))
 
+        # used when options are modified, to compare current and previous options
         self.__currentOptions=0
 
         self.__layout.addWidget(self.__btClear)
@@ -231,7 +232,7 @@ class BSConsoleTBar(QWidget):
 
         self.setLayout(self.__layout)
 
-    def __searchActivated(self, text, options):
+    def __searchActivated(self, text, options, searchAll=False):
         """Ask to search for text"""
         if options&SearchOptions.HIGHLIGHT==SearchOptions.HIGHLIGHT:
             # select all occurences
@@ -269,7 +270,7 @@ class BSConsoleTBar(QWidget):
             # search only if modified option is not highlight all
 
             # force highlight option when searching a text
-            self.__console.search().search(text, options|SearchOptions.HIGHLIGHT)
+            self.__console.search().searchNext(text, options|SearchOptions.HIGHLIGHT)
 
         self.__currentOptions=options
 
@@ -285,10 +286,6 @@ class BSConsoleTBar(QWidget):
         if not self.__actionFilterTypeValid.isChecked():
             filtered.append(WConsoleType.VALID)
         self.__console.setOptionFilteredTypes(filtered)
-
-    def search(self):
-        """Return current applied filter"""
-        return self.__search
 
     def option(self, optionId):
         """Return current option value
