@@ -114,6 +114,14 @@ class BSSettingsKey(SettingsKey):
     # docker "color picker"
     SESSION_DOCKER_COLORPICKER_MENU_SELECTED =                  'session.dockers.colorPicker.menu.selected'
 
+    # docker "search and replace"; keep in memory search options
+    SESSION_DOCKER_SAR_SEARCH_BTN_REGEX_CHECKED =               'session.dockers.searchAndReplace.search.buttons.regex.checked'
+    SESSION_DOCKER_SAR_SEARCH_BTN_CASESENSITIVE_CHECKED =       'session.dockers.searchAndReplace.search.buttons.caseSensitive.checked'
+    SESSION_DOCKER_SAR_SEARCH_BTN_WHOLEWORD_CHECKED =           'session.dockers.searchAndReplace.search.buttons.wholeWord.checked'
+    SESSION_DOCKER_SAR_SEARCH_BTN_BACKWARD_CHECKED =            'session.dockers.searchAndReplace.search.buttons.backward.checked'
+    SESSION_DOCKER_SAR_SEARCH_BTN_HIGHLIGHTALL_CHECKED =        'session.dockers.searchAndReplace.search.buttons.highlightAll.checked'
+    SESSION_DOCKER_SAR_SEARCH_TEXT =                            'session.dockers.searchAndReplace.search.text'
+    SESSION_DOCKER_SAR_REPLACE_TEXT =                           'session.dockers.searchAndReplace.replace.text'
 
 class BSSettings(Settings):
     """Manage all BuliScript settings with open&save options
@@ -190,7 +198,16 @@ class BSSettings(Settings):
                                                                                                                       SettingsFmt(list, ['error','warning','info','valid'])),
 
             SettingsRule(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED,            ['colorRGB', 'colorHSV', 'colorAlpha', 'colorCssRGB', 'colorWheel', 'colorPreview'],
-                                                                                                                      SettingsFmt(list)) # list is not fixed as palette names are not known
+                                                                                                                      SettingsFmt(list)), # list is not fixed as palette names are not known
+
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_REGEX_CHECKED,         False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_CASESENSITIVE_CHECKED, False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_WHOLEWORD_CHECKED,     False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_BACKWARD_CHECKED,      False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_HIGHLIGHTALL_CHECKED,  False,                    SettingsFmt(bool)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_TEXT,                      '',                       SettingsFmt(str)),
+            SettingsRule(BSSettingsKey.SESSION_DOCKER_SAR_REPLACE_TEXT,                     '',                       SettingsFmt(str))
+
         ]
 
         super(BSSettings, self).__init__(pluginId, rules)

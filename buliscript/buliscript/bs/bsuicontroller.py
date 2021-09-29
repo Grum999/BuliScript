@@ -44,12 +44,10 @@ from .bsdwlanguage import (
         BSDockWidgetLangageQuickHelp,
         BSDockWidgetLangageReference
     )
-from .bsdwconsole import (
-        BSDockWidgetConsoleOutput
-    )
-from .bsdwcolorpicker import (
-        BSDockWidgetColorPicker
-    )
+from .bsdwconsole import BSDockWidgetConsoleOutput
+from .bsdwcolorpicker import BSDockWidgetColorPicker
+from .bsdwsearchreplace import BSDockWidgetSearchReplace
+
 from .bshistory import BSHistory
 from .bsinterpreter import (
         BSInterpreter,
@@ -149,11 +147,13 @@ class BSUIController(QObject):
         self.__dwLangageQuickHelp=None
         self.__dwConsoleOutput=None
         self.__dwColorPicker=None
+        self.__dwSearchReplace=None
 
         self.__dwLangageQuickHelpAction=None
         self.__dwLangageReferenceAction=None
         self.__dwConsoleOutputAction=None
         self.__dwColorPickerAction=None
+        self.__dwSearchReplaceAction=None
 
         self.__interpreter=BSInterpreter(self.__languageDef)
 
@@ -206,8 +206,8 @@ class BSUIController(QObject):
         self.__dwConsoleOutputAction=self.__dwConsoleOutput.toggleViewAction()
         self.__dwConsoleOutputAction.setText(i18n("Console output"))
         self.__window.menuViewScript.addAction(self.__dwConsoleOutputAction)
-        self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwConsoleOutput)
-        # redirect interpeter output to console docker
+        self.__window.addDockWidget(Qt.BottomDockWidgetArea, self.__dwConsoleOutput)
+        # redirect interpetrer output to console docker
         self.__interpreter.output.connect(self.__dwConsoleOutput.append)
         self.__dwConsoleOutput.sourceRefClicked.connect(lambda src,colS,rowS,colE,rowE: self.commandScriptGoToLine(rowS))
 
@@ -219,6 +219,14 @@ class BSUIController(QObject):
         self.__dwColorPickerAction.setText(i18n("Color picker"))
         self.__window.menuViewLanguage.addAction(self.__dwColorPickerAction)
         self.__window.addDockWidget(Qt.RightDockWidgetArea, self.__dwColorPicker)
+
+        self.__dwSearchReplace=BSDockWidgetSearchReplace(self.__window)
+        self.__dwSearchReplace.setObjectName('__dwSearchReplace')
+        self.__dwSearchReplace.setAllowedAreas(Qt.BottomDockWidgetArea|Qt.TopDockWidgetArea)
+        self.__dwSearchReplaceAction=self.__dwSearchReplace.toggleViewAction()
+        self.__dwSearchReplaceAction.setText(i18n("Search & Replace"))
+        self.__window.menuViewLanguage.addAction(self.__dwSearchReplaceAction)
+        self.__window.addDockWidget(Qt.BottomDockWidgetArea, self.__dwSearchReplace)
 
         self.__window.setWindowTitle(self.__bsTitle)
         self.__window.show()
@@ -295,6 +303,15 @@ class BSUIController(QObject):
         self.__dwConsoleOutput.setOption(BSDockWidgetConsoleOutput.OPTION_BUFFER_SIZE, BSSettings.get(BSSettingsKey.CONFIG_DOCKER_CONSOLE_BUFFERSIZE))
 
         self.__dwColorPicker.setOptions(BSSettings.get(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED))
+
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_BTN_REGEX, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_REGEX_CHECKED))
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_BTN_CASESENSITIVE, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_CASESENSITIVE_CHECKED))
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_BTN_WHOLEWORD, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_WHOLEWORD_CHECKED))
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_BTN_BACKWARD, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_BACKWARD_CHECKED))
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_BTN_HIGHLIGHT, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_HIGHLIGHTALL_CHECKED))
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_TXT_SEARCH, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_TEXT))
+        self.__dwSearchReplace.setOption(BSDockWidgetSearchReplace.OPTION_TXT_REPLACE, BSSettings.get(BSSettingsKey.SESSION_DOCKER_SAR_REPLACE_TEXT))
+
 
         # do not load from here, already loaded from BSDocuments() initialisation
         # for fileName in BSSettings.get(BSSettingsKey.SESSION_DOCUMENTS_OPENED):
@@ -532,6 +549,10 @@ class BSUIController(QObject):
         else:
             raise EInvalidType('Given ` subDirectory` must be None or <str>')
 
+    def currentDocument(self):
+        """Return current document"""
+        return self.__currentDocument
+
     # endregion: getter/setters ------------------------------------------------
 
 
@@ -593,6 +614,14 @@ class BSUIController(QObject):
 
             BSSettings.set(BSSettingsKey.SESSION_DOCKER_COLORPICKER_MENU_SELECTED, self.__dwColorPicker.options())
 
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_REGEX_CHECKED, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_BTN_REGEX))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_CASESENSITIVE_CHECKED, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_BTN_CASESENSITIVE))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_WHOLEWORD_CHECKED, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_BTN_WHOLEWORD))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_BACKWARD_CHECKED, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_BTN_BACKWARD))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_BTN_HIGHLIGHTALL_CHECKED, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_BTN_HIGHLIGHT))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_SEARCH_TEXT, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_TXT_SEARCH))
+            BSSettings.set(BSSettingsKey.SESSION_DOCKER_SAR_REPLACE_TEXT, self.__dwSearchReplace.option(BSDockWidgetSearchReplace.OPTION_TXT_REPLACE))
+
         return BSSettings.save()
 
     def close(self):
@@ -612,11 +641,13 @@ class BSUIController(QObject):
         self.__dwLangageQuickHelp.close()
         self.__dwConsoleOutput.close()
         self.__dwColorPicker.close()
+        self.__dwSearchReplace.close()
 
         self.__dwLangageReference=None
         self.__dwLangageQuickHelp=None
         self.__dwConsoleOutput=None
         self.__dwColorPicker=None
+        self.__dwSearchReplace=None
 
         self.__bsStarted = False
         self.bsWindowClosed.emit()
@@ -1168,6 +1199,19 @@ class BSUIController(QObject):
                 self.__dwColorPicker.show()
             else:
                 self.__dwColorPicker.hide()
+
+    def commandViewDockSearchAndReplaceVisible(self, visible=None):
+        """Display/Hide search and replace docker"""
+        if visible is None:
+            visible = self.__dwSearchReplaceAction.isChecked()
+        elif not isinstance(visible, bool):
+            raise EInvalidValue('Given `visible` must be a <bool>')
+
+        if self.__dwSearchReplace:
+            if visible:
+                self.__dwSearchReplace.show()
+            else:
+                self.__dwSearchReplace.hide()
 
 
     def commandDockLangageQuickHelpSet(self, keyword):
