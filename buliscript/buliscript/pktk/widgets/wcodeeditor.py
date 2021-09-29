@@ -46,6 +46,8 @@ from ..modules.tokenizer import (
         Token
     )
 
+from .wsearchinput import SearchFromPlainTextEdit
+
 from ..pktk import *
 
 
@@ -209,6 +211,9 @@ class WCodeEditor(QPlainTextEdit):
 
         self.__completerLastSelectedIndex = None
 
+        # ---- search object
+        self.__search=SearchFromPlainTextEdit(self)
+
         # default values
         self.__updateLineNumberAreaWidth()
         self.__highlightCurrentLine()
@@ -363,7 +368,16 @@ class WCodeEditor(QPlainTextEdit):
     def __highlightCurrentLine(self):
         """When the cursor position changes, highlight the current line (the line containing the cursor)"""
         # manage
-        extraSelections = []
+        extraSelections = self.extraSelections()
+
+        # remove current selection from extra selection list
+        # => can't clear selection as maybe, there's other extra selection
+        for selection in extraSelections:
+            if selection.format.boolProperty(QTextFormat.FullWidthSelection):
+                # found, remove it and exit, no need to continue to search there's normaly only
+                # one extra selection like this one
+                extraSelections.remove(selection)
+                break
 
         if self.__optionMultiLine and not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
@@ -372,13 +386,9 @@ class WCodeEditor(QPlainTextEdit):
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()
 
-            # QPlainTextEdit gives the possibility to have more than one selection at the same time.
-            # We can set the character format (QTextCharFormat) of these selections.
-            # We clear the cursors selection before setting the new new QPlainTextEdit.ExtraSelection, else several
-            # lines would get highlighted when the user selects multiple lines with the mouse
-            selection.cursor.clearSelection()
-
-            extraSelections.append(selection)
+            # insert at beginning, must be the first extra selection rendered
+            # especially if there's extra selection from "search"
+            extraSelections.insert(0, selection)
 
         self.setExtraSelections(extraSelections)
         self.__updateCurrentPositionAndToken(False)
@@ -1442,6 +1452,10 @@ class WCodeEditor(QPlainTextEdit):
         """
         pass
 
+
+    def search(self):
+        """Return search object"""
+        return self.__search
 
 
 class WCELineNumberArea(QWidget):
