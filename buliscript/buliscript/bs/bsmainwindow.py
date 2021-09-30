@@ -42,6 +42,7 @@ from PyQt5.QtWidgets import (
     )
 
 from .bslanguagedef import BSLanguageDef
+from .bsrenderer import BSWRendererScene
 
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.utils import loadXmlUi
@@ -157,6 +158,7 @@ class BSMainWindow(QMainWindow):
 
         self.__initStatusBar()
         self.__initBSDocuments()
+        self.__initCanvas()
 
 
     def __initStatusBar(self):
@@ -206,6 +208,11 @@ class BSMainWindow(QMainWindow):
     def __initBSDocuments(self):
         """Initialise documents manager"""
         self.twDocuments.initialise(self, self.__uiController)
+
+    def __initCanvas(self):
+        """Initialise canvas"""
+        self.gvCanvas.setScene(self.__uiController.renderedScene())
+        self.__uiController.renderedScene().setSize(20000,20000)
 
 
     def initMainView(self):

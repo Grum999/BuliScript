@@ -39,6 +39,7 @@ from PyQt5.QtWidgets import (
         QWidget
     )
 
+from .bsrenderer import BSWRendererScene
 
 from .bsdwlanguage import (
         BSDockWidgetLangageQuickHelp,
@@ -155,7 +156,9 @@ class BSUIController(QObject):
         self.__dwColorPickerAction=None
         self.__dwSearchReplaceAction=None
 
-        self.__interpreter=BSInterpreter(self.__languageDef)
+        self.__renderedScene=BSWRendererScene()
+
+        self.__interpreter=BSInterpreter(self.__languageDef, self.__renderedScene)
 
         if kritaIsStarting and BSSettings.get(BSSettingsKey.CONFIG_OPEN_ATSTARTUP):
             self.start()
@@ -550,6 +553,10 @@ class BSUIController(QObject):
     def currentDocument(self):
         """Return current document"""
         return self.__currentDocument
+
+    def renderedScene(self):
+        """Return current document"""
+        return self.__renderedScene
 
     # endregion: getter/setters ------------------------------------------------
 

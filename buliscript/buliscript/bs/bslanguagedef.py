@@ -580,18 +580,19 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid color #880000FF`**\n\n'
                                                                                 'Will set a blue grid with 50% opacity')),
-                                                                     ('set canvas grid style \x01<STYLE>',
+                                                                     ('set canvas grid style \x01<STYLE-MAJOR> [<STYLE-MINOR>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid style]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set stroke style for canvas grid\n\n'
-                                                                                'Given *<STYLE>* can be:\n'
+                                                                                'Given *<STYLE-MAJOR>* and *<STYLE-MINOR>* can be:\n'
                                                                                 ' - **`SOLID`**\n'
                                                                                 ' - **`DASH`**\n'
                                                                                 ' - **`DOT`**\n'
                                                                                 ' - **`DASHDOT`**\n'
-                                                                                ' - **`NONE`**',
+                                                                                ' - **`NONE`**\n\n'
+                                                                                'When *<STYLE-MINOR>* is omitted, given *<STYLE-MAJOR>* is applied to both grid lines',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid style DOT`**\n\n'
@@ -611,19 +612,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas grid opacity 128`**\n'
                                                                                 '**`set canvas grid opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas grid size \x01<MAJOR> [<MINOR>] [<UNIT>]',
+                                                                     ('set canvas grid size \x01<WIDTH> [<MAJOR>] [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid size]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas grid size\n\n'
-                                                                                'Given *<MAJOR>* is a positive number that define major grid line size, expressed:\n'
+                                                                                'Given *<WIDTH>* is a positive number that define grid size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<MINOR>*, if provided, is a zero or positive number that define minor grid line size, expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                'Given *<MAJOR>*, if provided, is a positive integer greater than zero that define frequency of major grid line\n\n'
+                                                                                'Given *<UNIT>* if provided is applied to <WIDTH> and can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
                                                                                 ' - **`MM`**: use millimeters\n'
@@ -634,7 +633,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will define a major grid for which line is drawn every 50 pixels\n\n'
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid size 10 5 MM`**\n\n'
-                                                                                'Will define a major grid for which line is drawn every 10 millimeters and a minor grid drawn every 5 millimeters')),
+                                                                                'Will define a major grid for which line is drawn every 10 millimeters and a major grid line drawn every 5 grid line')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size|position)\b",
@@ -4689,6 +4688,7 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid style', False),
                 'Any_Expression',
+                GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -5468,6 +5468,7 @@ class BSLanguageDef(LanguageDef):
                       'String_Value',
                       GRToken(BSLanguageDef.ITokenType.NUMBER),
                       GRToken(BSLanguageDef.ITokenType.COLOR_CODE),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_NONE),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_ONOFF),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_UNITS_M),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_UNITS_R),
@@ -5479,6 +5480,8 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_POSHALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_COLORLABEL),
                       'List_Value',
                     ),
                 GRNoneOrMore('List_Index_Expression')

@@ -41,6 +41,7 @@ from .bssettings import (
 from .bslanguagedef import BSLanguageDef
 
 
+from buliscript.pktk.modules.ekrita import EKritaNode
 from buliscript.pktk.modules.utils import Debug
 from buliscript.pktk.modules.listutils import (
         flatten,
@@ -139,7 +140,29 @@ class BSInterpreter(QObject):
     CONST_DRAW_BLENDING_MODE=['NORMAL','SOURCE_OVER','DESTINATION_CLEAR','DESTINATION_OVER','SOURCE_IN','SOURCE_OUT','DESTINATION_IN','DESTINATION_OUT','DESTINATION_ATOP','SOURCE_ATOP','EXCLUSIVE_OR','PLUS','MULTIPLY','SCREEN','OVERLAY','DARKEN','LIGHTEN','COLORDODGE','COLORBURN','HARD_LIGHT','SOFT_LIGHT','DIFFERENCE','EXCLUSION',
                               'BITWISE_S_OR_D','BITWISE_S_AND_D','BITWISE_S_XOR_D','BITWISE_S_NOR_D','BITWISE_S_NAND_D','BITWISE_NS_XOR_D','BITWISE_S_NOT','BITWISE_NS_AND_D','BITWISE_S_AND_ND','BITWISE_NS_OR_D','BITWISE_CLEAR','BITWISE_SET','BITWISE_NOT_D','BITWISE_S_OR_ND']
 
-    def __init__(self, languageDef):
+
+    __CONV_PEN_STYLE={
+            'SOLID': Qt.SolidLine,
+            'DASH': Qt.DashLine,
+            'DOT': Qt.DotLine,
+            'DASHDOT': Qt.DashDotLine,
+            'NONE': Qt.NoPen
+        }
+
+    __CONST_HALIGN={
+            'LEFT': -1,
+            'CENTER': 0,
+            'RIGHT': 1
+        }
+
+    __CONST_VALIGN={
+            'TOP': -1,
+            'MIDDLE': 0,
+            'BOTTOM': 1
+        }
+
+
+    def __init__(self, languageDef, renderedScene):
         super(BSInterpreter, self).__init__(None)
 
         # language languageDefinition
@@ -198,6 +221,9 @@ class BSInterpreter(QObject):
         # delay mode by default is 0
         # when set, a delay is applied between each instruction
         self.__optionDelay=0
+
+        # define rendered scene, on which grid, origin, ... are drawn
+        self.__renderedScene=renderedScene
 
     # --------------------------------------------------------------------------
     # utils methods
@@ -426,17 +452,20 @@ class BSInterpreter(QObject):
         self.__scriptBlockStack.clear()
 
         self.__currentDocument=Krita.instance().activeDocument()
-        #if self.__currentDocument is None:
-        #    raise EInterpreter("No active document!", None)
+        if self.__currentDocument is None:
+            raise EInterpreter("No active document!", None)
 
-        #self.__currentDocumentBounds=self.__currentDocument.bounds()
+        self.__currentDocumentBounds=self.__currentDocument.bounds()
         # assume x/y resolution are the same
         # can't use Document.resolution() as it returns an integer value and value
         # is not correct if resolution is defined with decimal properties
-        #self.__currentDocumentResolution=self.__currentDocument.xRes()
+        self.__currentDocumentResolution=self.__currentDocument.xRes()
 
-        #self.__currentLayer=self.__currentDocument.activeNode()
-        #self.__currentLayerBounds=self.__currentLayer.bounds()
+        self.__currentLayer=self.__currentDocument.activeNode()
+        self.__currentLayerBounds=self.__currentLayer.bounds()
+
+        self.__renderedScene.setDocumentBounds(self.__currentDocumentBounds)
+        self.__renderedScene.setBackgroundImage(EKritaNode.toQPixmap(self.__currentLayer), self.__currentLayerBounds)
 
         self.valid(f"**Start script execution**# #w#[##lw#*{time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}*##w#]")
         if self.__astRoot.id()==ASTSpecialItemType.ROOT:
@@ -1624,7 +1653,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas grid color {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenColor(value)
 
         self.__delay()
         return None
@@ -1635,15 +1665,24 @@ class BSInterpreter(QObject):
         :canvas.grid.style
         """
         fctLabel='Action ***set canvas grid style***'
-        self.__checkParamNumber(currentAst, fctLabel, 1)
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
-        value=self.__evaluate(currentAst.node(0))
+        major=self.__evaluate(currentAst.node(0))
+        minor=self.__evaluate(currentAst.node(1))
 
-        self.__checkParamDomain(currentAst, fctLabel, 'STYLE', value in BSInterpreter.CONST_PEN_STYLE, f"style value for grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        if minor is None:
+            minor=major
 
-        self.verbose(f"set canvas grid style {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.style')}", currentAst)
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE-MAJOR', major in BSInterpreter.CONST_PEN_STYLE, f"style value for major grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE-MINOR', minor in BSInterpreter.CONST_PEN_STYLE, f"style value for minor grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.style', value, BSVariableScope.CURRENT)
+        self.verbose(f"set canvas grid style {self.__strValue(major)} {self.__strValue(minor)}{self.__formatStoreResult(':canvas.grid.style.major', ':canvas.grid.style.minor')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.grid.style.major', major, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.grid.style.minor', minor, BSVariableScope.GLOBAL)
+
+        self.__renderedScene.setGridPenStyleMajor(BSInterpreter.__CONV_PEN_STYLE[major])
+        self.__renderedScene.setGridPenStyleMinor(BSInterpreter.__CONV_PEN_STYLE[minor])
 
         self.__delay()
         return None
@@ -1675,7 +1714,8 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenOpacity(color.alphaF())
 
         self.__delay()
         return None
@@ -1683,57 +1723,56 @@ class BSInterpreter(QObject):
     def __executeActionSetCanvasGridSize(self, currentAst):
         """Set canvas grid size
 
+        :canvas.grid.size.width
         :canvas.grid.size.major
-        :canvas.grid.size.minor
         :canvas.grid.size.unit
         """
         fctLabel='Action ***set canvas grid size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2, 3)
 
-        major=self.__evaluate(currentAst.node(0))
+        width=self.__evaluate(currentAst.node(0))
         p2=self.__evaluate(currentAst.node(1))
         p3=self.__evaluate(currentAst.node(2))
 
         if p2 is None and p3 is None:
             # no other parameters provided, set default value
-            minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', 0)
+            major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', 0)
             unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
         elif p3 is None:
             # p2 has been provided
             if isinstance(p2, (int, float)):
-                minor=p2
+                major=p2
                 unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
             else:
-                minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', 0)
+                major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', 0)
                 unit=p2
         else:
             # p2+p3 provided
-            minor=p2
+            major=p2
             unit=p3
 
-        self.__checkParamType(currentAst, fctLabel, 'MAJOR', major, int, float)
-        self.__checkParamType(currentAst, fctLabel, 'MINOR', minor, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'MAJOR', major, int)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, 'MAJOR', major>0, f"a positive number is expected (current={major})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
+            # let default value being applied in this case
+            width=self.__scriptBlockStack.current().variable(':canvas.grid.size.width', width, True)
+
+        if not self.__checkParamDomain(currentAst, fctLabel, 'MAJOR', major>=0, f"a zero or positive number is expected (current={major})", False):
             # let default value being applied in this case
             major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', major, True)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, 'MINOR', minor>=0, f"a zero or positive number is expected (current={minor})", False):
-            # let default value being applied in this case
-            minor=self.__scriptBlockStack.current().variable(':canvas.grid.size.minor', minor, True)
-
-        if not self.__checkParamDomain(currentAst, fctLabel, 'MINOR', minor<major, f"size for minor grid must be lower than major grid size (current={minor}>{major})", False):
-            # force minor grid to be lower than major grid
-            minor=major/2
 
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"grid unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.verbose(f"set canvas grid size {self.__strValue(major)} {self.__strValue(minor)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.grid.size.major', ':canvas.grid.size.minor', ':canvas.grid.size.unit')}", currentAst)
+        self.verbose(f"set canvas grid size {self.__strValue(width)} {self.__strValue(major)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.grid.size.width', ':canvas.grid.size.major', ':canvas.grid.size.unit')}", currentAst)
 
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.major', major, BSVariableScope.CURRENT)
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.minor', minor, BSVariableScope.CURRENT)
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.unit', unit, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.width', width, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.major', major, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.unit', unit, BSVariableScope.GLOBAL)
+
+        self.__renderedScene.setGridSize(width, major)
 
         self.__delay()
         return None
@@ -1751,7 +1790,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin color {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenColor(value)
 
         self.__delay()
         return None
@@ -1770,7 +1810,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin style {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.style')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenStyle(BSInterpreter.__CONV_PEN_STYLE[value])
 
         self.__delay()
         return None
@@ -1802,7 +1843,8 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenOpacity(color.alphaF())
 
         self.__delay()
         return None
@@ -1829,7 +1871,8 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set canvas origin size {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.size')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginSize(value)
 
         self.__delay()
         return None
@@ -1851,8 +1894,9 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}{self.__formatStoreResult(':canvas.origin.position.absissa', 'canvas.origin.position.ordinate')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.CURRENT)
-        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPosition(BSInterpreter.__CONST_HALIGN[absissa], BSInterpreter.__CONST_VALIGN[ordinate])
 
         self.__delay()
         return None
@@ -1870,7 +1914,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position color {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionPenColor(value)
 
         self.__delay()
         return None
@@ -1902,7 +1947,8 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionPenOpacity(color.alphaF())
 
         self.__delay()
         return None
@@ -1929,7 +1975,8 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set canvas position size {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.size')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionSize(value)
 
         self.__delay()
         return None
@@ -1947,7 +1994,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position fulfilled {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.fulfill')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionFulfill(value)
 
         self.__delay()
         return None
@@ -1974,7 +2022,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.opacity')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setBackgroundOpacity(value)
 
         self.__delay()
         return None

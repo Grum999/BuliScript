@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1581</width>
+    <width>1476</width>
     <height>1047</height>
    </rect>
   </property>
@@ -73,7 +73,26 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="wRightArea" native="true"/>
+      <widget class="QWidget" name="wRightArea" native="true">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="BSWRendererView" name="gvCanvas">
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Plain</enum>
+          </property>
+          <property name="lineWidth">
+           <number>0</number>
+          </property>
+          <property name="viewportUpdateMode">
+           <enum>QGraphicsView::FullViewportUpdate</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -83,7 +102,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1581</width>
+     <width>1476</width>
      <height>31</height>
     </rect>
    </property>
@@ -631,6 +650,11 @@
    <extends>QTabWidget</extends>
    <header>buliscript.bs.bsdocument</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BSWRendererView</class>
+   <extends>QGraphicsView</extends>
+   <header>buliscript.bs.bsrenderer</header>
   </customwidget>
  </customwidgets>
  <resources>

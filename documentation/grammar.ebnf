@@ -180,7 +180,6 @@ Action_Set_Canvas
                 ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
 
 
-                ( )
                 ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
                 'position' ( 'fulfilled' Evaluate_Boolean_Expression )
