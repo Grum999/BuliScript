@@ -212,8 +212,10 @@ class BSMainWindow(QMainWindow):
     def __initCanvas(self):
         """Initialise canvas"""
         self.gvCanvas.setScene(self.__uiController.renderedScene())
+        self.gvCanvas.zoomChanged.connect(self.__canvasZoomChanged)
         self.__uiController.renderedScene().setSize(20000,20000)
 
+        self.lblZoomLevel.mousePressEvent=lambda x: self.gvCanvas.setZoom(1.0)
 
     def initMainView(self):
         """Initialise main view content"""
@@ -319,7 +321,6 @@ class BSMainWindow(QMainWindow):
         """
         self.__uiController.buildmenuFileRecent(self.menuFileRecent)
 
-
     def __actionNotYetImplemented(self, v=None):
         """"Method called when an action not yet implemented is triggered"""
         QMessageBox.warning(
@@ -327,6 +328,10 @@ class BSMainWindow(QMainWindow):
                 self.__uiController.name(),
                 i18n(f"Sorry! Action has not yet been implemented ({v})")
             )
+
+    def __canvasZoomChanged(self, zoomLevel):
+        """Update zoom level for canvas"""
+        self.lblZoomLevel.setText(f"{100*zoomLevel:.2f}%")
 
     # endregion: define actions method -----------------------------------------
 

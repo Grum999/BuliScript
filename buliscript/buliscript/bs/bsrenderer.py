@@ -20,10 +20,10 @@
 # -----------------------------------------------------------------------------
 
 import math
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-
+from PyQt5.Qt import *
+from PyQt5.QtCore import (
+        pyqtSignal as Signal
+    )
 
 from buliscript.pktk.modules.imgutils import checkerBoardBrush
 
@@ -36,6 +36,7 @@ from buliscript.pktk.pktk import (
 
 class BSWRendererView(QGraphicsView):
     """A graphic view dedicated to render scene"""
+    zoomChanged=Signal(float)
 
     def __init__(self, parent=None):
         super(BSWRendererView, self).__init__(parent)
@@ -51,16 +52,170 @@ class BSWRendererView(QGraphicsView):
         self.__currentZoomFactor = 1.0
         self.__zoomStep=0.25
 
+    def drawForeground(self, painter, rect):
+        """Draw foreground on view will just draw rulers
+
+        Rulers are not drawn directly on scene because we need to keep a constant
+        size whatever the curent scale is
+
+        """
+        super(BSWRendererView, self).drawForeground(painter, rect)
+
+        # retrieve ruler properties from scene
+        rulerProperties=self.scene().rulerProperties()
+
+        if len(rulerProperties['hPos'])>0:
+            # there's something to render
+
+            # -- convert "view position" to "scene position"
+            # origin 0,0 (from top/left position of rulers)
+            ptZero=self.mapToScene(QPoint(0,0))
+            # Horizontal ruler bottom/right position
+            ptH=self.mapToScene(QPoint(self.width(), rulerProperties['ruler_size']))
+            # Vertical ruler bottom/right position
+            ptV=self.mapToScene(QPoint(rulerProperties['ruler_size'], self.height()))
+            # top/left corner
+            ptC=self.mapToScene(QPoint(rulerProperties['ruler_size']+1, rulerProperties['ruler_size']+1))
+
+            # calculate size for minor ticks
+            minorSize=rulerProperties['ruler_size']-(rulerProperties['ruler_size']-rulerProperties['ruler_font_height'])/2
+
+            # generate ticks lines
+            lines=[]
+            # -- horizontal ruler ticks
+            ptTo=self.mapToScene(QPoint(0, rulerProperties['ruler_size']))
+            ptFromMajor=self.mapToScene(QPoint(0, rulerProperties['ruler_font_height']))
+            ptFromMinor=self.mapToScene(QPoint(0, minorSize))
+            for position in rulerProperties['hStrokes']:
+                if position[0]:
+                    # major line
+                    ptFrom=ptFromMajor
+                else:
+                    # minor line
+                    ptFrom=ptFromMinor
+                ptFrom.setX(position[1])
+                ptTo.setX(position[1])
+                lines.append(QLineF(ptFrom, ptTo))
+
+            # -- vertical ruler ticks
+            ptTo=self.mapToScene(QPoint(rulerProperties['ruler_size'], 0))
+            ptFromMajor=self.mapToScene(QPoint(rulerProperties['ruler_font_height'], 0))
+            ptFromMinor=self.mapToScene(QPoint(minorSize, 0))
+            for position in rulerProperties['vStrokes']:
+                if position[0]:
+                    # major line
+                    ptFrom=ptFromMajor
+                else:
+                    # minor line
+                    ptFrom=ptFromMinor
+                ptFrom.setY(position[1])
+                ptTo.setY(position[1])
+                lines.append(QLineF(ptFrom, ptTo))
+
+            # draw rulers BG
+            painter.fillRect(QRectF(ptZero, ptH), rulerProperties['brush'])
+            painter.fillRect(QRectF(ptZero, ptV), rulerProperties['brush'])
+
+            # draw ruler ticks
+            painter.setPen(rulerProperties['pen'])
+            painter.drawLines(*lines)
+
+
+            # -- define font, scaled to current zoom
+            font=QFont(rulerProperties['font'])
+            font.setPointSizeF(font.pointSizeF()/self.__currentZoomFactor)
+            painter.setFont(font)
+
+            # -- calculate width/height of font on scene
+            ptf=self.mapToScene(QPoint(rulerProperties['ruler_font_height'], rulerProperties['ruler_font_height']))
+
+            # calculate/render numbers on horizontal ruler
+            # -- bounding box
+            pt1=self.mapToScene(QPoint(0, 1))
+            pt2=self.mapToScene(QPoint(0, rulerProperties['ruler_font_height']-1))
+
+            # draw rulers numbers
+            nbChars=max(len(str(rulerProperties['hPos'][0])), len(str(rulerProperties['hPos'][-1])))-1
+            textWidth=nbChars*rulerProperties['ruler_font_width']/self.__currentZoomFactor
+            textWidthH=textWidth/2
+
+            # -- delta is value between 2 numbers
+            delta=rulerProperties['hPos'][1]-rulerProperties['hPos'][0]
+            # -- we need to ensure, when scrolling, that number 0 is always visible
+            #    and all numbers around are always the same
+            modulo=math.ceil(textWidth/delta)
+
+            # checkwidth define if we need to check width or not to display numbers
+            checkWidth=textWidth>(delta/self.__currentZoomFactor)
+
+            for position in rulerProperties['hPos']:
+                if checkWidth and (position/delta)%modulo!=0:
+                    continue
+                pt1.setX(position-textWidthH)
+                pt2.setX(position+textWidthH)
+                painter.drawText(QRectF(pt1, pt2), Qt.AlignCenter, str(position))
+
+
+            # calculate/render numbers on vertical ruler
+            # -- bounding box
+            pt1=self.mapToScene(QPoint(1, 0))
+            pt2=self.mapToScene(QPoint(rulerProperties['ruler_font_height']-1, 0))
+
+            # draw rulers numbers
+            nbChars=max(len(str(rulerProperties['hPos'][0])), len(str(rulerProperties['hPos'][-1])))-1
+            textWidth=nbChars*rulerProperties['ruler_font_width']/self.__currentZoomFactor
+            textWidthH=textWidth/2
+
+            # -- delta is value between 2 numbers
+            delta=rulerProperties['vPos'][1]-rulerProperties['vPos'][0]
+            # -- we need to ensure, when scrolling, that number 0 is always visible
+            #    and all numbers around are always the same
+            modulo=math.ceil(textWidth/delta)
+
+            # checkwidth define if we need to check width or not to display numbers
+            checkWidth=textWidth>(delta/self.__currentZoomFactor)
+
+
+            for position in rulerProperties['vPos']:
+                if checkWidth and (position/delta)%modulo!=0:
+                    continue
+                # rotated text...
+                # 1) Translate canvas origin to center of boudning rect
+                # 2) Do rotation
+                # 3) Draw text
+                #    . position must be relative new center, (then 0,0 with offset to bound rect)
+                #    . as a 90° rotation has been made, need to switch width&height
+                pt1.setY(position-textWidthH)
+                pt2.setY(position+textWidthH)
+
+                rect=QRectF(pt1, pt2)
+
+                painter.save()
+                painter.translate(rect.center().x(), rect.center().y())
+                painter.rotate(-90)
+                painter.drawText(QRectF(-rect.height()/2, -rect.width()/2, rect.height(), rect.width()), Qt.AlignCenter, str(position))
+                painter.restore()
+
+            # erase top/left part
+            painter.fillRect(QRectF(ptZero, ptC), rulerProperties['brush'])
+
     def mousePressEvent(self, event):
         """On left button pressed, start to pan scene"""
         if event.button() == Qt.LeftButton:
             self.setDragMode(QGraphicsView.ScrollHandDrag)
+        elif event.button() == Qt.MidButton:
+            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            # it seems Qt manage pan only with left button
+            # so emulate leftbutton event when middle button is used for panning
+            event=QMouseEvent(event.type(), event.localPos(), Qt.LeftButton, Qt.LeftButton, event.modifiers())
+        elif event.button() == Qt.RightButton:
+            self.centerOn(0,0)
 
         QGraphicsView.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event:QMouseEvent):
         """On left button released, stop to pan scene"""
-        if event.button() == Qt.LeftButton:
+        if event.button() in (Qt.LeftButton, Qt.MidButton):
             self.setDragMode(QGraphicsView.NoDrag)
 
         QGraphicsView.mouseReleaseEvent(self, event)
@@ -96,6 +251,8 @@ class BSWRendererView(QGraphicsView):
             self.resetTransform()
             self.scale(self.__currentZoomFactor, self.__currentZoomFactor)
 
+            self.zoomChanged.emit(self.__currentZoomFactor)
+
             if isIncreased:
                 if self.__currentZoomFactor>=0.25:
                     self.__zoomStep=0.25
@@ -117,8 +274,7 @@ class BSWRendererScene(QGraphicsScene):
 
     __MINOR_FACTOR_OPACITY = 0.5        # define opacity of minor grid relatvie to major grid
     __FULFILL_FACTOR_OPACITY = 0.75     # define opacity of position fulfill
-    __RULER_SIZE = 28                   # in PX
-    __RULER_FONT_SIZE = 16              # in PX
+    __RULER_FONT_SIZE = 7               # in PT
 
     def __init__(self, parent=None):
         super(BSWRendererScene, self).__init__(parent)
@@ -129,10 +285,12 @@ class BSWRendererScene(QGraphicsScene):
         self.__gridBrush=QBrush(QColor("#393939"))
         self.__gridPenMajor=QPen(QColor("#FF292929"))
         self.__gridPenMinor=QPen(QColor("#80292929"))
+        self.__gridVisible=True
+
         self.__gridPenRuler=QPen(QColor("#000000"))
         self.__gridBrushRuler=QBrush(QColor("#ffffff"))
         self.__gridFontRuler=QFont("Monospace")
-        self.__gridVisible=True
+        self.__gridRulerVisible=True
 
         self.__originPen=QPen(QColor("#0080FF"))
         self.__originSize = 20
@@ -164,12 +322,17 @@ class BSWRendererScene(QGraphicsScene):
         self.__gridStrokesRect=QRect()
         self.__gridStrokesMajor=[]
         self.__gridStrokesMinor=[]
-        self.__gridStrokesRuler=[]
+        self.__gridStrokesRulerH=[]
+        self.__gridStrokesRulerV=[]
         self.__gridTextRulerH=[]
         self.__gridTextRulerV=[]
         self.__originStrokes=[]
         self.__positionPoints=[]
         self.__viewZoom=1.0
+
+        self.__rulerSize=0
+        self.__rulerFontHeight=0
+        self.__rulerFontWidth=0
 
         self.initialise()
         self.setBackgroundBrush(self.__gridBrush)
@@ -183,9 +346,8 @@ class BSWRendererScene(QGraphicsScene):
 
         self.__gridStrokesMinor=[]
         self.__gridStrokesMajor=[]
-        self.__gridStrokesRuler=[]
-        self.__gridTextRulerH=[]
-        self.__gridTextRulerV=[]
+        self.__gridStrokesRulerH=[]
+        self.__gridStrokesRulerV=[]
 
         if not self.__gridVisible:
             return
@@ -195,20 +357,6 @@ class BSWRendererScene(QGraphicsScene):
         right = int(math.ceil(rect.right()))
         top = int(math.floor(rect.top()))
         bottom = int(math.ceil(rect.bottom()))
-
-        # ruler bounds
-        rulerSizeMinor=BSWRendererScene.__RULER_SIZE - (BSWRendererScene.__RULER_SIZE - BSWRendererScene.__RULER_FONT_SIZE)//2
-
-        rulerHFromMajor=top+BSWRendererScene.__RULER_FONT_SIZE
-        rulerHFromMinor=top+rulerSizeMinor
-        rulerHToMajor=top+BSWRendererScene.__RULER_SIZE
-        rulerHToMinor=top+BSWRendererScene.__RULER_SIZE
-
-        rulerVFromMajor=left+BSWRendererScene.__RULER_FONT_SIZE
-        rulerVFromMinor=left+rulerSizeMinor
-        rulerVToMajor=left+BSWRendererScene.__RULER_SIZE
-        rulerVToMinor=left+BSWRendererScene.__RULER_SIZE
-
 
         firstLeftStroke = left - (left % self.__gridSizeWidth)
         firstTopStroke = top - (top % self.__gridSizeWidth)
@@ -220,25 +368,53 @@ class BSWRendererScene(QGraphicsScene):
         for positionX in range(firstLeftStroke, right, self.__gridSizeWidth):
             if (positionX % majorStroke != 0):
                 self.__gridStrokesMinor.append(QLine(positionX, top, positionX, bottom))
-                if positionX>rulerVToMajor:
-                    self.__gridStrokesRuler.append(QLine(positionX, rulerHFromMinor, positionX, rulerHToMinor))
+                self.__gridStrokesRulerH.append((False, positionX))
             else:
                 self.__gridStrokesMajor.append(QLine(positionX, top, positionX, bottom))
-                if positionX>rulerVToMajor:
-                    self.__gridStrokesRuler.append(QLine(positionX, rulerHFromMajor, positionX, rulerHToMajor))
-                    self.__gridTextRulerH.append((QRect(positionX-24, top, 48, BSWRendererScene.__RULER_FONT_SIZE), str(positionX)))
+                self.__gridStrokesRulerH.append((True, positionX))
 
         # generate horizontal grid lines
         for positionY in range(firstTopStroke, bottom, self.__gridSizeWidth):
             if (positionY % majorStroke != 0):
                 self.__gridStrokesMinor.append(QLine(left, positionY, right, positionY))
-                if positionY>rulerHToMajor:
-                    self.__gridStrokesRuler.append(QLine(rulerVFromMinor, positionY, rulerVToMinor, positionY))
+                self.__gridStrokesRulerV.append((False, positionY))
             else:
                 self.__gridStrokesMajor.append(QLine(left, positionY, right, positionY))
-                if positionY>rulerHToMajor:
-                    self.__gridStrokesRuler.append(QLine(rulerVFromMajor, positionY, rulerVToMajor, positionY))
-                    self.__gridTextRulerV.append((QRect(left, positionY-24, BSWRendererScene.__RULER_FONT_SIZE, 48), str(positionY)))
+                self.__gridStrokesRulerV.append((True, positionY))
+
+    def __generateGridRulerNumbers(self, rect):
+        """Generate ruler numbers (avoid to regenerate them on each update)"""
+        if rect==self.__gridStrokesRect:
+            # viewport is the same, keep current gris definition
+            return
+
+        self.__gridTextRulerH=[]
+        self.__gridTextRulerV=[]
+
+        if not self.__gridRulerVisible:
+            return
+
+        # bounds
+        left = int(math.floor(rect.left()))
+        right = int(math.ceil(rect.right()))
+        top = int(math.floor(rect.top()))
+        bottom = int(math.ceil(rect.bottom()))
+
+        firstLeftStroke = left - (left % self.__gridSizeWidth)
+        firstTopStroke = top - (top % self.__gridSizeWidth)
+
+        # frequency of major strokes
+        majorStroke=max(1, self.__gridSizeWidth * self.__gridSizeMajor)
+
+        # generate vertical grid lines
+        for positionX in range(firstLeftStroke, right, self.__gridSizeWidth):
+            if (positionX % majorStroke == 0):
+                self.__gridTextRulerH.append(positionX)
+
+        # generate horizontal grid lines
+        for positionY in range(firstTopStroke, bottom, self.__gridSizeWidth):
+            if (positionY % majorStroke == 0):
+                self.__gridTextRulerV.append(positionY)
 
     def __generateOriginStrokes(self):
         """Generate grid strokes (avoid to regenerate them on each update)"""
@@ -301,7 +477,12 @@ class BSWRendererScene(QGraphicsScene):
         self.__originPen.setWidth(0)
         self.__positionPen.setWidth(0)
 
-        self.__gridFontRuler.setPixelSize(BSWRendererScene.__RULER_FONT_SIZE-2)
+        fntMetrics=QFontMetrics(self.__gridFontRuler)
+
+        self.__gridFontRuler.setPointSizeF(BSWRendererScene.__RULER_FONT_SIZE)
+        self.__rulerFontHeight=fntMetrics.height()
+        self.__rulerFontWidth=fntMetrics.averageCharWidth()
+        self.__rulerSize = math.ceil(self.__rulerFontHeight*1.5)
 
 
     def drawBackground(self, painter, rect):
@@ -328,8 +509,12 @@ class BSWRendererScene(QGraphicsScene):
         """Draw grid, origin, bounds, ..."""
         super(BSWRendererScene, self).drawForeground(painter, rect)
 
+        # ==> ruler is drawn from Graphic View
+
         # generate grid lines
         self.__generateGridStrokes(rect)
+        # generate ruler numbers
+        self.__generateGridRulerNumbers(rect)
 
         # draw the lines
         if len(self.__gridStrokesMinor)>0:
@@ -363,35 +548,6 @@ class BSWRendererScene(QGraphicsScene):
             painter.drawPolygon(*self.__positionPoints)
             painter.restore()
 
-        # draw the rulers
-        if len(self.__gridStrokesRuler)>0:
-            # ruler BG
-            painter.fillRect(rect.left(), rect.top(), BSWRendererScene.__RULER_SIZE, rect.height(), self.__gridBrushRuler)
-            painter.fillRect(rect.left(), rect.top(), rect.width(), BSWRendererScene.__RULER_SIZE, self.__gridBrushRuler)
-
-            # ruler ticks
-            painter.setPen(self.__gridPenRuler)
-            painter.drawLines(*self.__gridStrokesRuler)
-
-            # ruler numbers
-            painter.setFont(self.__gridFontRuler)
-            for text in self.__gridTextRulerH:
-                painter.drawText(text[0], Qt.AlignCenter, text[1])
-
-            for text in self.__gridTextRulerV:
-                # rotated text...
-                # 1) Translate canvas origin to center of boudning rect
-                # 2) Do rotation
-                # 3) Draw text
-                #    . position must be relative new center, (then 0,0 with offset to bound rect)
-                #    . as a 90° rotation has been made, need to switch width&height
-                painter.save()
-                painter.translate(text[0].center().x(), text[0].center().y())
-                painter.rotate(-90)
-                painter.drawText(-text[0].height()//2, -text[0].width()//2, text[0].height(), text[0].width(), Qt.AlignCenter, text[1])
-                painter.restore()
-
-
 
     def setSize(self, width, height):
         """Define size of scene with given `width` and `height`
@@ -403,6 +559,22 @@ class BSWRendererScene(QGraphicsScene):
     # --------------------------------------------------------------------------
     # getters
     # --------------------------------------------------------------------------
+    def rulerProperties(self):
+        """Return all needed properties to draw rulers"""
+        return {
+                'ruler_size': self.__rulerSize,
+                'ruler_font_height': self.__rulerFontHeight,
+                'ruler_font_width': self.__rulerFontWidth,
+                'brush': self.__gridBrushRuler,
+                'pen': self.__gridPenRuler,
+                'font': self.__gridFontRuler,
+                'hStrokes': self.__gridStrokesRulerH,
+                'vStrokes': self.__gridStrokesRulerV,
+                'hPos': self.__gridTextRulerH,
+                'vPos': self.__gridTextRulerV
+            }
+
+
     def gridVisible(self):
         """Return if grid is visible"""
         return self.__gridVisible
@@ -429,8 +601,7 @@ class BSWRendererScene(QGraphicsScene):
 
     def gridPenRuler(self):
         """Return pen used used to render grid ruler"""
-        return self.__gridPenMinor
-
+        return self.__gridPenRuler
 
 
     def originVisible(self):
@@ -484,7 +655,6 @@ class BSWRendererScene(QGraphicsScene):
         return self.__positionFulfill
 
 
-
     def documentBounds(self):
         """Return current document bounds"""
         return self.__documentBounds
@@ -506,6 +676,7 @@ class BSWRendererScene(QGraphicsScene):
     # --------------------------------------------------------------------------
     def setViewZoom(self, value):
         self.__viewZoom=value
+        self.__backgroundCBBrush=checkerBoardBrush(math.ceil(32/self.__viewZoom), strictSize=False)
 
     def setGridVisible(self, value):
         """Set if grid is visible"""
