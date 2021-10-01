@@ -796,7 +796,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will define an position size of 20 pixels')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity|from\s+(?:document|color|layer\s+(?:name|active|id)))\b",
                                                                     'Settings/Canvas/Background',
                                                                     [('set canvas background opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
@@ -812,6 +812,62 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas background opacity 128`**\n'
                                                                                 '**`set canvas background opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas background opacity of 50%')),
+                                                                     ('set canvas background from color \x01<COLOR>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from color]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from a given color\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from color #FFFFFF`**\n\n'
+                                                                                'Will define a white canvas background')),
+                                                                     ('set canvas background from document',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from document]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from current document projection',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from document`**\n\n'
+                                                                                'Will define current document projection as canvas background')),
+                                                                     ('set canvas background from layer active',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from active layer]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from current layer',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from layer active`**\n\n'
+                                                                                'Will define current layer content as canvas background')),
+                                                                     ('set canvas background from layer name \x01<NAME>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from defined layer]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from layer designed by given name\n\n'
+                                                                                'Given *<NAME>* can be a **`string`** or an expression returning a **`string`**\n'
+                                                                                'The first layer for which name match given reference is used; if no layer is found, active layer will be used',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from layer name "test"`**\n\n'
+                                                                                'Will define layer `"test"` content as canvas background')),
+                                                                     ('set canvas background from layer id \x01<ID>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from defined layer]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from layer designed by given ID\n\n'
+                                                                                'Given *<ID>* can be a **`string`** or an expression returning a **`string`**\n'
+                                                                                'If no layer is found, active layer will be used',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from layer id "{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}"`**\n\n'
+                                                                                'Will define layer `{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}` content as canvas background')),
+
                                                                     ],
                                                                     'A'),
 
@@ -2146,7 +2202,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script\s+randomize|script)))"
+                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script\s+randomize|script|canvas\s+background\s+from\s+layer|canvas\s+background\s+from|canvas\s+background)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
                                                                        r"|(?:clear|apply(?:\s+to)?)"
@@ -2156,7 +2212,6 @@ class BSLanguageDef(LanguageDef):
                                                                        r"|(?:with(?:\s+(?:minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
-
                                                                        # (?:single|multiple) (?:\s+(?:choice)?)?
                                                                        # (?:combobox|radio)(?:\s+(?:button)?)?
 
@@ -4483,6 +4538,11 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Position_Opacity',
                       'Action_Set_Canvas_Position_Fulfill',
                       'Action_Set_Canvas_Background_Opacity',
+                      'Action_Set_Canvas_Background_From_Document',
+                      'Action_Set_Canvas_Background_From_Layer_Name',
+                      'Action_Set_Canvas_Background_From_Layer_Id',
+                      'Action_Set_Canvas_Background_From_Layer_Active',
+                      'Action_Set_Canvas_Background_From_Color',
                       # TODO
                       #'Action_Set_Layer',
                       #'Action_Set_Selection',
@@ -4864,6 +4924,44 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background opacity', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Document',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from document', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Layer_Name',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer name', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Layer_Id',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer id', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Layer_Active',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer active', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from color', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )

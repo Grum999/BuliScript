@@ -183,7 +183,12 @@ Action_Set_Canvas
 
                 ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
-                'position' ( 'fulfilled' Evaluate_Boolean_Expression )
+                'position' ( 'fulfilled' Evaluate_Boolean_Expression ) |
+                'background' 'from' (
+                        ( 'color' Color_Expression ) |
+                        ( 'layer' ((('name' | 'id') Evaluate_String_Expression ) | 'Active' )) |
+                        'document'
+                    )
             )
 
 
@@ -699,13 +704,19 @@ Reserved_Variable
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
             ( 'draw' '.' ( 'antialiasing' | 'blendingMode' | 'shape' '.' 'status') ) |
-            ( 'canvas' '.'
-                ( 'grid' '.' ( 'color' | 'bgColor' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
-                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
-                ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
-                ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
-                ( 'rulers' '.' ( 'visibility' | 'color' | 'bgColor' ) ) |
-                ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
+            ( 'canvas' '.' (
+                    ( 'grid' '.' ( 'color' | 'bgColor' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
+                    ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
+                    ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
+                    ( 'background' '.' (
+                            'visibility' |
+                            'opacity' |
+                            'source' '.' ('type' | 'value')
+                        )
+                    ) |
+                    ( 'rulers' '.' ( 'visibility' | 'color' | 'bgColor' ) ) |
+                    ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
+                )
             ) |
             ( 'script' '.' ('execution' '.' 'verbose' | 'randomize' '.' 'seed' ) ) |
             ( 'repeat' '.' ( 'currentIteration' | 'totalIteration' | 'isFirstIteration' | 'isLastIteration' | 'incAngle' | 'currentAngle' ) ) |

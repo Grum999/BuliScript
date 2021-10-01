@@ -41,7 +41,10 @@ from .bssettings import (
 from .bslanguagedef import BSLanguageDef
 
 
-from buliscript.pktk.modules.ekrita import EKritaNode
+from buliscript.pktk.modules.ekrita import (
+        EKritaNode,
+        EKritaDocument
+    )
 from buliscript.pktk.modules.utils import Debug
 from buliscript.pktk.modules.listutils import (
         flatten,
@@ -615,6 +618,16 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasPositionFulfill(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Background_Opacity':
             return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Color':
+            return self.__executeActionSetCanvasBackgroundFromColor(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Document':
+            return self.__executeActionSetCanvasBackgroundFromDocument(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Layer_Id':
+            return self.__executeActionSetCanvasBackgroundFromLayerId(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Layer_Name':
+            return self.__executeActionSetCanvasBackgroundFromLayerName(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Layer_Active':
+            return self.__executeActionSetCanvasBackgroundFromLayerActive(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Execution_Verbose':
             return self.__executeActionSetExecutionVerbose(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Randomize_Seed':
@@ -2074,6 +2087,146 @@ class BSInterpreter(QObject):
 
         self.__delay()
         return None
+
+    def __executeActionSetCanvasBackgroundFromColor(self, currentAst):
+        """Set canvas background from color
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        fctLabel='Action ***set canvas background from color***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
+
+        self.verbose(f"set canvas background from color {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'color', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+
+        pixmap=QPixmap(self.__currentDocumentBounds.size())
+        pixmap.fill(value)
+
+        self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasBackgroundFromDocument(self, currentAst):
+        """Set canvas background from document
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        fctLabel='Action ***set canvas background from document***'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.verbose(f"set canvas background from document {self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'document', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentDocument.fileName(), BSVariableScope.GLOBAL)
+
+        self.__currentDocument.refreshProjection()
+        pixmap=QPixmap.fromImage(self.__currentDocument.projection(self.__currentDocumentBounds.left(), self.__currentDocumentBounds.top(), self.__currentDocumentBounds.width(), self.__currentDocumentBounds.height()))
+
+        self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasBackgroundFromLayerActive(self, currentAst):
+        """Set canvas background from layer active
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        fctLabel='Action ***set canvas background from layer active***'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.verbose(f"set canvas background from layer active {self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', '[active]', BSVariableScope.GLOBAL)
+
+
+        pixmap=EKritaNode.toQPixmap(self.__currentLayer)
+        self.__renderedScene.setBackgroundImage(pixmap, self.__currentLayerBounds)
+
+        self.__delay()
+        return None
+
+
+    def __executeActionSetCanvasBackgroundFromLayerName(self, currentAst):
+        """Set canvas background from layer name
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        fctLabel='Action ***set canvas background from layer name***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, 'NAME', value, str)
+
+        self.verbose(f"set canvas background from layer name {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer name', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+
+
+        node=EKritaDocument.findFirstLayerByName(self.__currentDocument, value)
+        if node is None:
+            node=self.__currentLayer
+            self.warning(f"Unable to find a layer with given name '*{value}*', active layer will be used instead", currentAst)
+
+        pixmap=EKritaNode.toQPixmap(node)
+        self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+
+        self.__delay()
+        return None
+
+
+    def __executeActionSetCanvasBackgroundFromLayerId(self, currentAst):
+        """Set canvas background from layer id
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        fctLabel='Action ***set canvas background from layer id***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, 'ID', value, str)
+
+        self.verbose(f"set canvas background from layer id {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer Id', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+
+        try:
+            uuid=QUuid(value)
+            node=EKritaDocument.findLayerById(self.__currentDocument, uuid)
+        except Exception as e:
+            node=None
+
+        if node is None:
+            node=self.__currentLayer
+            self.warning(f"Unable to find a layer with given Id '*{value}*', active layer will be used instead", currentAst)
+
+        pixmap=EKritaNode.toQPixmap(node)
+        self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+
+        self.__delay()
+        return None
+
+
+
+
+
 
     def __executeActionSetExecutionVerbose(self, currentAst):
         """Set script execution verbose
