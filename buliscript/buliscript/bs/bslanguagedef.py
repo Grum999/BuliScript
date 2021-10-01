@@ -62,6 +62,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_SET_TEXT = ('setText', 'A <SET TEXT> action')
         ACTION_SET_DRAW = ('setDraw', 'A <SET DRAW> action')
         ACTION_SET_CANVAS_GRID = ('setCanvasGrid', 'A <SET CANVAS GRID> action')
+        ACTION_SET_CANVAS_RULERS = ('setCanvasRuler', 'A <SET CANVAS RULER> action')
         ACTION_SET_CANVAS_ORIGIN = ('setCanvasOrigin', 'A <SET CANVAS ORIGIN> action')
         ACTION_SET_CANVAS_POSITION = ('setCanvasPosition', 'A <SET CANVAS POSITION> action')
         ACTION_SET_CANVAS_BACKGROUND = ('setCanvasBackground', 'A <SET CANVAS POSITION> action')
@@ -569,13 +570,14 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, r"^\x20*\bset\s+canvas\s+grid\s+(?:color|style|opacity|size)\b",
                                                                     'Settings/Canvas/Grid',
-                                                                    [('set canvas grid color \x01<COLOR>',
+                                                                    [('set canvas grid color \x01<COLOR> [<BGCOLOR>]',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas grid color]',
+                                                                                'Action [Define canvas grid colors]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
+                                                                                'The *<BGCOLOR>* define background color outside drawing area and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid color #880000FF`**\n\n'
@@ -634,6 +636,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid size 10 5 MM`**\n\n'
                                                                                 'Will define a major grid for which line is drawn every 10 millimeters and a major grid line drawn every 5 grid line')),
+                                                                    ],
+                                                                    'A'),
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, r"^\x20*\bset\s+canvas\s+rulers\s+(?:color)\b",
+                                                                    'Settings/Canvas/Rulers',
+                                                                    [('set canvas rulers color \x01<COLOR> [<BGCOLOR>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas rulers colors]',
+                                                                                # description
+                                                                                '*Canvas rulers is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set color for canvas rulers\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
+                                                                                'The *<BGCOLOR>* define background color and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas rulers color #0000FF #FFFFFF`**\n\n'
+                                                                                'Will set a blue ruler on white background'))
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size|position)\b",
@@ -1569,7 +1587,7 @@ class BSLanguageDef(LanguageDef):
 
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background|rulers)\b",
                                                                     'Canvas',
                                                                     [('show canvas grid',
                                                                             TokenizerRule.formatDescription(
@@ -1595,6 +1613,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Render background under canvas\n'
                                                                                 'Background (made from current document projection) is drawn under canvas and is not rendered on final drawing')),
+                                                                    ('show canvas rulers',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set canvas rulers visible]',
+                                                                                # description
+                                                                                'Render rulers over canvas\n'
+                                                                                'Rulers are drawn over canvas and are not rendered on final drawing')),
                                                                     ('hide canvas grid',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Set canvas grid invisible]',
@@ -1615,6 +1639,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Set background invisible]',
                                                                                 # description
                                                                                 'Do not render background')),
+                                                                    ('hide canvas rulers',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set canvas rulers invisible]',
+                                                                                # description
+                                                                                'Do not render rulers'))
                                                                     ],
                                                                     'A'),
 
@@ -3831,13 +3860,19 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|size\.major|size\.minor|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|bgColor|size\.major|size\.minor|style|opacity)\b",
                                                                     'Variables/Canvas/Grid',
                                                                     [(':canvas.grid.color',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current canvas grid color]',
                                                                                 # description
                                                                                 'Current canvas grid color\n'
+                                                                                'Returned as color value')),
+                                                                     (':canvas.grid.bgColor',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current canvas grid background color]',
+                                                                                # description
+                                                                                'Current canvas grid background color\n'
                                                                                 'Returned as color value')),
                                                                      (':canvas.grid.visibility',
                                                                              TokenizerRule.formatDescription(
@@ -3877,7 +3912,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:status|color|size|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:visibility|color|size|style|opacity)\b",
                                                                     'Variables/Canvas/Origin',
                                                                     [(':canvas.origin.color',
                                                                             TokenizerRule.formatDescription(
@@ -3885,11 +3920,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current canvas origin color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.origin.status',
+                                                                     (':canvas.origin.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas origin visibility]',
                                                                                  # description
-                                                                                 'Current canvas origin status (visible or not)\n'
+                                                                                 'Current canvas origin visibility\n'
                                                                                  'Returned as boolean value')),
                                                                      (':canvas.origin.size',
                                                                              TokenizerRule.formatDescription(
@@ -3923,7 +3958,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:status|color|size|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:visibility|color|size|style|opacity)\b",
                                                                     'Variables/Canvas/Position',
                                                                     [(':canvas.position.color',
                                                                             TokenizerRule.formatDescription(
@@ -3931,11 +3966,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current canvas position color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.position.status',
+                                                                     (':canvas.position.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas position/direction visibility]',
                                                                                  # description
-                                                                                 'Current canvas position status (visible or not)\n'
+                                                                                 'Current canvas position visibility\n'
                                                                                  'Returned as boolean value')),
                                                                      (':canvas.position.size',
                                                                              TokenizerRule.formatDescription(
@@ -3963,13 +3998,13 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:status|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:visibility|opacity)\b",
                                                                     'Variables/Canvas/Background',
-                                                                    [(':canvas.background.status',
+                                                                    [(':canvas.background.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas background visibility]',
                                                                                  # description
-                                                                                 'Current canvas background status (visible or not)\n'
+                                                                                 'Current canvas background visibility\n'
                                                                                  'Returned as boolean value')),
                                                                      (':canvas.background.opacity',
                                                                              TokenizerRule.formatDescription(
@@ -3977,6 +4012,29 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas background opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.rulers\.(?:visibility|color|bgColor)\b",
+                                                                    'Variables/Canvas/Rulers',
+                                                                    [(':canvas.rulers.visibility',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas rulers visibility]',
+                                                                                 # description
+                                                                                 'Current canvas rulers visibility\n'
+                                                                                 'Returned as boolean value')),
+                                                                     (':canvas.rulers.color',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas rulers color]',
+                                                                                 # description
+                                                                                 'Current canvas rulers color\n'
+                                                                                 'Returned as color value')),
+                                                                     (':canvas.rulers.bgColor',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas rulers background color]',
+                                                                                 # description
+                                                                                 'Current canvas rulers background color\n'
+                                                                                 'Returned as color value'))
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -4179,6 +4237,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_TEXT, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_DRAW, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#e5dd82', True, False),
@@ -4273,6 +4332,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_TEXT, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_DRAW, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#c278da', True, False),
@@ -4412,6 +4472,7 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Grid_Style',
                       'Action_Set_Canvas_Grid_Size',
                       'Action_Set_Canvas_Grid_Opacity',
+                      'Action_Set_Canvas_Rulers_Color',
                       'Action_Set_Canvas_Origin_Color',
                       'Action_Set_Canvas_Origin_Style',
                       'Action_Set_Canvas_Origin_Size',
@@ -4467,6 +4528,8 @@ class BSLanguageDef(LanguageDef):
                       'Action_Canvas_Hide_Position',
                       'Action_Canvas_Show_Background',
                       'Action_Canvas_Hide_Background',
+                      'Action_Canvas_Show_Rulers',
+                      'Action_Canvas_Hide_Rulers',
                       'Action_UIConsole_Print',
                       'Action_UIDialog_Message',
                       'Action_UIDialog_Boolean_Input',
@@ -4680,6 +4743,7 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid color', False),
                 'Any_Expression',
+                GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -4707,6 +4771,15 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid opacity', False),
                 'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Rulers_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, 'set canvas rulers color', False),
+                'Any_Expression',
+                GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -5121,6 +5194,20 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas background', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Canvas_Show_Rulers',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas rulers', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Canvas_Hide_Rulers',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas rulers', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 

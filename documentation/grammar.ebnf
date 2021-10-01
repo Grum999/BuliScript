@@ -171,10 +171,11 @@ Action_Set_Draw
 /* Settings: Canvas grid */
 Action_Set_Canvas
         ::= 'set' 'canvas' (
-                ( 'grid' | 'origin' | 'position' ) (
-                    ( 'color'   Color_Expression ) |
-                    ( 'style'   PenStyle_Expression )
-                ) |
+                ( 'grid' | 'rulers' ) ( 'color' Color_Expression Color_Expression? ) |
+
+                (  'origin' | 'position' ) ( 'color'   Color_Expression ) |
+
+                ( 'grid' | 'origin' | 'position' ) ( 'style'   PenStyle_Expression ) |
 
                 ( 'grid' 'size'  Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? ) |
                 ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
@@ -264,7 +265,7 @@ Action_State
 
 
 Action_Canvas
-        ::= ( 'show' | 'hide' ) 'canvas' ( 'grid' | 'origin' | 'position' | 'background' )
+        ::= ( 'show' | 'hide' ) 'canvas' ( 'grid' | 'origin' | 'position' | 'background' | 'rulers' )
 
 
 Action_UIConsole
@@ -699,10 +700,11 @@ Reserved_Variable
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
             ( 'draw' '.' ( 'antialiasing' | 'blendingMode' | 'shape' '.' 'status') ) |
             ( 'canvas' '.'
-                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
+                ( 'grid' '.' ( 'color' | 'bgColor' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
                 ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
                 ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
                 ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
+                ( 'rulers' '.' ( 'visibility' | 'color' | 'bgColor' ) ) |
                 ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
             ) |
             ( 'script' '.' ('execution' '.' 'verbose' | 'randomize' '.' 'seed' ) ) |

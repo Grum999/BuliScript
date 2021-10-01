@@ -64,7 +64,7 @@ class BSWRendererView(QGraphicsView):
         # retrieve ruler properties from scene
         rulerProperties=self.scene().rulerProperties()
 
-        if len(rulerProperties['hPos'])>0:
+        if rulerProperties['visible'] and len(rulerProperties['hPos'])>0:
             # there's something to render
 
             # -- convert "view position" to "scene position"
@@ -313,6 +313,7 @@ class BSWRendererScene(QGraphicsScene):
         self.__backgroundImage=None
         self.__backgroundOpacity=1.0
         self.__backgroundCBBrush=checkerBoardBrush()
+        self.__backgroundVisible=True
 
         # rendered image
         self.__renderedImage=None
@@ -341,16 +342,13 @@ class BSWRendererScene(QGraphicsScene):
     def __generateGridStrokes(self, rect):
         """Generate grid strokes (avoid to regenerate them on each update)"""
         if rect==self.__gridStrokesRect:
-            # viewport is the same, keep current gris definition
+            # viewport is the same, keep current grid definition
             return
 
         self.__gridStrokesMinor=[]
         self.__gridStrokesMajor=[]
         self.__gridStrokesRulerH=[]
         self.__gridStrokesRulerV=[]
-
-        if not self.__gridVisible:
-            return
 
         # bounds
         left = int(math.floor(rect.left()))
@@ -385,14 +383,11 @@ class BSWRendererScene(QGraphicsScene):
     def __generateGridRulerNumbers(self, rect):
         """Generate ruler numbers (avoid to regenerate them on each update)"""
         if rect==self.__gridStrokesRect:
-            # viewport is the same, keep current gris definition
+            # viewport is the same, keep current grid definition
             return
 
         self.__gridTextRulerH=[]
         self.__gridTextRulerV=[]
-
-        if not self.__gridRulerVisible:
-            return
 
         # bounds
         left = int(math.floor(rect.left()))
@@ -487,14 +482,14 @@ class BSWRendererScene(QGraphicsScene):
 
     def drawBackground(self, painter, rect):
         """Draw background (defined layer, checker board)"""
-        super(BSWRendererScene, self).drawForeground(painter, rect)
+        super(BSWRendererScene, self).drawBackground(painter, rect)
 
         if self.__documentBounds:
             painter.save()
             painter.translate(self.__originPx, self.__originPy)
 
             painter.fillRect(self.__documentBounds, self.__backgroundCBBrush)
-            if self.__backgroundImage:
+            if self.__backgroundVisible and self.__backgroundImage:
                 painter.save()
                 painter.setOpacity(self.__backgroundOpacity)
                 painter.drawPixmap(self.__backgroundBounds.left(), self.__backgroundBounds.top(), self.__backgroundImage)
@@ -509,19 +504,20 @@ class BSWRendererScene(QGraphicsScene):
         """Draw grid, origin, bounds, ..."""
         super(BSWRendererScene, self).drawForeground(painter, rect)
 
+        # generate ruler numbers
         # ==> ruler is drawn from Graphic View
+        self.__generateGridRulerNumbers(rect)
 
         # generate grid lines
         self.__generateGridStrokes(rect)
-        # generate ruler numbers
-        self.__generateGridRulerNumbers(rect)
 
         # draw the lines
-        if len(self.__gridStrokesMinor)>0:
+        # -> if grid is not visible, there's no strokes generated
+        if self.__gridVisible and len(self.__gridStrokesMinor)>0:
             painter.setPen(self.__gridPenMinor)
             painter.drawLines(*self.__gridStrokesMinor)
 
-        if len(self.__gridStrokesMajor)>0:
+        if self.__gridVisible and len(self.__gridStrokesMajor)>0:
             painter.setPen(self.__gridPenMajor)
             painter.drawLines(*self.__gridStrokesMajor)
 
@@ -529,7 +525,7 @@ class BSWRendererScene(QGraphicsScene):
         self.__generateOriginStrokes()
 
         # draw origin
-        if len(self.__originStrokes):
+        if self.__originVisible and len(self.__originStrokes):
             painter.setPen(self.__originPen)
             painter.drawLines(*self.__originStrokes)
 
@@ -538,7 +534,7 @@ class BSWRendererScene(QGraphicsScene):
         self.__generatePositionPoints()
 
         # draw position
-        if len(self.__positionPoints):
+        if self.__positionVisible and len(self.__positionPoints):
             painter.save()
             painter.setPen(self.__positionPen)
             if self.__positionFulfill:
@@ -547,6 +543,8 @@ class BSWRendererScene(QGraphicsScene):
                 painter.setBrush(QBrush(Qt.NoBrush))
             painter.drawPolygon(*self.__positionPoints)
             painter.restore()
+
+        self.__gridStrokesRect=rect
 
 
     def setSize(self, width, height):
@@ -571,7 +569,8 @@ class BSWRendererScene(QGraphicsScene):
                 'hStrokes': self.__gridStrokesRulerH,
                 'vStrokes': self.__gridStrokesRulerV,
                 'hPos': self.__gridTextRulerH,
-                'vPos': self.__gridTextRulerV
+                'vPos': self.__gridTextRulerV,
+                'visible': self.__gridRulerVisible
             }
 
 
@@ -579,9 +578,17 @@ class BSWRendererScene(QGraphicsScene):
         """Return if grid is visible"""
         return self.__gridVisible
 
+    def gridRulerVisible(self):
+        """Return if grid is visible"""
+        return self.__gridRulerVisible
+
     def gridSize(self):
         """Return a tuple (grid size width, major grid frequency) in PX"""
         return (self.__gridSizeWidth, self.__gridSizeMajor)
+
+    def gridBrush(self):
+        """Return brush used to render background grid"""
+        return self.__gridBrush
 
     def gridPenMajor(self):
         """Return pen used to render major grid"""
@@ -659,6 +666,11 @@ class BSWRendererScene(QGraphicsScene):
         """Return current document bounds"""
         return self.__documentBounds
 
+
+    def backgroundVisible(self):
+        """Return if background is visible"""
+        return self.__backgroundVisible
+
     def backgroundBounds(self):
         """Return current background image bounds"""
         return self.__backgroundBounds
@@ -682,7 +694,13 @@ class BSWRendererScene(QGraphicsScene):
         """Set if grid is visible"""
         if isinstance(value, bool) and value!=self.__gridVisible:
             self.__gridVisible=value
-            update()
+            self.update()
+
+    def setGridRulerVisible(self, value):
+        """Set if grid is visible"""
+        if isinstance(value, bool) and value!=self.__gridRulerVisible:
+            self.__gridRulerVisible=value
+            self.update()
 
     def setGridSize(self, width, major=0):
         """Set grid size, given `width` is in PX
@@ -695,12 +713,14 @@ class BSWRendererScene(QGraphicsScene):
             self.__gridSizeMajor=max(0, major)
             self.update()
 
-    def setGridBrush(self, value):
+    def  setGridBrushColor(self, value):
         """Set color for grid background"""
         color=QColor(value)
         color.setAlpha(255)
         self.__gridBrush.setColor(color)
+        print(self.__gridBrush)
         self.setBackgroundBrush(self.__gridBrush)
+        self.update()
 
     def setGridPenColor(self, value):
         """Set color for grid"""
@@ -757,7 +777,7 @@ class BSWRendererScene(QGraphicsScene):
         """Set if origin is visible"""
         if isinstance(value, bool) and value!=self.__originVisible:
             self.__originVisible=value
-            update()
+            self.update()
 
     def setOriginPenColor(self, value):
         """Set color for origin"""
@@ -836,7 +856,7 @@ class BSWRendererScene(QGraphicsScene):
         """Set if position is visible"""
         if isinstance(value, bool) and value!=self.__positionVisible:
             self.__positionVisible=value
-            update()
+            self.update()
 
     def setPositionPenColor(self, value):
         """Set color for origin"""
@@ -887,6 +907,13 @@ class BSWRendererScene(QGraphicsScene):
         self.__documentBounds=bounds
         self.__calculateSceneSize()
         self.update()
+
+
+    def setBackgroundVisible(self, value):
+        """Set if background is visible"""
+        if isinstance(value, bool) and value!=self.__backgroundVisible:
+            self.__backgroundVisible=value
+            self.update()
 
     def setBackgroundImage(self, pixmap, bounds=None):
         """Set current background image

@@ -593,6 +593,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasGridOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Grid_Size':
             return self.__executeActionSetCanvasGridSize(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Rulers_Color':
+            return self.__executeActionSetCanvasRulersColor(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Origin_Color':
             return self.__executeActionSetCanvasOriginColor(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Origin_Style':
@@ -687,6 +689,8 @@ class BSInterpreter(QObject):
             return self.__executeActionCanvasShowPosition(currentAst)
         elif currentAst.id() == 'Action_Canvas_Show_Background':
             return self.__executeActionCanvasShowBackground(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Show_Rulers':
+            return self.__executeActionCanvasShowRulers(currentAst)
         elif currentAst.id() == 'Action_Canvas_Hide_Grid':
             return self.__executeActionCanvasHideGrid(currentAst)
         elif currentAst.id() == 'Action_Canvas_Hide_Origin':
@@ -695,6 +699,8 @@ class BSInterpreter(QObject):
             return self.__executeActionCanvasHidePosition(currentAst)
         elif currentAst.id() == 'Action_Canvas_Hide_Background':
             return self.__executeActionCanvasHideBackground(currentAst)
+        elif currentAst.id() == 'Action_Canvas_Hide_Rulers':
+            return self.__executeActionCanvasHideRulers(currentAst)
         elif currentAst.id() == 'Action_UIConsole_Print':
             return self.__executeActionUIConsolePrint(currentAst)
         elif currentAst.id() == 'Action_UIDialog_Message':
@@ -1644,17 +1650,28 @@ class BSInterpreter(QObject):
         """Set canvas grid color
 
         :canvas.grid.color
+        :canvas.grid.bgColor
         """
         fctLabel='Action ***set canvas grid color***'
-        self.__checkParamNumber(currentAst, fctLabel, 1)
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
         value=self.__evaluate(currentAst.node(0))
+        valueBg=self.__evaluate(currentAst.node(1))
 
         self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
+        if not valueBg is None:
+            self.__checkParamType(currentAst, fctLabel, 'BGCOLOR', valueBg, QColor)
 
-        self.verbose(f"set canvas grid color {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
+        if not valueBg is None:
+            self.verbose(f"set canvas grid color {self.__strValue(value)} {self.__strValue(valueBg)}{self.__formatStoreResult(':canvas.grid.color', ':canvas.grid.bgColor')}", currentAst)
+        else:
+            self.verbose(f"set canvas grid color {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
 
         self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setGridPenColor(value)
+
+        if not valueBg is None:
+            self.__scriptBlockStack.setVariable(':canvas.grid.bgColor', valueBg, BSVariableScope.GLOBAL)
+            self.__renderedScene.setGridBrushColor(valueBg)
 
         self.__delay()
         return None
@@ -1773,6 +1790,36 @@ class BSInterpreter(QObject):
         self.__scriptBlockStack.setVariable(':canvas.grid.size.unit', unit, BSVariableScope.GLOBAL)
 
         self.__renderedScene.setGridSize(width, major)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasRulersColor(self, currentAst):
+        """Set canvas rulers color
+
+        :canvas.rulers.color
+        :canvas.rulers.bgColor
+        """
+        fctLabel='Action ***set canvas rulers color***'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+        value=self.__evaluate(currentAst.node(0))
+        valueBg=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
+        if not valueBg is None:
+            self.__checkParamType(currentAst, fctLabel, 'BGCOLOR', valueBg, QColor)
+
+        if not valueBg is None:
+            self.verbose(f"set canvas rulers color {self.__strValue(value)} {self.__strValue(valueBg)}{self.__formatStoreResult(':canvas.rulers.color', ':canvas.rulers.bgColor')}", currentAst)
+        else:
+            self.verbose(f"set canvas rulers color {self.__strValue(value)}{self.__formatStoreResult(':canvas.rulers.color')}", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.rulers.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenRulerColor(value)
+
+        if not valueBg is None:
+            self.__scriptBlockStack.setVariable(':canvas.rulers.bgColor', valueBg, BSVariableScope.GLOBAL)
+            self.__renderedScene.setGridBrushRulerColor(valueBg)
 
         self.__delay()
         return None
@@ -2067,7 +2114,7 @@ class BSInterpreter(QObject):
             randSeed=value
         random.seed(randSeed)
 
-        self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.GLOBAL)
 
 
         self.__delay()
@@ -2797,9 +2844,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas grid", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', True, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', True, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridVisible(True)
 
         self.__delay()
         return None
@@ -2814,9 +2860,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas grid", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', False, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', False, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridVisible(False)
 
         self.__delay()
         return None
@@ -2831,9 +2876,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas origin", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', True, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', True, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginVisible(True)
 
         self.__delay()
         return None
@@ -2848,9 +2892,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas origin", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', False, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', False, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginVisible(False)
 
         self.__delay()
         return None
@@ -2865,9 +2908,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas position", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.visibility', True, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', True, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionVisible(True)
 
         self.__delay()
         return None
@@ -2882,9 +2924,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas position", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.visibility', False, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', False, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionVisible(False)
 
         self.__delay()
         return None
@@ -2899,9 +2940,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas background", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.visibility', True, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', True, BSVariableScope.GLOBAL)
+        self.__renderedScene.setBackgroundVisible(True)
 
         self.__delay()
         return None
@@ -2916,9 +2956,40 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas background", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.visibility', False, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', False, BSVariableScope.GLOBAL)
+        self.__renderedScene.setBackgroundVisible(False)
 
-        # TODO: implement canvas render
+        self.__delay()
+        return None
+
+    def __executeActionCanvasShowRulers(self, currentAst):
+        """Show canvas rulers
+
+        :canvas.rulers.visibility
+        """
+        fctLabel='Action ***show canvas rulers***'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.verbose(f"show canvas rulers", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.rulers.visibility', True, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridRulerVisible(True)
+
+        self.__delay()
+        return None
+
+    def __executeActionCanvasHideRulers(self, currentAst):
+        """Hide canvas rulers
+
+        :canvas.rulers.visibility
+        """
+        fctLabel='Action ***hide canvas rulers***'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        self.verbose(f"hide canvas rulers", currentAst)
+
+        self.__scriptBlockStack.setVariable(':canvas.rulers.visibility', False, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridRulerVisible(False)
 
         self.__delay()
         return None
