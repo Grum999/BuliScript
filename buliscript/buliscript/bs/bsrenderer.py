@@ -139,64 +139,67 @@ class BSWRendererView(QGraphicsView):
             textWidth=nbChars*rulerProperties['ruler_font_width']/self.__currentZoomFactor
             textWidthH=textWidth/2
 
-            # -- delta is value between 2 numbers
-            delta=rulerProperties['hPos'][1]-rulerProperties['hPos'][0]
-            # -- we need to ensure, when scrolling, that number 0 is always visible
-            #    and all numbers around are always the same
-            modulo=math.ceil(textWidth/delta)
+            if len(rulerProperties['hPos'])>1:
+                # -- delta is value between 2 numbers
+                delta=rulerProperties['hPos'][1]-rulerProperties['hPos'][0]
+                # -- we need to ensure, when scrolling, that number 0 is always visible
+                #    and all numbers around are always the same
+                modulo=math.ceil(textWidth/delta)
 
-            # checkwidth define if we need to check width or not to display numbers
-            checkWidth=textWidth>(delta/self.__currentZoomFactor)
+                # checkwidth define if we need to check width or not to display numbers
+                checkWidth=textWidth>(delta/self.__currentZoomFactor)
 
-            for position in rulerProperties['hPos']:
-                if checkWidth and (position/delta)%modulo!=0:
-                    continue
-                pt1.setX(position-textWidthH)
-                pt2.setX(position+textWidthH)
-                painter.drawText(QRectF(pt1, pt2), Qt.AlignCenter, str(position))
-
-
-            # calculate/render numbers on vertical ruler
-            # -- bounding box
-            pt1=self.mapToScene(QPoint(1, 0))
-            pt2=self.mapToScene(QPoint(rulerProperties['ruler_font_height']-1, 0))
-
-            # draw rulers numbers
-            nbChars=max(len(str(rulerProperties['hPos'][0])), len(str(rulerProperties['hPos'][-1])))-1
-            textWidth=nbChars*rulerProperties['ruler_font_width']/self.__currentZoomFactor
-            textWidthH=textWidth/2
-
-            # -- delta is value between 2 numbers
-            delta=rulerProperties['vPos'][1]-rulerProperties['vPos'][0]
-            # -- we need to ensure, when scrolling, that number 0 is always visible
-            #    and all numbers around are always the same
-            modulo=math.ceil(textWidth/delta)
-
-            # checkwidth define if we need to check width or not to display numbers
-            checkWidth=textWidth>(delta/self.__currentZoomFactor)
+                for position in rulerProperties['hPos']:
+                    if checkWidth and (position/delta)%modulo!=0:
+                        continue
+                    pt1.setX(position-textWidthH)
+                    pt2.setX(position+textWidthH)
+                    painter.drawText(QRectF(pt1, pt2), Qt.AlignCenter, str(position))
 
 
-            for position in rulerProperties['vPos']:
-                if checkWidth and (position/delta)%modulo!=0:
-                    continue
-                # rotated text...
-                # 1) Translate canvas origin to center of boudning rect
-                # 2) Do rotation
-                # 3) Draw text
-                #    . position must be relative new center, (then 0,0 with offset to bound rect)
-                #    . as a 90° rotation has been made, need to switch width&height
-                pt1.setY(position-textWidthH)
-                pt2.setY(position+textWidthH)
+                # calculate/render numbers on vertical ruler
+                # -- bounding box
+                pt1=self.mapToScene(QPoint(1, 0))
+                pt2=self.mapToScene(QPoint(rulerProperties['ruler_font_height']-1, 0))
 
-                rect=QRectF(pt1, pt2)
+                # draw rulers numbers
+                nbChars=max(len(str(rulerProperties['hPos'][0])), len(str(rulerProperties['hPos'][-1])))-1
+                textWidth=nbChars*rulerProperties['ruler_font_width']/self.__currentZoomFactor
+                textWidthH=textWidth/2
 
-                painter.save()
-                painter.translate(rect.center().x(), rect.center().y())
-                painter.rotate(-90)
-                painter.drawText(QRectF(-rect.height()/2, -rect.width()/2, rect.height(), rect.width()), Qt.AlignCenter, str(position))
-                painter.restore()
+            if len(rulerProperties['vPos'])>1:
+                # -- delta is value between 2 numbers
+                delta=rulerProperties['vPos'][1]-rulerProperties['vPos'][0]
+                # -- we need to ensure, when scrolling, that number 0 is always visible
+                #    and all numbers around are always the same
+                modulo=math.ceil(textWidth/delta)
+
+                # checkwidth define if we need to check width or not to display numbers
+                checkWidth=textWidth>(delta/self.__currentZoomFactor)
+
+
+                for position in rulerProperties['vPos']:
+                    if checkWidth and (position/delta)%modulo!=0:
+                        continue
+                    # rotated text...
+                    # 1) Translate canvas origin to center of boudning rect
+                    # 2) Do rotation
+                    # 3) Draw text
+                    #    . position must be relative new center, (then 0,0 with offset to bound rect)
+                    #    . as a 90° rotation has been made, need to switch width&height
+                    pt1.setY(position-textWidthH)
+                    pt2.setY(position+textWidthH)
+
+                    rect=QRectF(pt1, pt2)
+
+                    painter.save()
+                    painter.translate(rect.center().x(), rect.center().y())
+                    painter.rotate(-90)
+                    painter.drawText(QRectF(-rect.height()/2, -rect.width()/2, rect.height(), rect.width()), Qt.AlignCenter, str(position))
+                    painter.restore()
 
             # erase top/left part
+            painter.setOpacity(0.75)
             painter.fillRect(QRectF(ptZero, ptC), rulerProperties['brush'])
 
     def mousePressEvent(self, event):
@@ -277,6 +280,7 @@ class BSWRendererScene(QGraphicsScene):
     __SECONDARY_FACTOR_OPACITY = 0.5    # define opacity of secondary grid relative to main grid
     __FULFILL_FACTOR_OPACITY = 0.75     # define opacity of position fulfill
     __RULER_FONT_SIZE = 7               # in PT
+    __ARROW_SIZE = 4                    # in PX, height of arrows drawn for origin
 
     def __init__(self, parent=None):
         super(BSWRendererScene, self).__init__(parent)
@@ -330,6 +334,7 @@ class BSWRendererScene(QGraphicsScene):
         self.__gridTextRulerH=[]
         self.__gridTextRulerV=[]
         self.__originStrokes=[]
+        self.__originStrokesArrows=[]
         self.__positionPoints=[]
         self.__viewZoom=1.0
 
@@ -418,10 +423,36 @@ class BSWRendererScene(QGraphicsScene):
 
     def __generateOriginStrokes(self):
         """Generate grid strokes (avoid to regenerate them on each update)"""
+        def arrow(direction, size):
+            # append arrow
+            points=[]
+
+            if direction=='L':
+                size=-size
+                points.append(QPoint(size-BSWRendererScene.__ARROW_SIZE, 0))
+                points.append(QPoint(size, BSWRendererScene.__ARROW_SIZE))
+                points.append(QPoint(size, -BSWRendererScene.__ARROW_SIZE))
+            elif direction=='R':
+                points.append(QPoint(size+BSWRendererScene.__ARROW_SIZE, 0))
+                points.append(QPoint(size, BSWRendererScene.__ARROW_SIZE))
+                points.append(QPoint(size, -BSWRendererScene.__ARROW_SIZE))
+            elif direction=='T':
+                size=-size
+                points.append(QPoint(0, size-BSWRendererScene.__ARROW_SIZE))
+                points.append(QPoint(BSWRendererScene.__ARROW_SIZE, size))
+                points.append(QPoint(-BSWRendererScene.__ARROW_SIZE, size))
+            elif direction=='B':
+                points.append(QPoint(0, size+BSWRendererScene.__ARROW_SIZE))
+                points.append(QPoint(BSWRendererScene.__ARROW_SIZE, size))
+                points.append(QPoint(-BSWRendererScene.__ARROW_SIZE, size))
+
+            return QPolygon(points)
+
         if len(self.__originStrokes)>0:
             # strokes are already generated, does nothing
             return
 
+        self.__originStrokesArrows=[]
         size=self.__originSize/2
 
         # absissa, ordinate
@@ -429,6 +460,24 @@ class BSWRendererScene(QGraphicsScene):
                 QLine(-size, 0, size, 0),
                 QLine(0, -size, 0, size)
             ]
+
+        # absissa
+        if self.__originPosition[0]==1:
+            # right ==> arrow to left direction
+            self.__originStrokesArrows.append(arrow('L', size))
+        else:
+            # center or left ==> arrow to right direction
+            self.__originStrokesArrows.append(arrow('R', size))
+
+        # ordinate
+        if self.__originPosition[1]==-1:
+            # top ==> arrow to bottom direction
+            self.__originStrokesArrows.append(arrow('B', size))
+        else:
+            # center or bottom ==> arrow to top direction
+            self.__originStrokesArrows.append(arrow('T', size))
+
+
 
     def __generatePositionPoints(self):
         """Generate position strokes (avoid to regenerate them on each update)"""
@@ -454,7 +503,7 @@ class BSWRendererScene(QGraphicsScene):
             ]
 
     def __calculateSceneSize(self):
-        """Calculate scene size according to current document & background bounds"""
+        """Calculate scene size/rect according to current document & background bounds"""
         if self.__documentBounds is None:
             size=5000
         else:
@@ -464,9 +513,34 @@ class BSWRendererScene(QGraphicsScene):
             size=max(size, self.__backgroundBounds.right()+abs(min(0, self.__backgroundBounds.left())))
             size=max(size, self.__backgroundBounds.bottom()+abs(min(0, self.__backgroundBounds.top())))
 
-        size*=2
+        rulerSize=0
+        if self.__gridRulerVisible:
+            rulerSize=self.__rulerSize
 
-        self.setSize(size, size)
+        halfSize=size//2
+        sceneSize=2*size+rulerSize
+
+        if self.__originPosition[0]==0:
+            # H centered
+            xValue=-(size+rulerSize)
+        elif self.__originPosition[0]==-1:
+            # H left ----
+            xValue=-(halfSize+rulerSize)
+        elif self.__originPosition[0]==1:
+            # H right
+            xValue=-(size+halfSize+rulerSize)
+
+        if self.__originPosition[1]==0:
+            # V centered
+            yValue=-(size+rulerSize)
+        elif self.__originPosition[1]==-1:
+            # V top ----
+            yValue=-(halfSize+rulerSize)
+        elif self.__originPosition[1]==1:
+            # V bottom
+            yValue=-(size+halfSize+rulerSize)
+
+        self.setSceneRect(xValue, yValue, sceneSize, sceneSize)
 
 
     def initialise(self):
@@ -533,6 +607,11 @@ class BSWRendererScene(QGraphicsScene):
         if self.__originVisible and len(self.__originStrokes):
             painter.setPen(self.__originPen)
             painter.drawLines(*self.__originStrokes)
+            painter.save()
+            painter.setBrush(QBrush(self.__originPen.color()))
+            for polygon in self.__originStrokesArrows:
+                painter.drawPolygon(polygon)
+            painter.restore()
 
 
         # generate position
@@ -707,6 +786,7 @@ class BSWRendererScene(QGraphicsScene):
         if isinstance(value, bool) and value!=self.__gridRulerVisible:
             self.__gridRulerVisible=value
             self.__propertyChanged(':canvas.rulers.visibility', self.__gridRulerVisible)
+            self.__calculateSceneSize() # ruler impact scene size because they have to be excluded from scene
             self.update()
 
     def setGridSize(self, width, main=0):
@@ -759,7 +839,7 @@ class BSWRendererScene(QGraphicsScene):
     def setGridPenStyleSecondary(self, value):
         """Set stroke style for secondary grid"""
         self.__gridPenSecondary.setStyle(value)
-        self.__propertyChanged(':canvas.grid.style.secondary', value)
+        self.__propertyChanged(':canvas.origin.style.secondary', value)
         self.update()
 
     def setGridPenOpacity(self, value):
@@ -849,6 +929,8 @@ class BSWRendererScene(QGraphicsScene):
         # but for background, need to apply new position for background
         self.__originPosition=(absissa, ordinate)
 
+        # need to recalculate strokes for arrows
+        self.__originStrokes=[]
 
         # absissa
         if self.__originPosition[0]==-1:
@@ -874,6 +956,7 @@ class BSWRendererScene(QGraphicsScene):
 
         self.__propertyChanged(':canvas.origin.position.absissa', self.__originPosition[0])
         self.__propertyChanged(':canvas.origin.position.ordinate', self.__originPosition[1])
+        self.__calculateSceneSize()
         self.update()
 
 
