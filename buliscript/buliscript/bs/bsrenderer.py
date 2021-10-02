@@ -77,37 +77,37 @@ class BSWRendererView(QGraphicsView):
             # top/left corner
             ptC=self.mapToScene(QPoint(rulerProperties['ruler_size']+1, rulerProperties['ruler_size']+1))
 
-            # calculate size for minor ticks
-            minorSize=rulerProperties['ruler_size']-(rulerProperties['ruler_size']-rulerProperties['ruler_font_height'])/2
+            # calculate size for secondary ticks
+            secondarySize=rulerProperties['ruler_size']-(rulerProperties['ruler_size']-rulerProperties['ruler_font_height'])/2
 
             # generate ticks lines
             lines=[]
             # -- horizontal ruler ticks
             ptTo=self.mapToScene(QPoint(0, rulerProperties['ruler_size']))
-            ptFromMajor=self.mapToScene(QPoint(0, rulerProperties['ruler_font_height']))
-            ptFromMinor=self.mapToScene(QPoint(0, minorSize))
+            ptFromMain=self.mapToScene(QPoint(0, rulerProperties['ruler_font_height']))
+            ptFromSecondary=self.mapToScene(QPoint(0, secondarySize))
             for position in rulerProperties['hStrokes']:
                 if position[0]:
-                    # major line
-                    ptFrom=ptFromMajor
+                    # main line
+                    ptFrom=ptFromMain
                 else:
-                    # minor line
-                    ptFrom=ptFromMinor
+                    # secondary line
+                    ptFrom=ptFromSecondary
                 ptFrom.setX(position[1])
                 ptTo.setX(position[1])
                 lines.append(QLineF(ptFrom, ptTo))
 
             # -- vertical ruler ticks
             ptTo=self.mapToScene(QPoint(rulerProperties['ruler_size'], 0))
-            ptFromMajor=self.mapToScene(QPoint(rulerProperties['ruler_font_height'], 0))
-            ptFromMinor=self.mapToScene(QPoint(minorSize, 0))
+            ptFromMain=self.mapToScene(QPoint(rulerProperties['ruler_font_height'], 0))
+            ptFromSecondary=self.mapToScene(QPoint(secondarySize, 0))
             for position in rulerProperties['vStrokes']:
                 if position[0]:
-                    # major line
-                    ptFrom=ptFromMajor
+                    # main line
+                    ptFrom=ptFromMain
                 else:
-                    # minor line
-                    ptFrom=ptFromMinor
+                    # secondary line
+                    ptFrom=ptFromSecondary
                 ptFrom.setY(position[1])
                 ptTo.setY(position[1])
                 lines.append(QLineF(ptFrom, ptTo))
@@ -271,8 +271,10 @@ class BSWRendererView(QGraphicsView):
 
 class BSWRendererScene(QGraphicsScene):
     """Render canvas scene: grid, origin, bounds, background, rendered graphics...."""
+    propertyChanged=Signal(tuple)       # tuple is defined by (<variable name>, <value)
+                                        # => <variable name> is the same than one used in BuliScript language
 
-    __MINOR_FACTOR_OPACITY = 0.5        # define opacity of minor grid relatvie to major grid
+    __SECONDARY_FACTOR_OPACITY = 0.5    # define opacity of secondary grid relative to main grid
     __FULFILL_FACTOR_OPACITY = 0.75     # define opacity of position fulfill
     __RULER_FONT_SIZE = 7               # in PT
 
@@ -281,10 +283,10 @@ class BSWRendererScene(QGraphicsScene):
 
         # settings
         self.__gridSizeWidth = 20
-        self.__gridSizeMajor = 5
+        self.__gridSizeMain = 5
         self.__gridBrush=QBrush(QColor("#393939"))
-        self.__gridPenMajor=QPen(QColor("#FF292929"))
-        self.__gridPenMinor=QPen(QColor("#80292929"))
+        self.__gridPenMain=QPen(QColor("#FF292929"))
+        self.__gridPenSecondary=QPen(QColor("#80292929"))
         self.__gridVisible=True
 
         self.__gridPenRuler=QPen(QColor("#000000"))
@@ -321,8 +323,8 @@ class BSWRendererScene(QGraphicsScene):
 
         # internal data for rendering
         self.__gridStrokesRect=QRect()
-        self.__gridStrokesMajor=[]
-        self.__gridStrokesMinor=[]
+        self.__gridStrokesMain=[]
+        self.__gridStrokesSecondary=[]
         self.__gridStrokesRulerH=[]
         self.__gridStrokesRulerV=[]
         self.__gridTextRulerH=[]
@@ -338,6 +340,9 @@ class BSWRendererScene(QGraphicsScene):
         self.initialise()
         self.setBackgroundBrush(self.__gridBrush)
 
+    def __propertyChanged(self, name, value):
+        """Emit signal for variable name"""
+        self.propertyChanged.emit((name, value))
 
     def __generateGridStrokes(self, rect):
         """Generate grid strokes (avoid to regenerate them on each update)"""
@@ -345,8 +350,8 @@ class BSWRendererScene(QGraphicsScene):
             # viewport is the same, keep current grid definition
             return
 
-        self.__gridStrokesMinor=[]
-        self.__gridStrokesMajor=[]
+        self.__gridStrokesSecondary=[]
+        self.__gridStrokesMain=[]
         self.__gridStrokesRulerH=[]
         self.__gridStrokesRulerV=[]
 
@@ -359,25 +364,25 @@ class BSWRendererScene(QGraphicsScene):
         firstLeftStroke = left - (left % self.__gridSizeWidth)
         firstTopStroke = top - (top % self.__gridSizeWidth)
 
-        # frequency of major strokes
-        majorStroke=max(1, self.__gridSizeWidth * self.__gridSizeMajor)
+        # frequency of main strokes
+        mainStroke=max(1, self.__gridSizeWidth * self.__gridSizeMain)
 
         # generate vertical grid lines
         for positionX in range(firstLeftStroke, right, self.__gridSizeWidth):
-            if (positionX % majorStroke != 0):
-                self.__gridStrokesMinor.append(QLine(positionX, top, positionX, bottom))
+            if (positionX % mainStroke != 0):
+                self.__gridStrokesSecondary.append(QLine(positionX, top, positionX, bottom))
                 self.__gridStrokesRulerH.append((False, positionX))
             else:
-                self.__gridStrokesMajor.append(QLine(positionX, top, positionX, bottom))
+                self.__gridStrokesMain.append(QLine(positionX, top, positionX, bottom))
                 self.__gridStrokesRulerH.append((True, positionX))
 
         # generate horizontal grid lines
         for positionY in range(firstTopStroke, bottom, self.__gridSizeWidth):
-            if (positionY % majorStroke != 0):
-                self.__gridStrokesMinor.append(QLine(left, positionY, right, positionY))
+            if (positionY % mainStroke != 0):
+                self.__gridStrokesSecondary.append(QLine(left, positionY, right, positionY))
                 self.__gridStrokesRulerV.append((False, positionY))
             else:
-                self.__gridStrokesMajor.append(QLine(left, positionY, right, positionY))
+                self.__gridStrokesMain.append(QLine(left, positionY, right, positionY))
                 self.__gridStrokesRulerV.append((True, positionY))
 
     def __generateGridRulerNumbers(self, rect):
@@ -398,17 +403,17 @@ class BSWRendererScene(QGraphicsScene):
         firstLeftStroke = left - (left % self.__gridSizeWidth)
         firstTopStroke = top - (top % self.__gridSizeWidth)
 
-        # frequency of major strokes
-        majorStroke=max(1, self.__gridSizeWidth * self.__gridSizeMajor)
+        # frequency of main strokes
+        mainStroke=max(1, self.__gridSizeWidth * self.__gridSizeMain)
 
         # generate vertical grid lines
         for positionX in range(firstLeftStroke, right, self.__gridSizeWidth):
-            if (positionX % majorStroke == 0):
+            if (positionX % mainStroke == 0):
                 self.__gridTextRulerH.append(positionX)
 
         # generate horizontal grid lines
         for positionY in range(firstTopStroke, bottom, self.__gridSizeWidth):
-            if (positionY % majorStroke == 0):
+            if (positionY % mainStroke == 0):
                 self.__gridTextRulerV.append(positionY)
 
     def __generateOriginStrokes(self):
@@ -466,8 +471,8 @@ class BSWRendererScene(QGraphicsScene):
 
     def initialise(self):
         """Initialize render scene"""
-        self.__gridPenMajor.setWidth(0)
-        self.__gridPenMinor.setWidth(0)
+        self.__gridPenMain.setWidth(0)
+        self.__gridPenSecondary.setWidth(0)
         self.__gridPenRuler.setWidth(0)
         self.__originPen.setWidth(0)
         self.__positionPen.setWidth(0)
@@ -513,13 +518,13 @@ class BSWRendererScene(QGraphicsScene):
 
         # draw the lines
         # -> if grid is not visible, there's no strokes generated
-        if self.__gridVisible and len(self.__gridStrokesMinor)>0:
-            painter.setPen(self.__gridPenMinor)
-            painter.drawLines(*self.__gridStrokesMinor)
+        if self.__gridVisible and len(self.__gridStrokesSecondary)>0:
+            painter.setPen(self.__gridPenSecondary)
+            painter.drawLines(*self.__gridStrokesSecondary)
 
-        if self.__gridVisible and len(self.__gridStrokesMajor)>0:
-            painter.setPen(self.__gridPenMajor)
-            painter.drawLines(*self.__gridStrokesMajor)
+        if self.__gridVisible and len(self.__gridStrokesMain)>0:
+            painter.setPen(self.__gridPenMain)
+            painter.drawLines(*self.__gridStrokesMain)
 
         # generate origin
         self.__generateOriginStrokes()
@@ -583,20 +588,20 @@ class BSWRendererScene(QGraphicsScene):
         return self.__gridRulerVisible
 
     def gridSize(self):
-        """Return a tuple (grid size width, major grid frequency) in PX"""
-        return (self.__gridSizeWidth, self.__gridSizeMajor)
+        """Return a tuple (grid size width, main grid frequency) in PX"""
+        return (self.__gridSizeWidth, self.__gridSizeMain)
 
     def gridBrush(self):
         """Return brush used to render background grid"""
         return self.__gridBrush
 
-    def gridPenMajor(self):
-        """Return pen used to render major grid"""
-        return self.__gridPenMajor
+    def gridPenMain(self):
+        """Return pen used to render main grid"""
+        return self.__gridPenMain
 
-    def gridPenMinor(self):
-        """Return pen used to render minor grid"""
-        return self.__gridPenMinor
+    def gridPenSecondary(self):
+        """Return pen used to render secondary grid"""
+        return self.__gridPenSecondary
 
     def gridFontRuler(self):
         """Return font used to render grid ruler"""
@@ -694,68 +699,79 @@ class BSWRendererScene(QGraphicsScene):
         """Set if grid is visible"""
         if isinstance(value, bool) and value!=self.__gridVisible:
             self.__gridVisible=value
+            self.__propertyChanged(':canvas.grid.visibility', self.__gridVisible)
             self.update()
 
     def setGridRulerVisible(self, value):
         """Set if grid is visible"""
         if isinstance(value, bool) and value!=self.__gridRulerVisible:
             self.__gridRulerVisible=value
+            self.__propertyChanged(':canvas.rulers.visibility', self.__gridRulerVisible)
             self.update()
 
-    def setGridSize(self, width, major=0):
+    def setGridSize(self, width, main=0):
         """Set grid size, given `width` is in PX
-        Given `major` is an integer that define to draw a major line everything `major` line
+        Given `main` is an integer that define to draw a main line everything `main` line
         """
-        if width!=self.__gridSizeWidth or major!=self.__gridSizeMajor:
+        if width!=self.__gridSizeWidth or main!=self.__gridSizeMain:
             # force grid to be recalculated
             self.__gridStrokesRect=QRect()
             self.__gridSizeWidth=max(2, round(width))
-            self.__gridSizeMajor=max(0, major)
+            self.__gridSizeMain=max(0, main)
+            self.__propertyChanged(':canvas.grid.size.main', self.__gridSizeMain)
+            self.__propertyChanged(':canvas.grid.size.width', self.__gridSizeWidth)
             self.update()
 
-    def  setGridBrushColor(self, value):
+    def setGridBrushColor(self, value):
         """Set color for grid background"""
         color=QColor(value)
         color.setAlpha(255)
         self.__gridBrush.setColor(color)
-        print(self.__gridBrush)
         self.setBackgroundBrush(self.__gridBrush)
+        self.__propertyChanged(':canvas.grid.bgColor', color)
         self.update()
 
     def setGridPenColor(self, value):
         """Set color for grid"""
         # get current opacity
-        alphaF=self.__gridPenMajor.color().alphaF()
+        alphaF=self.__gridPenMain.color().alphaF()
 
         # apply current color and keep opacity
         color=QColor(value)
+        self.__propertyChanged(':canvas.grid.color', color)
+
         color.setAlphaF(alphaF)
-        self.__gridPenMajor.setColor(color)
+        self.__gridPenMain.setColor(color)
 
         # apply current color and keep opacity
         color=QColor(value)
-        color.setAlphaF(alphaF*BSWRendererScene.__MINOR_FACTOR_OPACITY)
-        self.__gridPenMinor.setColor(color)
+        color.setAlphaF(alphaF*BSWRendererScene.__SECONDARY_FACTOR_OPACITY)
+        self.__gridPenSecondary.setColor(color)
         self.update()
 
-    def setGridPenStyleMajor(self, value):
-        """Set stroke style for major grid"""
-        self.__gridPenMajor.setStyle(value)
+    def setGridPenStyleMain(self, value):
+        """Set stroke style for main grid"""
+        self.__gridPenMain.setStyle(value)
+
+        self.__propertyChanged(':canvas.grid.style.main', value)
         self.update()
 
-    def setGridPenStyleMinor(self, value):
-        """Set stroke style for minor grid"""
-        self.__gridPenMinor.setStyle(value)
+    def setGridPenStyleSecondary(self, value):
+        """Set stroke style for secondary grid"""
+        self.__gridPenSecondary.setStyle(value)
+        self.__propertyChanged(':canvas.grid.style.secondary', value)
         self.update()
 
     def setGridPenOpacity(self, value):
         """Set opacity for grid"""
-        color=self.__gridPenMajor.color()
+        color=self.__gridPenMain.color()
         color.setAlphaF(value)
-        self.__gridPenMajor.setColor(QColor(color))
+        self.__gridPenMain.setColor(QColor(color))
 
-        color.setAlphaF(value*BSWRendererScene.__MINOR_FACTOR_OPACITY)
-        self.__gridPenMinor.setColor(QColor(color))
+        color.setAlphaF(value*BSWRendererScene.__SECONDARY_FACTOR_OPACITY)
+        self.__gridPenSecondary.setColor(QColor(color))
+
+        self.__propertyChanged(':canvas.grid.opacity', value)
         self.update()
 
     def setGridPenRulerColor(self, value):
@@ -763,6 +779,7 @@ class BSWRendererScene(QGraphicsScene):
         color=QColor(value)
         color.setAlpha(255)
         self.__gridPenRuler.setColor(color)
+        self.__propertyChanged(':canvas.rulers.color', color)
         self.update()
 
     def setGridBrushRulerColor(self, value):
@@ -770,6 +787,7 @@ class BSWRendererScene(QGraphicsScene):
         color=QColor(value)
         color.setAlphaF(1.0)
         self.__gridBrushRuler.setColor(color)
+        self.__propertyChanged(':canvas.rulers.bgColor', color)
         self.update()
 
 
@@ -777,15 +795,17 @@ class BSWRendererScene(QGraphicsScene):
         """Set if origin is visible"""
         if isinstance(value, bool) and value!=self.__originVisible:
             self.__originVisible=value
+            self.__propertyChanged(':canvas.origin.visibility', self.__originVisible)
             self.update()
 
     def setOriginPenColor(self, value):
         """Set color for origin"""
         # get current opacity
-        alphaF=self.__gridPenMajor.color().alphaF()
+        alphaF=self.__gridPenMain.color().alphaF()
 
         # apply current color and keep opacity
         color=QColor(value)
+        self.__propertyChanged(':canvas.origin.color', color)
         color.setAlphaF(alphaF)
         self.__originPen.setColor(color)
         self.update()
@@ -793,6 +813,7 @@ class BSWRendererScene(QGraphicsScene):
     def setOriginPenStyle(self, value):
         """Set stroke style for origin"""
         self.__originPen.setStyle(value)
+        self.__propertyChanged(':canvas.origin.style', value)
         self.update()
 
     def setOriginPenOpacity(self, value):
@@ -800,6 +821,7 @@ class BSWRendererScene(QGraphicsScene):
         color=self.__originPen.color()
         color.setAlphaF(value)
         self.__originPen.setColor(QColor(color))
+        self.__propertyChanged(':canvas.origin.opacity', value)
         self.update()
 
     def setOriginSize(self, size):
@@ -807,6 +829,7 @@ class BSWRendererScene(QGraphicsScene):
         if size!=self.__originSize:
             self.__originStrokes=[]
             self.__originSize=max(5, round(size))
+            self.__propertyChanged(':canvas.origin.size', self.__originSize)
             self.update()
 
     def setOriginPosition(self, absissa=0, ordinate=0):
@@ -849,6 +872,8 @@ class BSWRendererScene(QGraphicsScene):
             # center
             self.__originPy=-self.__documentBounds.height()//2
 
+        self.__propertyChanged(':canvas.origin.position.absissa', self.__originPosition[0])
+        self.__propertyChanged(':canvas.origin.position.ordinate', self.__originPosition[1])
         self.update()
 
 
@@ -856,6 +881,7 @@ class BSWRendererScene(QGraphicsScene):
         """Set if position is visible"""
         if isinstance(value, bool) and value!=self.__positionVisible:
             self.__positionVisible=value
+            self.__propertyChanged(':canvas.position.visibility', self.__positionVisible)
             self.update()
 
     def setPositionPenColor(self, value):
@@ -865,6 +891,7 @@ class BSWRendererScene(QGraphicsScene):
 
         # apply current color and keep opacity
         color=QColor(value)
+        self.__propertyChanged(':canvas.position.color', color)
         color.setAlphaF(alphaF)
         self.__positionPen.setColor(QColor(color))
 
@@ -880,6 +907,8 @@ class BSWRendererScene(QGraphicsScene):
 
         color.setAlphaF(value*BSWRendererScene.__FULFILL_FACTOR_OPACITY)
         self.__positionBrush.setColor(QColor(color))
+
+        self.__propertyChanged(':canvas.position.opacity', value)
         self.update()
 
     def setPositionSize(self, size):
@@ -887,12 +916,14 @@ class BSWRendererScene(QGraphicsScene):
         if size!=self.__positionSize:
             self.__positionPoints=[]
             self.__positionSize=max(5, round(size))
+            self.__propertyChanged(':canvas.position.size', self.__positionSize)
             self.update()
 
     def setPositionFulfill(self, value):
         """Set settings used to define if position is fulfill or not"""
         if self.__positionFulfill!=value:
             self.__positionFulfill=value
+            self.__propertyChanged(':canvas.position.fulfill', self.__positionFulfill)
             self.update()
 
 
@@ -913,6 +944,7 @@ class BSWRendererScene(QGraphicsScene):
         """Set if background is visible"""
         if isinstance(value, bool) and value!=self.__backgroundVisible:
             self.__backgroundVisible=value
+            self.__propertyChanged(':canvas.background.visibility', self.__backgroundVisible)
             self.update()
 
     def setBackgroundImage(self, pixmap, bounds=None):
@@ -938,4 +970,5 @@ class BSWRendererScene(QGraphicsScene):
         """Set current background opacity"""
         if isinstance(value, float) and value!=self.__backgroundOpacity:
             self.__backgroundOpacity=max(0.0, min(1.0, value))
+            self.__propertyChanged(':canvas.background.opacity', self.__backgroundOpacity)
             self.update()
