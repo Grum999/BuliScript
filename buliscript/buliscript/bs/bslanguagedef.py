@@ -4107,7 +4107,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.geometry\.(?:width|height|top|bottom|left|right)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.geometry\.(?:width|height|top|bottom|left|right|resolution)\b",
                                                                     'Variables/Canvas/Geometry',
                                                                     [(':canvas.geometry.width',
                                                                              TokenizerRule.formatDescription(
@@ -4145,6 +4145,12 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas bottom position, relative to origin\n'
                                                                                  'Returned in current unit')),
+                                                                    (':canvas.geometry.resolution',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas resolution]',
+                                                                                 # description
+                                                                                 'Current canvas resolution\n'
+                                                                                 'Returned in DPI')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),

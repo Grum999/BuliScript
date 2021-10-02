@@ -715,7 +715,7 @@ Reserved_Variable
                         )
                     ) |
                     ( 'rulers' '.' ( 'visibility' | 'color' | 'bgColor' ) ) |
-                    ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
+                    ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' | 'resolution' ) )
                 )
             ) |
             ( 'script' '.' ('execution' '.' 'verbose' | 'randomize' '.' 'seed' ) ) |
