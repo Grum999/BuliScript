@@ -175,7 +175,7 @@ Action_Set_Canvas
 
                 (  'origin' | 'position' ) ( 'color'   Color_Expression ) |
 
-                ( 'grid' | 'origin' | 'position' ) ( 'style'   PenStyle_Expression ) |
+                ( 'grid' | 'origin' ) ( 'style'   PenStyle_Expression ) |
 
                 ( 'grid' 'size'  Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? ) |
                 ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
@@ -700,14 +700,14 @@ Reserved_Variable
             ( 'position' '.' ( 'x' | 'y' ) ) |
             'angle' |
             ( 'unit' '.' ( 'rotation' | 'canvas' ) ) |
-            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
+            ( 'pen' '.' ( 'color' | 'size' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
             ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
             ( 'draw' '.' ( 'antialiasing' | 'blendingMode' | 'shape' '.' 'status') ) |
             ( 'canvas' '.' (
-                    ( 'grid' '.' ( 'color' | 'bgColor' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
+                    ( 'grid' '.' ( 'color' | 'bgColor' | 'visibility' | 'size' '.' ( 'main' | 'width' ) | 'style' '.' ( 'main' | 'secondary' ) | 'opacity' ) ) |
                     ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
-                    ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
+                    ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'opacity' | 'fulfill' ) ) |
                     ( 'background' '.' (
                             'visibility' |
                             'opacity' |

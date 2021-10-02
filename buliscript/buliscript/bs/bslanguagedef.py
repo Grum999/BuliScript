@@ -582,19 +582,19 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid color #880000FF`**\n\n'
                                                                                 'Will set a blue grid with 50% opacity')),
-                                                                     ('set canvas grid style \x01<STYLE-MAJOR> [<STYLE-MINOR>]',
+                                                                     ('set canvas grid style \x01<STYLE-MAIN> [<STYLE-SECONDARY>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid style]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set stroke style for canvas grid\n\n'
-                                                                                'Given *<STYLE-MAJOR>* and *<STYLE-MINOR>* can be:\n'
+                                                                                'Given *<STYLE-MAIN>* and *<STYLE-SECONDARY>* can be:\n'
                                                                                 ' - **`SOLID`**\n'
                                                                                 ' - **`DASH`**\n'
                                                                                 ' - **`DOT`**\n'
                                                                                 ' - **`DASHDOT`**\n'
                                                                                 ' - **`NONE`**\n\n'
-                                                                                'When *<STYLE-MINOR>* is omitted, given *<STYLE-MAJOR>* is applied to both grid lines',
+                                                                                'When *<STYLE-SECONDARY>* is omitted, given *<STYLE-MAIN>* is applied to both grid lines',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid style DOT`**\n\n'
@@ -614,7 +614,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas grid opacity 128`**\n'
                                                                                 '**`set canvas grid opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas grid size \x01<WIDTH> [<MAJOR>] [<UNIT>]',
+                                                                     ('set canvas grid size \x01<WIDTH> [<MAIN>] [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid size]',
                                                                                 # description
@@ -623,7 +623,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<WIDTH>* is a positive number that define grid size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<MAJOR>*, if provided, is a positive integer greater than zero that define frequency of major grid line\n\n'
+                                                                                'Given *<MAIN>*, if provided, is a positive integer greater than zero that define frequency of main grid line\n\n'
                                                                                 'Given *<UNIT>* if provided is applied to <WIDTH> and can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
@@ -632,10 +632,10 @@ class BSLanguageDef(LanguageDef):
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid size 50 PX`**\n\n'
-                                                                                'Will define a major grid for which line is drawn every 50 pixels\n\n'
+                                                                                'Will define a grid for which line is drawn every 50 pixels\n\n'
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid size 10 5 MM`**\n\n'
-                                                                                'Will define a major grid for which line is drawn every 10 millimeters and a major grid line drawn every 5 grid line')),
+                                                                                'Will define a main grid for which line is drawn every 10 millimeters and a main grid line drawn every 5 grid line')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, r"^\x20*\bset\s+canvas\s+rulers\s+(?:color)\b",
@@ -3755,7 +3755,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
             # todo: add |brush
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|status)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|size|style|cap|join|status)\b",
                                                                     'Variables/Pen',
                                                                     [(':pen.color',
                                                                             TokenizerRule.formatDescription(
@@ -3763,11 +3763,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current pen color\n'
                                                                                 'Returned as color value')),
-                                                                     (':pen.width',
+                                                                     (':pen.size',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current pen width]',
+                                                                                'Reserved variable [Current pen size]',
                                                                                 # description
-                                                                                'Current pen width in current canvas unit\n'
+                                                                                'Current pen size in current canvas unit\n'
                                                                                 'Returned as decimal value')),
                                                                      (':pen.style',
                                                                             TokenizerRule.formatDescription(
@@ -3820,7 +3820,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape])\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape\.status)\b",
                                                                     'Variables/Draw',
                                                                     [(':draw.antialiasing',
                                                                             TokenizerRule.formatDescription(
@@ -3915,7 +3915,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|bgColor|size\.major|size\.minor|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|bgColor|size\.main|size\.width|style|opacity)\b",
                                                                     'Variables/Canvas/Grid',
                                                                     [(':canvas.grid.color',
                                                                             TokenizerRule.formatDescription(
@@ -3935,29 +3935,28 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas grid visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.grid.size.major',
+                                                                     (':canvas.grid.size.main',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas major grid size]',
+                                                                                 'Reserved variable [Current canvas main grid frequency]',
                                                                                  # description
-                                                                                 'Current canvas major grid size\n'
+                                                                                 'Current canvas main grid frequency\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.grid.size.minor',
+                                                                     (':canvas.grid.size.width',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas minor grid size]',
+                                                                                 'Reserved variable [Current canvas grid size]',
                                                                                  # description
-                                                                                 'Current canvas minor grid size\n'
+                                                                                 'Current canvas grid size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.grid.size.unit',
+                                                                     (':canvas.grid.style.main',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid unit]',
+                                                                                 'Reserved variable [Current canvas grid style (main grid)]',
                                                                                  # description
-                                                                                 'Current canvas grid unit\n'
-                                                                                 'Returned as string')),
-                                                                     (':canvas.grid.style',
+                                                                                 'Current canvas grid style (main grid)')),
+                                                                     (':canvas.grid.style.secondary',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid style]',
+                                                                                 'Reserved variable [Current canvas grid style (secondary grid)]',
                                                                                  # description
-                                                                                 'Current canvas grid style')),
+                                                                                 'Current canvas grid style (secondary grid)')),
                                                                      (':canvas.grid.opacity',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas grid opacity]',
@@ -3967,7 +3966,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:visibility|color|size|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:visibility|color|size|style|opacity|position\.(?:absissa|ordinate))\b",
                                                                     'Variables/Canvas/Origin',
                                                                     [(':canvas.origin.color',
                                                                             TokenizerRule.formatDescription(
@@ -4013,7 +4012,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:visibility|color|size|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:visibility|color|size|opacity|fulfill)\b",
                                                                     'Variables/Canvas/Position',
                                                                     [(':canvas.position.color',
                                                                             TokenizerRule.formatDescription(
@@ -4033,11 +4032,6 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current position size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.position.style',
-                                                                             TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas position/direction style]',
-                                                                                 # description
-                                                                                 'Current canvas position style')),
                                                                      (':canvas.position.opacity',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas position/direction opacity]',
@@ -4053,7 +4047,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:visibility|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:visibility|opacity|source\.type|source\.value)\b",
                                                                     'Variables/Canvas/Background',
                                                                     [(':canvas.background.visibility',
                                                                              TokenizerRule.formatDescription(
@@ -4067,6 +4061,26 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas background opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
+                                                                     (':canvas.background.source.type',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas background source]',
+                                                                                 # description
+                                                                                 'Current canvas background source is string value for which value can be\n:'
+                                                                                 '- **`color`**: a color\n'
+                                                                                 '- **`document`**: current document projection\n'
+                                                                                 '- **`layer active`**: current active layer\n'
+                                                                                 '- **`layer name`**: layer designed by name\n'
+                                                                                 '- **`layer id`**: layer designed by Id')),
+                                                                     (':canvas.background.source.value',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas background value linked to source]',
+                                                                                 # description
+                                                                                 'Current canvas background source is a value linked to source type and can be\n:'
+                                                                                 '- **`color`**: a color\n'
+                                                                                 '- **`document`**: current document file name\n'
+                                                                                 '- **`layer active`**: current active layer name\n'
+                                                                                 '- **`layer name`**: layer name\n'
+                                                                                 '- **`layer id`**: layer Id')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
