@@ -149,12 +149,17 @@ class BSWRendererView(QGraphicsView):
                 # checkwidth define if we need to check width or not to display numbers
                 checkWidth=textWidth>(delta/self.__currentZoomFactor)
 
+                sign=1
+                if rulerProperties['origin'][0]==1:
+                    # H right origin; left direction is positive
+                    sign=-1
+
                 for position in rulerProperties['hPos']:
                     if checkWidth and (position/delta)%modulo!=0:
                         continue
                     pt1.setX(position-textWidthH)
                     pt2.setX(position+textWidthH)
-                    painter.drawText(QRectF(pt1, pt2), Qt.AlignCenter, str(position))
+                    painter.drawText(QRectF(pt1, pt2), Qt.AlignCenter, str(sign*position))
 
 
                 # calculate/render numbers on vertical ruler
@@ -177,6 +182,11 @@ class BSWRendererView(QGraphicsView):
                 # checkwidth define if we need to check width or not to display numbers
                 checkWidth=textWidth>(delta/self.__currentZoomFactor)
 
+                # inverted, because QT default positive direction is top to bottom and for us, it bottom to top
+                sign=-1
+                if rulerProperties['origin'][1]==-1:
+                    # V top origin; bottom direction is positive
+                    sign=1
 
                 for position in rulerProperties['vPos']:
                     if checkWidth and (position/delta)%modulo!=0:
@@ -195,7 +205,7 @@ class BSWRendererView(QGraphicsView):
                     painter.save()
                     painter.translate(rect.center().x(), rect.center().y())
                     painter.rotate(-90)
-                    painter.drawText(QRectF(-rect.height()/2, -rect.width()/2, rect.height(), rect.width()), Qt.AlignCenter, str(position))
+                    painter.drawText(QRectF(-rect.height()/2, -rect.width()/2, rect.height(), rect.width()), Qt.AlignCenter, str(sign*position))
                     painter.restore()
 
             # erase top/left part
@@ -212,7 +222,7 @@ class BSWRendererView(QGraphicsView):
             # so emulate leftbutton event when middle button is used for panning
             event=QMouseEvent(event.type(), event.localPos(), Qt.LeftButton, Qt.LeftButton, event.modifiers())
         elif event.button() == Qt.RightButton:
-            self.centerOn(0,0)
+            self.centerOn(self.sceneRect().center())
 
         QGraphicsView.mousePressEvent(self, event)
 
@@ -654,7 +664,8 @@ class BSWRendererScene(QGraphicsScene):
                 'vStrokes': self.__gridStrokesRulerV,
                 'hPos': self.__gridTextRulerH,
                 'vPos': self.__gridTextRulerV,
-                'visible': self.__gridRulerVisible
+                'visible': self.__gridRulerVisible,
+                'origin': self.__originPosition
             }
 
 
