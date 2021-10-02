@@ -131,6 +131,10 @@ class BSInterpreter(QObject):
 
     output = Signal(str, WConsoleType, dict, bool)
 
+    OPTION_BACKGROUND_FROM_ACTIVE_LAYER = 0
+    OPTION_BACKGROUND_FROM_DOCUMENT = 1
+    OPTION_BACKGROUND_FROM_COLOR = 2
+
     CONST_MEASURE_UNIT=['PX', 'PCT', 'MM', 'INCH']
     CONST_MEASURE_UNIT_RPCT=['PX', 'PCT', 'MM', 'INCH', 'RPCT']
     CONST_ROTATION_UNIT=['DEGREE', 'RADIAN']
@@ -143,7 +147,7 @@ class BSInterpreter(QObject):
     CONST_DRAW_BLENDING_MODE=['NORMAL','SOURCE_OVER','DESTINATION_CLEAR','DESTINATION_OVER','SOURCE_IN','SOURCE_OUT','DESTINATION_IN','DESTINATION_OUT','DESTINATION_ATOP','SOURCE_ATOP','EXCLUSIVE_OR','PLUS','MULTIPLY','SCREEN','OVERLAY','DARKEN','LIGHTEN','COLORDODGE','COLORBURN','HARD_LIGHT','SOFT_LIGHT','DIFFERENCE','EXCLUSION',
                               'BITWISE_S_OR_D','BITWISE_S_AND_D','BITWISE_S_XOR_D','BITWISE_S_NOR_D','BITWISE_S_NAND_D','BITWISE_NS_XOR_D','BITWISE_S_NOT','BITWISE_NS_AND_D','BITWISE_S_AND_ND','BITWISE_NS_OR_D','BITWISE_CLEAR','BITWISE_SET','BITWISE_NOT_D','BITWISE_S_OR_ND']
 
-
+    # conversion tables BuliScript<>Qt
     __CONV_PEN_STYLE={
             'SOLID': Qt.SolidLine,
             'DASH': Qt.DashLine,
@@ -212,6 +216,7 @@ class BSInterpreter(QObject):
         self.__currentLayer=None
         self.__currentLayerBounds=QRect()
 
+        # -- default options values
 
         # debug mode by default is False
         # when True, execution is made step by step
@@ -225,8 +230,47 @@ class BSInterpreter(QObject):
         # when set, a delay is applied between each instruction
         self.__optionDelay=0
 
+        # default background properties for canvas
+        self.__optionDefaulCanvasBackgroundFrom=BSInterpreter.OPTION_BACKGROUND_FROM_ACTIVE_LAYER
+        self.__optionDefaulCanvasBackgroundFromColor=QColor(Qt.white)
+        self.__optionDefaulCanvasBackgroundVisibility=True
+        self.__optionDefaulCanvasBackgroundOpacity=1.0
+
+        # default grid properties for canvas
+        self.__optionDefaulCanvasGridVisibility=True
+        self.__optionDefaulCanvasGridColor=QColor("#808080")
+        self.__optionDefaulCanvasGridBgColor=QColor("#303030")
+        self.__optionDefaulCanvasGridStyleMain='SOLID'
+        self.__optionDefaulCanvasGridStyleSecondary='DOT'
+        self.__optionDefaulCanvasGridOpacity=0.25
+        self.__optionDefaulCanvasGridSizeWidth=10
+        self.__optionDefaulCanvasGridSizeMain=5
+        self.__optionDefaulCanvasGridSizeUnit='PX'
+
+        # default rulers properties for canvas
+        self.__optionDefaulCanvasRulersVisibility=True
+        self.__optionDefaulCanvasRulersColor=QColor('#808080')
+        self.__optionDefaulCanvasRulersBgColor=QColor('#303030')
+
+        # default origin properties for canvas
+        self.__optionDefaulCanvasOriginVisibility=True
+        self.__optionDefaulCanvasOriginColor=QColor("#d51ba7")
+        self.__optionDefaulCanvasOriginStyle='SOLID'
+        self.__optionDefaulCanvasOriginOpacity=1.0
+        self.__optionDefaulCanvasOriginSize=45
+        self.__optionDefaulCanvasOriginPositionAbsissa='CENTER'
+        self.__optionDefaulCanvasOriginPositionOrdinate='MIDDLE'
+
+        # default position properties for canvas
+        self.__optionDefaulCanvasPositionVisibility=True
+        self.__optionDefaulCanvasPositionColor=QColor('#229922')
+        self.__optionDefaulCanvasPositionOpacity=1.0
+        self.__optionDefaulCanvasPositionSize=25.0
+        self.__optionDefaulCanvasPositionFulfill=True
+
         # define rendered scene, on which grid, origin, ... are drawn
         self.__renderedScene=renderedScene
+        self.__renderedScene.propertyChanged.connect(lambda x: print(x))
 
     # --------------------------------------------------------------------------
     # utils methods
@@ -449,11 +493,13 @@ class BSInterpreter(QObject):
     # --------------------------------------------------------------------------
     # Script execution methods
     # --------------------------------------------------------------------------
-    def __executeStart(self):
+    def __executeStart(self, reset):
         """Execute from root AST"""
-        self.__macroDefinitions.clear()
-        self.__scriptBlockStack.clear()
+        if reset:
+            self.__macroDefinitions.clear()
+            self.__scriptBlockStack.clear()
 
+        # convenience variable on current document
         self.__currentDocument=Krita.instance().activeDocument()
         if self.__currentDocument is None:
             raise EInterpreter("No active document!", None)
@@ -464,10 +510,95 @@ class BSInterpreter(QObject):
         # is not correct if resolution is defined with decimal properties
         self.__currentDocumentResolution=self.__currentDocument.xRes()
 
+        # convenience variable on current active layer
+        # note: current layer might be changed by executed script and then the
+        #       variables might be updated
         self.__currentLayer=self.__currentDocument.activeNode()
         self.__currentLayerBounds=self.__currentLayer.bounds()
 
+        # initialise execution environment
         self.__renderedScene.setDocumentBounds(self.__currentDocumentBounds)
+        self.__updateGeometry()
+
+        if reset:
+            # -- canvas configuration                                               # --- Option to implement ---
+            self.__setCanvasGridVisible(self.__optionDefaulCanvasGridVisibility)
+            self.__setCanvasGridColor(self.__optionDefaulCanvasGridColor)
+            self.__setCanvasGridBgColor(self.__optionDefaulCanvasGridBgColor)
+            self.__setCanvasGridStyleMain(self.__optionDefaulCanvasGridStyleMain)
+            self.__setCanvasGridStyleSecondary(self.__optionDefaulCanvasGridStyleSecondary)
+            self.__setCanvasGridOpacity(self.__optionDefaulCanvasGridOpacity)
+            self.__setCanvasGridSize(self.__optionDefaulCanvasGridSizeWidth, self.__optionDefaulCanvasGridSizeMain, self.__optionDefaulCanvasGridSizeUnit)
+
+            self.__setCanvasRulersVisible(self.__optionDefaulCanvasRulersVisibility)
+            self.__setCanvasRulersColor(self.__optionDefaulCanvasRulersColor)
+            self.__setCanvasRulersBgColor(self.__optionDefaulCanvasRulersBgColor)
+
+            self.__setCanvasOriginVisible(self.__optionDefaulCanvasOriginVisibility)
+            self.__setCanvasOriginColor(self.__optionDefaulCanvasOriginColor)
+            self.__setCanvasOriginStyle(self.__optionDefaulCanvasOriginStyle)
+            self.__setCanvasOriginOpacity(self.__optionDefaulCanvasOriginOpacity)
+            self.__setCanvasOriginSize(self.__optionDefaulCanvasOriginSize)
+            self.__setCanvasOriginPosition(self.__optionDefaulCanvasOriginPositionAbsissa, self.__optionDefaulCanvasOriginPositionOrdinate)
+
+            self.__setCanvasPositionVisible(self.__optionDefaulCanvasPositionVisibility)
+            self.__setCanvasPositionColor(self.__optionDefaulCanvasPositionColor)
+            self.__setCanvasPositionOpacity(self.__optionDefaulCanvasPositionOpacity)
+            self.__setCanvasPositionSize(self.__optionDefaulCanvasPositionSize)
+            self.__setCanvasPositionFulfill(self.__optionDefaulCanvasPositionFulfill)
+
+            self.__setCanvasBackgroundVisible(self.__optionDefaulCanvasBackgroundVisibility)
+            self.__setCanvasBackgroundOpacity(self.__optionDefaulCanvasBackgroundOpacity)
+            if self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_ACTIVE_LAYER:
+                self.__setCanvasBackgroundFromLayerActive()
+            elif self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_DOCUMENT:
+                self.__setCanvasBackgroundFromDocument()
+            elif self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_COLOR:
+                self.__setCanvasBackgroundFromColor(self.__optionDefaulCanvasBackgroundFromColor)
+
+
+            # -- default environment initialisation:
+            #       hardcoded to ensure that default values are always the same for everyone
+            #       let user's define default value they're prefering through scripting
+            self.__setUnitRotation('DEGREE')
+            self.__setUnitCanvas('PX')
+
+            self.__setPenColor(QColor(Qt.black))
+            self.__setPenSize(5.0)
+            self.__setPenStyle('SOLID')
+            self.__setPenCap('FLAT')
+            self.__setPenJoin('MITTER')
+            self.__setPenOpacity(True)
+
+            self.__setFillColor(QColor(Qt.black))
+            self.__setFillRule('EVEN')
+            self.__setFillOpacity(False)
+
+            self.__setTextColor(QColor(Qt.black))
+            self.__setTextOpacity(1.0)
+            self.__setTextFont("Helvetica")
+            self.__setTextSize(25)
+            self.__setTextBold(False)
+            self.__setTextItalic(False)
+            self.__setTextOutline(False)
+            self.__setTextLetterSpacing(100.0, 'PCT')
+            self.__setTextStretch(100.0)
+            self.__setTextHAlignment('LEFT')
+            self.__setTextVAlignment('TOP')
+
+            self.__setDrawAntialiasing(True)
+            self.__setDrawBlending('NORMAL')
+            self.__setDrawShapeStatus(False)
+
+            # -- misc initialisation
+            self.__setExecutionVerbose(self.__optionVerboseMode)
+            self.__setRandomizeSeed()
+
+            # -- default configuration                                                > Default option value to implement
+            ###':position.x':                      0.0,
+            ###':position.y':                      0.0,
+            ###':angle':                           0.0,
+
         self.__renderedScene.setBackgroundImage(EKritaNode.toQPixmap(self.__currentLayer), self.__currentLayerBounds)
 
         self.valid(f"**Start script execution**# #w#[##lw#*{time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}*##w#]")
@@ -496,16 +627,11 @@ class BSInterpreter(QObject):
         # ----
         if currentAst.id() == ASTSpecialItemType.ROOT:
             # given AST is the main block of instructions
-            random.seed()
-            randSeed=random.randint(0,999999999)
-            random.seed(randSeed)
-
+            # initialise reserved 'constant' variables
             predefinedVariables={
-                    ':math.pi': math.pi,
-                    ':math.e': math.e,
-                    ':math.phi': 1.618033988749895,
-                    ':script.randomize.seed': randSeed,
-                    ':script.execution.verbose': self.__optionVerboseMode
+                    ':math.pi':                         math.pi,
+                    ':math.e':                          math.e,
+                    ':math.phi':                        1.618033988749895
                 }
             return self.__executeScriptBlock(currentAst, True, "Main script", predefinedVariables)
 
@@ -1157,7 +1283,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set unit canvas {self.__strValue(value)}{self.__formatStoreResult(':unit.canvas')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':unit.canvas', value, BSVariableScope.CURRENT)
+        self.__setUnitCanvas(value)
 
         self.__delay()
         return None
@@ -1175,7 +1301,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set unit rotation {self.__strValue(value)}{self.__formatStoreResult(':unit.rotation')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':unit.rotation', value, BSVariableScope.CURRENT)
+        self.__setUnitRotation(value)
 
         self.__delay()
         return None
@@ -1193,7 +1319,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set pen color {self.__strValue(value)}{self.__formatStoreResult(':pen.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':pen.color', value, BSVariableScope.CURRENT)
+        self.__setPenColor(value)
 
         self.__delay()
         return None
@@ -1220,7 +1346,7 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set pen size {self.__strValue(value)}{self.__formatStoreResult(':pen.size')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':pen.size', value, BSVariableScope.CURRENT)
+        self.__setPenSize(value, unit)
 
         self.__delay()
         return None
@@ -1239,7 +1365,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set pen style {self.__strValue(value)}{self.__formatStoreResult(':pen.style')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':pen.style', value, BSVariableScope.CURRENT)
+        self.__setPenStyle(value)
 
         self.__delay()
         return None
@@ -1258,7 +1384,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set pen cap {self.__strValue(value)}{self.__formatStoreResult(':pen.cap')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':pen.cap', value, BSVariableScope.CURRENT)
+        self.__setPenCap(value)
 
         self.__delay()
         return None
@@ -1277,7 +1403,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set pen join {self.__strValue(value)}{self.__formatStoreResult(':pen.join')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':pen.join', value, BSVariableScope.CURRENT)
+        self.__setPenJoin(value)
 
         self.__delay()
         return None
@@ -1303,13 +1429,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set pen opacity {self.__strValue(value)}{self.__formatStoreResult(':pen.color')}", currentAst)
 
-        color=self.__scriptBlockStack.current().variable(':pen.color', QColor(0,0,0))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':pen.color', color, BSVariableScope.CURRENT)
+        self.__setPenOpacity(value)
 
         self.__delay()
         return None
@@ -1327,7 +1447,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set fill color {self.__strValue(value)}{self.__formatStoreResult(':fill.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':fill.color', value, BSVariableScope.CURRENT)
+        self.__setFillColor(value)
 
         self.__delay()
         return None
@@ -1346,7 +1466,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set fill rule {self.__strValue(value)}{self.__formatStoreResult(':fill.rule')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':fill.rule', value, BSVariableScope.CURRENT)
+        self.__setFillRule(value)
 
         self.__delay()
         return None
@@ -1372,13 +1492,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set fill opacity {self.__strValue(value)}{self.__formatStoreResult(':fill.color')}", currentAst)
 
-        color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
+        self.__setFillOpacity(value)
 
         self.__delay()
         return None
@@ -1396,7 +1510,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text color {self.__strValue(value)}{self.__formatStoreResult(':text.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.color', value, BSVariableScope.CURRENT)
+        self.__setTextColor(value)
 
         self.__delay()
         return None
@@ -1422,13 +1536,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text opacity {self.__strValue(value)}{self.__formatStoreResult(':text.color')}", currentAst)
 
-        color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':text.color', color, BSVariableScope.CURRENT)
+        self.__setTextOpacity(value)
 
         self.__delay()
         return None
@@ -1446,7 +1554,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text font {self.__strValue(value)}{self.__formatStoreResult(':text.font')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.font', value, BSVariableScope.CURRENT)
+        self.__setTextFont(value)
 
         self.__delay()
         return None
@@ -1473,7 +1581,7 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set text size {self.__strValue(value)}{self.__formatStoreResult(':text.size')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
+        self.__setTextSize(value, unit)
 
         self.__delay()
         return None
@@ -1491,7 +1599,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text bold {self.__strValue(value)}{self.__formatStoreResult(':text.bold')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.bold', value, BSVariableScope.CURRENT)
+        self.__setTextBold(value)
 
         self.__delay()
         return None
@@ -1509,7 +1617,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text italic {self.__strValue(value)}{self.__formatStoreResult(':text.italic')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.italic', value, BSVariableScope.CURRENT)
+        self.__setTextItalic(value)
 
         self.__delay()
         return None
@@ -1527,7 +1635,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text outline {self.__strValue(value)}{self.__formatStoreResult(':text.outline')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.outline', value, BSVariableScope.CURRENT)
+        self.__setTextOutline(value)
 
         self.__delay()
         return None
@@ -1555,8 +1663,7 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"letter spacing unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"set text letter spacing {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':text.letterSpacing.spacing', 'text.letterSpacing.unit')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.letterspacing.spacing', value, BSVariableScope.CURRENT)
-        self.__scriptBlockStack.setVariable(':text.letterspacing.unit', unit, BSVariableScope.CURRENT)
+        self.__setTextLetterSpacing(value, unit)
 
         self.__delay()
         return None
@@ -1582,7 +1689,7 @@ class BSInterpreter(QObject):
                 value=min(40.0, max(1.0, value))
             value=round(value*100)
 
-        self.__scriptBlockStack.setVariable(':text.stretch', value, BSVariableScope.CURRENT)
+        self.__setTextStretch(value)
 
         self.__delay()
         return None
@@ -1600,7 +1707,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text horizontal alignment {self.__strValue(value)}{self.__formatStoreResult(':text.alignment.horizontal')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.alignment.horizontal', value, BSVariableScope.CURRENT)
+        self.__setTextHAlignment(value)
 
         self.__delay()
         return None
@@ -1618,7 +1725,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set text vertical alignment {self.__strValue(value)}{self.__formatStoreResult(':text.alignment.vertical')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':text.alignment.vertical', value, BSVariableScope.CURRENT)
+        self.__setTextVAlignment(value)
 
         self.__delay()
         return None
@@ -1636,7 +1743,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set draw antialiasing {self.__strValue(value)}{self.__formatStoreResult(':draw.antialiasing')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':draw.antialiasing', value, BSVariableScope.CURRENT)
+        self.__setDrawAntialiasing(value)
 
         self.__delay()
         return None
@@ -1654,7 +1761,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set draw blending mode {self.__strValue(value)}{self.__formatStoreResult(':draw.blendingMode')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':draw.blendingmode', value, BSVariableScope.CURRENT)
+        self.__setDrawBlending(value)
 
         self.__delay()
         return None
@@ -1679,12 +1786,10 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set canvas grid color {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenColor(value)
+        self.__setCanvasGridColor(value)
 
         if not valueBg is None:
-            self.__scriptBlockStack.setVariable(':canvas.grid.bgColor', valueBg, BSVariableScope.GLOBAL)
-            self.__renderedScene.setGridBrushColor(valueBg)
+            self.__setCanvasGridBgColor(valueBg)
 
         self.__delay()
         return None
@@ -1692,27 +1797,22 @@ class BSInterpreter(QObject):
     def __executeActionSetCanvasGridStyle(self, currentAst):
         """Set canvas grid style
 
-        :canvas.grid.style
+        :canvas.grid.style.main
+        :canvas.grid.style.secondary
         """
         fctLabel='Action ***set canvas grid style***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
-        major=self.__evaluate(currentAst.node(0))
-        minor=self.__evaluate(currentAst.node(1))
+        main=self.__evaluate(currentAst.node(0))
+        secondary=self.__evaluate(currentAst.node(1))
 
-        if minor is None:
-            minor=major
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE-MAIN', main in BSInterpreter.CONST_PEN_STYLE, f"style value for main grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'STYLE-SECONDARY', secondary in BSInterpreter.CONST_PEN_STYLE, f"style value for secondary grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.__checkParamDomain(currentAst, fctLabel, 'STYLE-MAJOR', major in BSInterpreter.CONST_PEN_STYLE, f"style value for major grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
-        self.__checkParamDomain(currentAst, fctLabel, 'STYLE-MINOR', minor in BSInterpreter.CONST_PEN_STYLE, f"style value for minor grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
+        self.verbose(f"set canvas grid style {self.__strValue(main)} {self.__strValue(secondary)}{self.__formatStoreResult(':canvas.grid.style.main', ':canvas.grid.style.secondary')}", currentAst)
 
-        self.verbose(f"set canvas grid style {self.__strValue(major)} {self.__strValue(minor)}{self.__formatStoreResult(':canvas.grid.style.major', ':canvas.grid.style.minor')}", currentAst)
-
-        self.__scriptBlockStack.setVariable(':canvas.grid.style.major', major, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.grid.style.minor', minor, BSVariableScope.GLOBAL)
-
-        self.__renderedScene.setGridPenStyleMajor(BSInterpreter.__CONV_PEN_STYLE[major])
-        self.__renderedScene.setGridPenStyleMinor(BSInterpreter.__CONV_PEN_STYLE[minor])
+        self.__setCanvasGridStyleMain(main)
+        self.__setCanvasGridStyleSecondary(secondary)
 
         self.__delay()
         return None
@@ -1738,14 +1838,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas grid opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
 
-        color=self.__scriptBlockStack.current().variable(':canvas.grid.color', QColor(60,60,128))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenOpacity(color.alphaF())
+        self.__setCanvasGridOpacity(value)
 
         self.__delay()
         return None
@@ -1754,8 +1847,7 @@ class BSInterpreter(QObject):
         """Set canvas grid size
 
         :canvas.grid.size.width
-        :canvas.grid.size.major
-        :canvas.grid.size.unit
+        :canvas.grid.size.main
         """
         fctLabel='Action ***set canvas grid size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2, 3)
@@ -1766,43 +1858,38 @@ class BSInterpreter(QObject):
 
         if p2 is None and p3 is None:
             # no other parameters provided, set default value
-            major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', 0)
+            main=self.__scriptBlockStack.current().variable(':canvas.grid.size.main', 0)
             unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
         elif p3 is None:
             # p2 has been provided
             if isinstance(p2, (int, float)):
-                major=p2
+                main=p2
                 unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
             else:
-                major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', 0)
+                main=self.__scriptBlockStack.current().variable(':canvas.grid.size.main', 0)
                 unit=p2
         else:
             # p2+p3 provided
-            major=p2
+            main=p2
             unit=p3
 
         self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
-        self.__checkParamType(currentAst, fctLabel, 'MAJOR', major, int)
+        self.__checkParamType(currentAst, fctLabel, 'MAIN', main, int)
 
         if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # let default value being applied in this case
             width=self.__scriptBlockStack.current().variable(':canvas.grid.size.width', width, True)
 
-        if not self.__checkParamDomain(currentAst, fctLabel, 'MAJOR', major>=0, f"a zero or positive number is expected (current={major})", False):
+        if not self.__checkParamDomain(currentAst, fctLabel, 'MAIN', main>=0, f"a zero or positive number is expected (current={main})", False):
             # let default value being applied in this case
-            major=self.__scriptBlockStack.current().variable(':canvas.grid.size.major', major, True)
+            main=self.__scriptBlockStack.current().variable(':canvas.grid.size.main', main, True)
 
 
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"grid unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.verbose(f"set canvas grid size {self.__strValue(width)} {self.__strValue(major)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.grid.size.width', ':canvas.grid.size.major', ':canvas.grid.size.unit')}", currentAst)
+        self.verbose(f"set canvas grid size {self.__strValue(width)} {self.__strValue(main)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.grid.size.width', ':canvas.grid.size.main')}", currentAst)
 
-
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.width', width, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.major', major, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.unit', unit, BSVariableScope.GLOBAL)
-
-        self.__renderedScene.setGridSize(width, major)
+        self.__setCanvasGridSize(width, main, unit)
 
         self.__delay()
         return None
@@ -1827,12 +1914,10 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set canvas rulers color {self.__strValue(value)}{self.__formatStoreResult(':canvas.rulers.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.rulers.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenRulerColor(value)
+        self.__setCanvasRulersColor(value)
 
         if not valueBg is None:
-            self.__scriptBlockStack.setVariable(':canvas.rulers.bgColor', valueBg, BSVariableScope.GLOBAL)
-            self.__renderedScene.setGridBrushRulerColor(valueBg)
+            self.__setCanvasRulersBgColor(valueBg)
 
         self.__delay()
         return None
@@ -1850,8 +1935,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin color {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPenColor(value)
+        self.__setCanvasOriginColor(value)
 
         self.__delay()
         return None
@@ -1870,8 +1954,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin style {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.style')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPenStyle(BSInterpreter.__CONV_PEN_STYLE[value])
+        self.__setCanvasOriginStyle(value)
 
         self.__delay()
         return None
@@ -1897,14 +1980,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
 
-        color=self.__scriptBlockStack.current().variable(':canvas.origin.color', QColor(60,60,128))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPenOpacity(color.alphaF())
+        self.__setCanvasOriginOpacity(value)
 
         self.__delay()
         return None
@@ -1931,8 +2007,7 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set canvas origin size {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.size')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginSize(value)
+        self.__setCanvasOriginSize(value, unit)
 
         self.__delay()
         return None
@@ -1954,9 +2029,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}{self.__formatStoreResult(':canvas.origin.position.absissa', 'canvas.origin.position.ordinate')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPosition(BSInterpreter.__CONST_HALIGN[absissa], BSInterpreter.__CONST_VALIGN[ordinate])
+        self.__setCanvasOriginPosition(absissa, ordinate)
 
         self.__delay()
         return None
@@ -1974,8 +2047,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position color {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionPenColor(value)
+        self.__setCanvasPositionColor(value)
 
         self.__delay()
         return None
@@ -2001,14 +2073,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
 
-        color=self.__scriptBlockStack.current().variable(':canvas.position.color', QColor(60,60,128))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionPenOpacity(color.alphaF())
+        self.__setCanvasPositionOpacity(value)
 
         self.__delay()
         return None
@@ -2035,8 +2100,7 @@ class BSInterpreter(QObject):
         else:
             self.verbose(f"set canvas position size {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.size')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionSize(value)
+        self.__setCanvasPositionSize(value, unit)
 
         self.__delay()
         return None
@@ -2054,8 +2118,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position fulfilled {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.fulfill')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionFulfill(value)
+        self.__setCanvasPositionFulfill(value)
 
         self.__delay()
         return None
@@ -2082,8 +2145,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.opacity')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setBackgroundOpacity(value)
+        self.__setCanvasBackgroundOpacity(value)
 
         self.__delay()
         return None
@@ -2103,13 +2165,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from color {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'color', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
-
-        pixmap=QPixmap(self.__currentDocumentBounds.size())
-        pixmap.fill(value)
-
-        self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
+        self.__setCanvasBackgroundFromColor(value)
 
         self.__delay()
         return None
@@ -2125,13 +2181,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from document {self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'document', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentDocument.fileName(), BSVariableScope.GLOBAL)
-
-        self.__currentDocument.refreshProjection()
-        pixmap=QPixmap.fromImage(self.__currentDocument.projection(self.__currentDocumentBounds.left(), self.__currentDocumentBounds.top(), self.__currentDocumentBounds.width(), self.__currentDocumentBounds.height()))
-
-        self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
+        self.__setCanvasBackgroundFromDocument()
 
         self.__delay()
         return None
@@ -2147,16 +2197,10 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from layer active {self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', '[active]', BSVariableScope.GLOBAL)
-
-
-        pixmap=EKritaNode.toQPixmap(self.__currentLayer)
-        self.__renderedScene.setBackgroundImage(pixmap, self.__currentLayerBounds)
+        self.__setCanvasBackgroundFromLayerActive()
 
         self.__delay()
         return None
-
 
     def __executeActionSetCanvasBackgroundFromLayerName(self, currentAst):
         """Set canvas background from layer name
@@ -2173,21 +2217,10 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from layer name {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer name', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
-
-
-        node=EKritaDocument.findFirstLayerByName(self.__currentDocument, value)
-        if node is None:
-            node=self.__currentLayer
-            self.warning(f"Unable to find a layer with given name '*{value}*', active layer will be used instead", currentAst)
-
-        pixmap=EKritaNode.toQPixmap(node)
-        self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+        self.__setCanvasBackgroundFromLayerName(value)
 
         self.__delay()
         return None
-
 
     def __executeActionSetCanvasBackgroundFromLayerId(self, currentAst):
         """Set canvas background from layer id
@@ -2204,29 +2237,10 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from layer id {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer Id', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
-
-        try:
-            uuid=QUuid(value)
-            node=EKritaDocument.findLayerById(self.__currentDocument, uuid)
-        except Exception as e:
-            node=None
-
-        if node is None:
-            node=self.__currentLayer
-            self.warning(f"Unable to find a layer with given Id '*{value}*', active layer will be used instead", currentAst)
-
-        pixmap=EKritaNode.toQPixmap(node)
-        self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+        self.__setCanvasBackgroundFromLayerId(value)
 
         self.__delay()
         return None
-
-
-
-
-
 
     def __executeActionSetExecutionVerbose(self, currentAst):
         """Set script execution verbose
@@ -2241,8 +2255,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set script execution verbose {self.__strValue(value)}{self.__formatStoreResult(':script.execution.verbose')}", currentAst)
 
-        self.__scriptBlockStack.setVariable(':script.execution.verbose', value, BSVariableScope.CURRENT)
-        self.__optionVerboseMode=value
+        self.__setExecutionVerbose(value)
 
         self.__delay()
         return None
@@ -2260,15 +2273,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set script randomize seed {self.__strValue(value)}{self.__formatStoreResult(':script.randomize.seed')}", currentAst)
 
-        if isinstance(value, int) and value<0:
-            random.seed()
-            randSeed=random.randint(0,999999999)
-        else:
-            randSeed=value
-        random.seed(randSeed)
-
-        self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.GLOBAL)
-
+        self.__setRandomizeSeed(value)
 
         self.__delay()
         return None
@@ -2708,9 +2713,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"start to draw shape", currentAst)
 
-        self.__scriptBlockStack.setVariable(':draw.shape.status', True, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__setDrawShapeStatus(True)
 
         self.__delay()
         return None
@@ -2725,8 +2728,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"stop to draw shape", currentAst)
 
-        self.__scriptBlockStack.setVariable(':draw.shape.status', False, BSVariableScope.CURRENT)
-        # TODO: implement canvas render
+        self.__setDrawShapeStatus(False)
 
         self.__delay()
         return None
@@ -2997,8 +2999,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas grid", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', True, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridVisible(True)
+        self.__setCanvasGridVisible(True)
 
         self.__delay()
         return None
@@ -3013,8 +3014,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas grid", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', False, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridVisible(False)
+        self.__setCanvasGridVisible(False)
 
         self.__delay()
         return None
@@ -3029,8 +3029,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas origin", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', True, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginVisible(True)
+        self.__setCanvasOriginVisible(True)
 
         self.__delay()
         return None
@@ -3045,8 +3044,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas origin", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', False, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginVisible(False)
+        self.__setCanvasOriginVisible(False)
 
         self.__delay()
         return None
@@ -3061,8 +3059,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas position", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.visibility', True, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionVisible(True)
+        self.__setCanvasPositionVisible(True)
 
         self.__delay()
         return None
@@ -3077,8 +3074,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas position", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.visibility', False, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionVisible(False)
+        self.__setCanvasPositionVisible(False)
 
         self.__delay()
         return None
@@ -3093,8 +3089,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas background", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.visibility', True, BSVariableScope.GLOBAL)
-        self.__renderedScene.setBackgroundVisible(True)
+        self.__setCanvasBackgroundVisible(True)
 
         self.__delay()
         return None
@@ -3109,8 +3104,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas background", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.background.visibility', False, BSVariableScope.GLOBAL)
-        self.__renderedScene.setBackgroundVisible(False)
+        self.__setCanvasBackgroundVisible(False)
 
         self.__delay()
         return None
@@ -3125,8 +3119,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"show canvas rulers", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.rulers.visibility', True, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridRulerVisible(True)
+        self.__setCanvasRulersVisible(True)
 
         self.__delay()
         return None
@@ -3141,8 +3134,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"hide canvas rulers", currentAst)
 
-        self.__scriptBlockStack.setVariable(':canvas.rulers.visibility', False, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridRulerVisible(False)
+        self.__setCanvasRulersVisible(False)
 
         self.__delay()
         return None
@@ -5042,6 +5034,561 @@ class BSInterpreter(QObject):
 
         return returned
 
+    # --------------------------------------------------------------------------
+    # Internal -- can be called directly without AST definition
+    # --------------------------------------------------------------------------
+
+    def __updateGeometry(self):
+        """Update geomtry according to document bounds and origin position"""
+        self.warning("to finalize: __updateGeometry")
+        self.__scriptBlockStack.setVariable(':canvas.geometry.width', self.__currentDocumentBounds.width(), BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.geometry.height', self.__currentDocumentBounds.height(), BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.geometry.left', -self.__currentDocumentBounds.width()/2, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.geometry.right', self.__currentDocumentBounds.width()/2, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.geometry.top', self.__currentDocumentBounds.height()/2, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.geometry.bottom', -self.__currentDocumentBounds.height()/2, BSVariableScope.GLOBAL)
+
+    def __setUnitCanvas(self, value):
+        """Set canvas unit
+
+        :unit.canvas
+        """
+        self.warning("to finalize: __setUnitCanvas")
+        self.__scriptBlockStack.setVariable(':unit.canvas', value, BSVariableScope.CURRENT)
+
+    def __setUnitRotation(self, value):
+        """Set canvas unit
+
+        :unit.rotation
+        """
+        self.warning("to finalize: __setUnitRotation")
+        self.__scriptBlockStack.setVariable(':unit.rotation', value, BSVariableScope.CURRENT)
+
+    def __setPenColor(self, value):
+        """Set pen color
+
+        :pen.color
+        """
+        self.warning("to finalize: __setPenColor")
+        color=self.__scriptBlockStack.current().variable(':pen.color', QColor(0,0,0))
+        value.setAlpha(color.alpha())
+        self.__scriptBlockStack.setVariable(':pen.color', value, BSVariableScope.CURRENT)
+
+    def __setPenSize(self, value, unit=None):
+        """Set pen size
+
+        :pen.size
+        """
+        self.warning("to finalize: __setPenSize")
+        self.__scriptBlockStack.setVariable(':pen.size', value, BSVariableScope.CURRENT)
+
+    def __setPenStyle(self, value):
+        """Set pen style
+
+        :pen.style
+        """
+        self.warning("to finalize: __setPenStyle")
+        self.__scriptBlockStack.setVariable(':pen.style', value, BSVariableScope.CURRENT)
+
+    def __setPenCap(self, value):
+        """Set pen cap
+
+        :pen.cap
+        """
+        self.warning("to finalize: __setPenCap")
+        self.__scriptBlockStack.setVariable(':pen.cap', value, BSVariableScope.CURRENT)
+
+    def __setPenJoin(self, value):
+        """Set pen join
+
+        :pen.join
+        """
+        self.warning("to finalize: __setPenJoin")
+        self.__scriptBlockStack.setVariable(':pen.join', value, BSVariableScope.CURRENT)
+
+    def __setPenOpacity(self, value):
+        """Set pen opacity
+
+        :pen.color
+        """
+        self.warning("to finalize: __setPenOpacity")
+        color=self.__scriptBlockStack.current().variable(':pen.color', QColor(0,0,0))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.setVariable(':pen.color', color, BSVariableScope.CURRENT)
+
+    def __setFillColor(self, value):
+        """Set fill color
+
+        :fill.color
+        """
+        self.warning("to finalize: __setFillColor")
+        color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
+        value.setAlpha(color.alpha())
+        self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
+
+    def __setFillRule(self, value):
+        """Set fill rule
+
+        :fill.rule
+        """
+        self.warning("to finalize: __setFillRule")
+        self.__scriptBlockStack.setVariable(':fill.rule', value, BSVariableScope.CURRENT)
+
+    def __setFillOpacity(self, value):
+        """Set fill opacity
+
+        :fill.color
+        """
+        self.warning("to finalize: __setFillOpacity")
+        color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+        self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
+
+    def __setTextColor(self, value):
+        """Set text color
+
+        :text.color
+        """
+        self.warning("to finalize: __setTextColor")
+        color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
+        value.setAlpha(color.alpha())
+        self.__scriptBlockStack.setVariable(':text.color', value, BSVariableScope.CURRENT)
+
+    def __setTextOpacity(self, value):
+        """Set text opacity
+
+        :text.color
+        """
+        self.warning("to finalize: __setTextOpacity")
+        color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+        self.__scriptBlockStack.setVariable(':text.color', color, BSVariableScope.CURRENT)
+
+    def __setTextFont(self, value):
+        """Set text font
+
+        :text.font
+        """
+        self.warning("to finalize: __setTextFont")
+        self.__scriptBlockStack.setVariable(':text.font', value, BSVariableScope.CURRENT)
+
+    def __setTextSize(self, value, unit=None):
+        """Set text size
+
+        :text.size
+        """
+        self.warning("to finalize: __setTextSize")
+        self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
+
+    def __setTextBold(self, value):
+        """Set text bold
+
+        :text.bold
+        """
+        self.warning("to finalize: __setTextBold")
+        self.__scriptBlockStack.setVariable(':text.bold', value, BSVariableScope.CURRENT)
+
+    def __setTextItalic(self, value):
+        """Set text italic
+
+        :text.italic
+        """
+        self.warning("to finalize: __setTextItalic")
+        self.__scriptBlockStack.setVariable(':text.italic', value, BSVariableScope.CURRENT)
+
+    def __setTextOutline(self, value):
+        """Set text outline
+
+        :text.outline
+        """
+        self.warning("to finalize: __setTextOutline")
+        self.__scriptBlockStack.setVariable(':text.outline', value, BSVariableScope.CURRENT)
+
+    def __setTextLetterSpacing(self, value, unit='PCT'):
+        """Set text letter spacing
+
+        :text.letterSpacing.spacing
+        :text.letterSpacing.unit
+        """
+        self.warning("to finalize: __setTextLetterSpacing")
+        self.__scriptBlockStack.setVariable(':text.letterspacing.spacing', value, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':text.letterspacing.unit', unit, BSVariableScope.CURRENT)
+
+    def __setTextStretch(self, value):
+        """Set text stretch
+
+        :text.stretch
+        """
+        self.warning("to finalize: __setTextStretch")
+        self.__scriptBlockStack.setVariable(':text.stretch', value, BSVariableScope.CURRENT)
+
+    def __setTextHAlignment(self, value):
+        """Set text horizontal alignment
+
+        :text.alignment.horizontal
+        """
+        self.warning("to finalize: __setTextHAlignment")
+        self.__scriptBlockStack.setVariable(':text.alignment.horizontal', value, BSVariableScope.CURRENT)
+
+    def __setTextVAlignment(self, value):
+        """Set text vertical alignment
+
+        :text.alignment.vertical
+        """
+        self.warning("to finalize: __setTextVAlignment")
+        self.__scriptBlockStack.setVariable(':text.alignment.vertical', value, BSVariableScope.CURRENT)
+
+    def __setDrawAntialiasing(self, value):
+        """Set draw antialiasing
+
+        :draw.antialiasing
+        """
+        self.warning("to finalize: __setDrawAntialiasing")
+        self.__scriptBlockStack.setVariable(':draw.antialiasing', value, BSVariableScope.CURRENT)
+
+    def __setDrawBlending(self, value):
+        """Set draw blending mode
+
+        :draw.blendingMode
+        """
+        self.warning("to finalize: __setDrawBlending")
+        self.__scriptBlockStack.setVariable(':draw.blendingmode', value, BSVariableScope.CURRENT)
+
+    def __setCanvasGridColor(self, value):
+        """Set canvas grid color
+
+        :canvas.grid.color
+        """
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenColor(value)
+
+    def __setCanvasGridBgColor(self, value):
+        """Set canvas grid color
+
+        :canvas.grid.bgColor
+        """
+        self.__scriptBlockStack.setVariable(':canvas.grid.bgColor', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridBrushColor(value)
+
+    def __setCanvasGridStyleMain(self, value):
+        """Set canvas grid style
+
+        :canvas.grid.style.main
+        """
+        self.__scriptBlockStack.setVariable(':canvas.grid.style.main', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenStyleMain(BSInterpreter.__CONV_PEN_STYLE[value])
+
+    def __setCanvasGridStyleSecondary(self, value):
+        """Set canvas grid style
+
+        :canvas.grid.style.secondary
+        """
+        self.__scriptBlockStack.setVariable(':canvas.grid.style.secondary', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenStyleSecondary(BSInterpreter.__CONV_PEN_STYLE[value])
+
+    def __setCanvasGridOpacity(self, value):
+        """Set canvas grid opacity
+
+        :canvas.grid.color
+        """
+        color=self.__scriptBlockStack.current().variable(':canvas.grid.color', QColor(0,0,0))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', color.alphaF(), BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenOpacity(color.alphaF())
+
+    def __setCanvasGridSize(self, width, main, unit=None):
+        """Set canvas grid size
+
+        :canvas.grid.size.width
+        :canvas.grid.size.main
+        """
+        self.warning("to finalize: __setCanvasGridSize")
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.width', width, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.grid.size.main', main, BSVariableScope.GLOBAL)
+
+        self.__renderedScene.setGridSize(width, main)
+
+    def __setCanvasRulersColor(self, value):
+        """Set canvas rulers color
+
+        :canvas.rulers.color
+        """
+        self.__scriptBlockStack.setVariable(':canvas.rulers.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenRulerColor(value)
+
+    def __setCanvasRulersBgColor(self, value):
+        """Set canvas rulers color
+
+        :canvas.rulers.bgColor
+        """
+        self.__scriptBlockStack.setVariable(':canvas.rulers.bgColor', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridBrushRulerColor(value)
+
+    def __setCanvasOriginColor(self, value):
+        """Set canvas origin color
+
+        :canvas.origin.color
+        """
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenColor(value)
+
+    def __setCanvasOriginStyle(self, value):
+        """Set canvas origin style
+
+        :canvas.origin.style
+        """
+        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenStyle(BSInterpreter.__CONV_PEN_STYLE[value])
+
+    def __setCanvasOriginOpacity(self, value):
+        """Set canvas origin opacity
+
+        :canvas.origin.color
+        """
+        color=self.__scriptBlockStack.current().variable(':canvas.origin.color', QColor(60,60,128))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenOpacity(color.alphaF())
+
+    def __setCanvasOriginSize(self, value, unit=None):
+        """Set canvas origin size
+
+        :canvas.origin.size
+        """
+        self.warning("to finalize: __setCanvasOriginSize")
+        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginSize(value)
+
+    def __setCanvasOriginPosition(self, absissa, ordinate):
+        """Set canvas origin position
+
+        :canvas.origin.position.absissa
+        :canvas.origin.position.ordinate
+        """
+        self.warning("to finalize: __setCanvasOriginPosition")
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPosition(BSInterpreter.__CONST_HALIGN[absissa], BSInterpreter.__CONST_VALIGN[ordinate])
+        self.__updateGeometry()
+
+    def __setCanvasPositionColor(self, value):
+        """Set canvas position color
+
+        :canvas.position.color
+        """
+        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionPenColor(value)
+
+    def __setCanvasPositionOpacity(self, value):
+        """Set canvas position opacity
+
+        :canvas.position.color
+        """
+        color=self.__scriptBlockStack.current().variable(':canvas.position.color', QColor(60,60,128))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionPenOpacity(color.alphaF())
+
+    def __setCanvasPositionSize(self, value, unit=None):
+        """Set canvas position size
+
+        :canvas.position.size
+        """
+        self.warning("to finalize: __setCanvasPositionSize")
+        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionSize(value)
+
+    def __setCanvasPositionFulfill(self, value):
+        """Set canvas position fulfilled
+
+        :canvas.position.fulfill
+        """
+        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionFulfill(value)
+
+    def __setCanvasBackgroundOpacity(self, value):
+        """Set canvas background opacity
+
+        :canvas.background.opacity
+        """
+        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setBackgroundOpacity(value)
+
+    def __setCanvasBackgroundFromColor(self, value):
+        """Set canvas background from color
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'color', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+
+        pixmap=QPixmap(self.__currentDocumentBounds.size())
+        pixmap.fill(value)
+
+        self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
+
+    def __setCanvasBackgroundFromDocument(self):
+        """Set canvas background from document
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'document', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentDocument.fileName(), BSVariableScope.GLOBAL)
+
+        self.__currentDocument.refreshProjection()
+        pixmap=QPixmap.fromImage(self.__currentDocument.projection(self.__currentDocumentBounds.left(), self.__currentDocumentBounds.top(), self.__currentDocumentBounds.width(), self.__currentDocumentBounds.height()))
+
+        self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
+
+    def __setCanvasBackgroundFromLayerActive(self):
+        """Set canvas background from layer active
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer active', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
+
+        pixmap=EKritaNode.toQPixmap(self.__currentLayer)
+        self.__renderedScene.setBackgroundImage(pixmap, self.__currentLayerBounds)
+
+    def __setCanvasBackgroundFromLayerName(self, value):
+        """Set canvas background from layer name
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        node=EKritaDocument.findFirstLayerByName(self.__currentDocument, value)
+        if node is None:
+            node=self.__currentLayer
+            self.warning(f"Unable to find a layer with given name '*{value}*', active layer will be used instead", currentAst)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer active', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
+        else:
+            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer name', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+
+        pixmap=EKritaNode.toQPixmap(node)
+        self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+
+    def __setCanvasBackgroundFromLayerId(self, value):
+        """Set canvas background from layer id
+
+        :canvas.background.source.type
+        :canvas.background.source.value
+        """
+        try:
+            uuid=QUuid(value)
+            node=EKritaDocument.findLayerById(self.__currentDocument, uuid)
+        except Exception as e:
+            node=None
+
+        if node is None:
+            node=self.__currentLayer
+            self.warning(f"Unable to find a layer with given Id '*{value}*', active layer will be used instead", currentAst)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer active', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
+        else:
+            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer Id', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.value', str(node.uniqueId()), BSVariableScope.GLOBAL)
+
+        pixmap=EKritaNode.toQPixmap(node)
+        self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+
+    def __setExecutionVerbose(self, value):
+        """Set script execution verbose
+
+        :script.execution.verbose
+        """
+        self.__scriptBlockStack.setVariable(':script.execution.verbose', value, BSVariableScope.CURRENT)
+        self.__optionVerboseMode=value
+
+    def __setRandomizeSeed(self, value=None):
+        """Set script randomize seed
+
+        :script.randomize.seed
+        """
+        if value is None or isinstance(value, int) and value<0:
+            random.seed()
+            randSeed=random.randint(0,999999999)
+        else:
+            randSeed=value
+        random.seed(randSeed)
+
+        self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.GLOBAL)
+
+    def __setCanvasGridVisible(self, value):
+        """Show canvas grid
+
+        :canvas.grid.visibility
+        """
+        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridVisible(value)
+
+    def __setCanvasOriginVisible(self, value):
+        """Show canvas origin
+
+        :canvas.origin.visibility
+        """
+        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginVisible(value)
+
+    def __setCanvasPositionVisible(self, value):
+        """Show canvas position
+
+        :canvas.position.visibility
+        """
+        self.__scriptBlockStack.setVariable(':canvas.position.visibility', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionVisible(value)
+
+    def __setCanvasBackgroundVisible(self, value):
+        """Show canvas background
+
+        :canvas.background.visibility
+        """
+        self.__scriptBlockStack.setVariable(':canvas.background.visibility', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setBackgroundVisible(value)
+
+    def __setCanvasRulersVisible(self, value):
+        """Show canvas rulers
+
+        :canvas.rulers.visibility
+        """
+        self.__scriptBlockStack.setVariable(':canvas.rulers.visibility', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridRulerVisible(value)
+
+    def __setDrawShapeStatus(self, value):
+        """Start to draw shape
+
+        :draw.shape.status
+        """
+        self.warning("to finalize: __setDrawShapeStatus")
+        self.__scriptBlockStack.setVariable(':draw.shape.status', value, BSVariableScope.CURRENT)
+
 
     # --------------------------------------------------------------------------
     # Public
@@ -5090,6 +5637,47 @@ class BSInterpreter(QObject):
         else:
             self.print(f"#w#[Already parsed]#", cReturn=False)
 
+    def execute(self, reset=True):
+        """Execute script
+
+        If `reset` is True, all execution environment is reseted to default values:
+        - Default configuration for canvas, position, pen, ...
+        - Stack, Variables, Macro definition are cleaned
+
+        If False, all informations from last execution are kept
+        """
+        if self.__isRunning:
+            # can't execute while previous execution is not yet finished
+            raise EInterpreterInternalError("Interpreter is already running", None)
+
+        self.__isRunning=True
+        self.executionStarted.emit()
+
+        try:
+            returned=self.__executeStart(reset)
+        except Exception as e:
+            self.executionFinished.emit()
+            self.__isRunning=False
+            raise e
+
+        self.executionFinished.emit()
+        self.__isRunning=False
+        return returned
+
+    def executeNext(self):
+        """Execute next instruction
+
+        Notes:
+        - execution must be started
+        - debug mode must be active
+        """
+        if not self.__isRunning:
+            # can't execute if execution not started
+            raise EInterpreterInternalError("Interpreter is not running", None)
+        elif not self.__optionDebugMode:
+            # can't execute if not in debug mode
+            raise EInterpreterInternalError("Interpreter is not in Debug Mode", None)
+
     def parserErrors(self):
         """Return parser errors"""
         return self.__parser.errors()
@@ -5105,6 +5693,8 @@ class BSInterpreter(QObject):
         """Return if interpreter is currently running a script"""
         return self.__isRunning
 
+    # --------------------------------------------------------------------------
+    # options
     def optionDebugMode(self):
         """Return if interpreter is in debug mode or not"""
         return self.__optionDebugMode
@@ -5137,39 +5727,6 @@ class BSInterpreter(QObject):
             raise EInvalidValue("Given `value` must be in range [0 - 30000] (maximum delay is 30s)")
         self.__optionDelay=value
 
-    def execute(self):
-        """Execute script"""
-        if self.__isRunning:
-            # can't execute while previous execution is not yet finished
-            raise EInterpreterInternalError("Interpreter is already running", None)
-
-        self.__isRunning=True
-        self.executionStarted.emit()
-
-        try:
-            returned=self.__executeStart()
-        except Exception as e:
-            self.executionFinished.emit()
-            self.__isRunning=False
-            raise e
-
-        self.executionFinished.emit()
-        self.__isRunning=False
-        return returned
-
-    def executeNext(self):
-        """Execute next instruction
-
-        Notes:
-        - execution must be started
-        - debug mode must be active
-        """
-        if not self.__isRunning:
-            # can't execute if execution not started
-            raise EInterpreterInternalError("Interpreter is not running", None)
-        elif not self.__optionDebugMode:
-            # can't execute if not in debug mode
-            raise EInterpreterInternalError("Interpreter is not in Debug Mode", None)
 
 
 class BSVariableScope(Enum):
@@ -5302,6 +5859,7 @@ class BSScriptBlockStack:
         self.__maxStackSize=maxStackSize
         self.__stack=[]
         self.__current=None
+        self.clear()
 
     def push(self, ast, allowLocalVariable, name=None):
         if len(self.__stack)>0:
@@ -5343,6 +5901,7 @@ class BSScriptBlockStack:
     def clear(self):
         """Clear stack"""
         self.__stack.clear()
+        self.push(ASTItem("<STACK.GLOBAL.VARIABLES>"), True, "<STACK.GLOBAL.VARIABLES>")
 
     def variable(self, name, default=None):
         """Shortcut to get variable from current block in stack"""
