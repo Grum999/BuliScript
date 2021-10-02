@@ -2217,7 +2217,9 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from layer name {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__setCanvasBackgroundFromLayerName(value)
+        layerApplied=self.__setCanvasBackgroundFromLayerName(value)
+        if layerApplied[0]!='layer name':
+            self.warning(f"Unable to find a layer with given name '*{value}*', active layer will be used instead", currentAst)
 
         self.__delay()
         return None
@@ -2237,7 +2239,9 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas background from layer id {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
 
-        self.__setCanvasBackgroundFromLayerId(value)
+        layerApplied=self.__setCanvasBackgroundFromLayerId(value)
+        if layerApplied[0]!='layer id':
+            self.warning(f"Unable to find a layer with given Id '*{value}*', active layer will be used instead", currentAst)
 
         self.__delay()
         return None
@@ -5307,7 +5311,7 @@ class BSInterpreter(QObject):
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', color.alphaF(), BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.GLOBAL)
         self.__renderedScene.setGridPenOpacity(color.alphaF())
 
     def __setCanvasGridSize(self, width, main, unit=None):
@@ -5475,6 +5479,7 @@ class BSInterpreter(QObject):
 
         pixmap=EKritaNode.toQPixmap(self.__currentLayer)
         self.__renderedScene.setBackgroundImage(pixmap, self.__currentLayerBounds)
+        return ('layer active', self.__currentLayer.name())
 
     def __setCanvasBackgroundFromLayerName(self, value):
         """Set canvas background from layer name
@@ -5484,16 +5489,14 @@ class BSInterpreter(QObject):
         """
         node=EKritaDocument.findFirstLayerByName(self.__currentDocument, value)
         if node is None:
-            node=self.__currentLayer
-            self.warning(f"Unable to find a layer with given name '*{value}*', active layer will be used instead", currentAst)
-            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer active', BSVariableScope.GLOBAL)
-            self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
+            return self.__setCanvasBackgroundFromLayerActive()
         else:
             self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer name', BSVariableScope.GLOBAL)
             self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
 
         pixmap=EKritaNode.toQPixmap(node)
         self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+        return ('layer name', value)
 
     def __setCanvasBackgroundFromLayerId(self, value):
         """Set canvas background from layer id
@@ -5508,16 +5511,14 @@ class BSInterpreter(QObject):
             node=None
 
         if node is None:
-            node=self.__currentLayer
-            self.warning(f"Unable to find a layer with given Id '*{value}*', active layer will be used instead", currentAst)
-            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer active', BSVariableScope.GLOBAL)
-            self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
+            return self.__setCanvasBackgroundFromLayerActive()
         else:
-            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer Id', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer id', BSVariableScope.GLOBAL)
             self.__scriptBlockStack.setVariable(':canvas.background.source.value', str(node.uniqueId()), BSVariableScope.GLOBAL)
 
         pixmap=EKritaNode.toQPixmap(node)
         self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
+        return ('layer id', str(node.uniqueId()))
 
     def __setExecutionVerbose(self, value):
         """Set script execution verbose
