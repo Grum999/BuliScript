@@ -212,6 +212,7 @@ class BSInterpreter(QObject):
         # . current layer bounds (QRect)
         self.__currentDocument=None
         self.__currentDocumentBounds=QRect()
+        self.__currentDocumentGeometry=QRectF()
         self.__currentDocumentResolution=1.0
         self.__currentLayer=None
         self.__currentLayerBounds=QRect()
@@ -3790,10 +3791,17 @@ class BSInterpreter(QObject):
             # need to check consistency convertFrom->convertTo
             if convertFrom in ['PX', 'PCT', 'MM', 'INCH']:
                 self.__checkParamDomain(currentAst, fctLabel, 'T-UNIT', convertTo in ['PX', 'PCT', 'MM', 'INCH'], 'conversion of a measure unit can only be converted to another measure unit (PC, PCT, MM, INCH)')
-                returned=BSConvertUnits.convert(value, convertFrom, convertTo, refPct)
+
+                if not refPct is None:
+                    self.__checkParamType(currentAst, fctLabel, 'PCT-REF', refPct, str)
+                    self.__checkParamDomain(currentAst, refPct, 'PCT-REF', refPct in 'WH', 'percentage reference can only be: "W" or "H", use default WIDTH as reference', False)
+
+                returned=BSConvertUnits.convertMeasure(value, convertFrom, convertTo, refPct)
             elif convertFrom in ['DEGREE','RADIAN']:
                 self.__checkParamDomain(currentAst, fctLabel, 'T-UNIT', convertTo in ['DEGREE','RADIAN'], 'conversion of an angle unit can only be converted to another angle unit (DEGREE, RADIAN)')
-                returned=BSConvertUnits.convert(value, convertFrom, convertTo, refPct)
+                if not refPct is None:
+                    self.warning(f"Percentage reference is ignored for ANGLE conversion", currentAst)
+                returned=BSConvertUnits.convertAngle(value, convertFrom, convertTo)
             else:
                 self.__checkParamDomain(currentAst, fctLabel, 'F-UNIT', False, 'can only convert measures and angles units')
 
@@ -5043,14 +5051,58 @@ class BSInterpreter(QObject):
     # --------------------------------------------------------------------------
 
     def __updateGeometry(self):
-        """Update geomtry according to document bounds and origin position"""
-        self.warning("to finalize: __updateGeometry")
+        """Update geometry according to document bounds and origin position"""
+        self.__scriptBlockStack.setVariable(':canvas.geometry.resolution', self.__currentDocumentResolution, BSVariableScope.GLOBAL)
+        # width & height always match to document dimension
         self.__scriptBlockStack.setVariable(':canvas.geometry.width', self.__currentDocumentBounds.width(), BSVariableScope.GLOBAL)
         self.__scriptBlockStack.setVariable(':canvas.geometry.height', self.__currentDocumentBounds.height(), BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.geometry.left', -self.__currentDocumentBounds.width()/2, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.geometry.right', self.__currentDocumentBounds.width()/2, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.geometry.top', self.__currentDocumentBounds.height()/2, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.geometry.bottom', -self.__currentDocumentBounds.height()/2, BSVariableScope.GLOBAL)
+
+        # letft, right, top and bottom are relative to origin
+        absissa=self.__scriptBlockStack.variable(':canvas.origin.position.absissa', 'CENTER')
+        ordinate=self.__scriptBlockStack.variable(':canvas.origin.position.ordinate', 'MIDDLE')
+
+        if absissa=='CENTER':
+            halfWidth=self.__currentDocumentBounds.width()/2
+            self.__currentDocumentGeometry.setLeft(-halfWidth)
+            self.__currentDocumentGeometry.setRight(halfWidth)
+
+            self.__scriptBlockStack.setVariable(':canvas.geometry.left', -halfWidth, BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.geometry.right', halfWidth, BSVariableScope.GLOBAL)
+        elif absissa=='LEFT':
+            self.__currentDocumentGeometry.setLeft(0)
+            self.__currentDocumentGeometry.setRight(self.__currentDocumentBounds.width())
+
+            self.__scriptBlockStack.setVariable(':canvas.geometry.left', 0, BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.geometry.right', self.__currentDocumentBounds.width(), BSVariableScope.GLOBAL)
+        elif absissa=='RIGHT':
+            self.__currentDocumentGeometry.setLeft(self.__currentDocumentBounds.width())
+            self.__currentDocumentGeometry.setRight(0)
+
+            self.__scriptBlockStack.setVariable(':canvas.geometry.left', self.__currentDocumentBounds.width(), BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.geometry.right', 0, BSVariableScope.GLOBAL)
+
+        if ordinate=='MIDDLE':
+            halfHeight=self.__currentDocumentBounds.height()/2
+            self.__currentDocumentGeometry.setTop(halfHeight)
+            self.__currentDocumentGeometry.setBottom(-halfHeight)
+
+            self.__scriptBlockStack.setVariable(':canvas.geometry.top', halfHeight, BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.geometry.bottom', -halfHeight, BSVariableScope.GLOBAL)
+        elif ordinate=='TOP':
+            self.__currentDocumentGeometry.setTop(0)
+            self.__currentDocumentGeometry.setBottom(self.__currentDocumentBounds.height())
+
+            self.__scriptBlockStack.setVariable(':canvas.geometry.top', 0, BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.geometry.bottom', self.__currentDocumentBounds.height(), BSVariableScope.GLOBAL)
+        elif ordinate=='BOTTOM':
+            self.__currentDocumentGeometry.setTop(self.__currentDocumentBounds.height())
+            self.__currentDocumentGeometry.setBottom(0)
+
+            self.__scriptBlockStack.setVariable(':canvas.geometry.top', self.__currentDocumentBounds.height(), BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':canvas.geometry.bottom', 0, BSVariableScope.GLOBAL)
+
+        BSConvertUnits.initMeasures(self.__currentDocumentGeometry, self.__currentDocumentResolution)
+
 
     def __setUnitCanvas(self, value):
         """Set canvas unit
@@ -5982,17 +6034,66 @@ class BSScriptBlockDefinedMacros:
 
 
 class BSConvertUnits:
+    """Convert unit class provide simple methods to convert a unit to another one
+    - Angle (Radian, Degree)
+    - Measures (Pixels, Millimeters, Inches, Percentage)
+        => measures take in account current document geometry (size, resolution) for calculation
+    """
+
+    __CONV_TABLE={}
 
     @staticmethod
-    def convert(value, fromUnit, toUnit, refPct=None):
-        return value
+    def initMeasures(documentGeometry, documentResolution):
+        """Initialise conversion table using:
+        - document size (width, height)
+        - document resolution
+        """
+        if documentResolution<=0:
+            documentResolution=1.0
+
+        BSConvertUnits.__CONV_TABLE={
+                'PXMM':         25.4/documentResolution,
+                'PXINCH':       1/documentResolution,
+                'PXPCTW':       100/documentGeometry.width(),
+                'PXPCTH':       100/documentGeometry.height(),
+
+                'MMPX':         documentResolution/25.4,
+                'MMINCH':       1/25.4,
+                'MMPCTW':       (100*documentResolution)/(documentGeometry.width()*25.4),
+                'MMPCTH':       (100*documentResolution)/(documentGeometry.height()*25.4),
+
+                'INCHPX':       documentResolution,
+                'INCHMM':       25.4,
+                'INCHPCTW':     documentResolution*100/documentGeometry.width(),
+                'INCHPCTH':     documentResolution*100/documentGeometry.height(),
+
+                'PCTPXW':       documentGeometry.width()/100,
+                'PCTPXH':       documentGeometry.height()/100,
+                'PCTMMW':       0.254*documentGeometry.width()/documentResolution,
+                'PCTMMH':       0.254*documentGeometry.height()/documentResolution,
+                'PCTINCHW':     documentGeometry.width()/(100*documentResolution),
+                'PCTINCHH':     documentGeometry.height()/(100*documentResolution),
+
+                'DEGREERADIAN': math.pi/180,
+                'RADIANDEGREE': 180/math.pi
+            }
 
     @staticmethod
     def convertAngle(value, fromUnit, toUnit):
+        if fromUnit!=toUnit:
+            key=fromUnit+toUnit
+            if key in BSConvertUnits.__CONV_TABLE:
+                return value*BSConvertUnits.__CONV_TABLE[key]
         return value
 
     @staticmethod
-    def convertMeasure(value, fromUnit, toUnit, refPct=None):
+    def convertMeasure(value, fromUnit, toUnit, refPct='W'):
+        if fromUnit!=toUnit:
+            key=fromUnit+toUnit
+            if refPct and refPct in 'WH':
+                key+=refPct
+            if key in BSConvertUnits.__CONV_TABLE:
+                return value*BSConvertUnits.__CONV_TABLE[key]
         return value
 
 
