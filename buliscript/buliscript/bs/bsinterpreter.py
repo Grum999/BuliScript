@@ -759,6 +759,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetExecutionVerbose(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Randomize_Seed':
             return self.__executeActionSetRandomizeSeed(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Line':
+            return self.__executeActionDrawShapeLine(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Square':
             return self.__executeActionDrawShapeSquare(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Round_Square':
@@ -2285,6 +2287,26 @@ class BSInterpreter(QObject):
 
     # Draw
     # ----
+    def __executeActionDrawShapeLine(self, currentAst):
+        """Draw line"""
+        fctLabel='Action ***draw line***'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        length=self.__evaluate(currentAst.node(0))
+        unit=self.__evaluate(currentAst.node(1, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, 'LENGTH', length, int, float)
+        if not self.__checkParamDomain(currentAst, fctLabel, 'LENGTH', length>0, f"a positive number is expected (current={length})", False):
+            # if value<=0, exit
+            self.verbose(f"draw square {self.__strValue(length)} {self.__strValue(unit)}      => Cancelled", currentAst)
+            self.__delay()
+            return None
+
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.verbose(f"draw line {self.__strValue(length)} {self.__strValue(unit)}", currentAst)
+        self.__delay()
+        return None
+
     def __executeActionDrawShapeSquare(self, currentAst):
         """Draw square"""
         fctLabel='Action ***draw square***'

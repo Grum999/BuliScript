@@ -1015,9 +1015,29 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
             # todo: add |left arc|right arc|bezier|spline
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:line|round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star)\b",
                                                                     'Drawing/Shapes',
-                                                                    [('draw square \x01<WIDTH> [<UNIT>]',
+                                                                    [('draw line \x01<LENGTH> [<UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw a line]',
+                                                                                # description
+                                                                                'Draw a line from current point\n'
+                                                                                'Given *<LENGTH>* define line lenght and is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
+                                                                                ' - With given **`UNIT`** if provided\n\n'
+                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw line 40`**\n\n'
+                                                                                'Draw a line of 40 pixels length if default canvas unit is **`PX`**\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`draw line 40 MM`**\n\n'
+                                                                                'Draw a line of 40 millimeters length whatever is default canvas unit')),
+                                                                     ('draw square \x01<WIDTH> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a square]',
                                                                                 # description
@@ -4568,6 +4588,7 @@ class BSLanguageDef(LanguageDef):
                       #'Action_Set_Selection',
                       'Action_Set_Script_Execution_Verbose',
                       'Action_Set_Script_Randomize_Seed',
+                      'Action_Draw_Shape_Line',
                       'Action_Draw_Shape_Square',
                       'Action_Draw_Shape_Round_Square',
                       'Action_Draw_Shape_Rect',
@@ -5006,6 +5027,15 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw square', False),
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Line',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw line', False),
                 'Any_Expression',
                 GROptional('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)

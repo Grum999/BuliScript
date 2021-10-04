@@ -209,6 +209,7 @@ Action_Set_Script_Execution
 
 Action_Draw_Shape
         ::= 'draw' (
+                ( 'line' Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'square' Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'round' (
                         ('square' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
