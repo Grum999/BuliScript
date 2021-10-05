@@ -268,6 +268,8 @@ class BSInterpreter(QObject):
         self.__optionDefaulCanvasPositionOpacity=1.0
         self.__optionDefaulCanvasPositionSize=25.0
         self.__optionDefaulCanvasPositionFulfill=True
+        self.__optionDefaulCanvasPositionAxis=False
+        self.__optionDefaulCanvasPositionModel='BASIC'
 
         # define rendered scene, on which grid, origin, ... are drawn
         self.__renderedScene=renderedScene
@@ -547,6 +549,8 @@ class BSInterpreter(QObject):
             self.__setCanvasPositionOpacity(self.__optionDefaulCanvasPositionOpacity)
             self.__setCanvasPositionSize(self.__optionDefaulCanvasPositionSize)
             self.__setCanvasPositionFulfill(self.__optionDefaulCanvasPositionFulfill)
+            self.__setCanvasPositionAxis(self.__optionDefaulCanvasPositionAxis)
+            self.__setCanvasPositionModel(self.__optionDefaulCanvasPositionModel)
 
             self.__setCanvasBackgroundVisible(self.__optionDefaulCanvasBackgroundVisibility)
             self.__setCanvasBackgroundOpacity(self.__optionDefaulCanvasBackgroundOpacity)
@@ -743,6 +747,10 @@ class BSInterpreter(QObject):
             return self.__executeActionSetCanvasPositionSize(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Position_Fulfill':
             return self.__executeActionSetCanvasPositionFulfill(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Position_Axis':
+            return self.__executeActionSetCanvasPositionAxis(currentAst)
+        elif currentAst.id() == 'Action_Set_Canvas_Position_Model':
+            return self.__executeActionSetCanvasPositionModel(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Background_Opacity':
             return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Background_From_Color':
@@ -2140,6 +2148,40 @@ class BSInterpreter(QObject):
         self.verbose(f"set canvas position fulfilled {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.fulfill')}", currentAst)
 
         self.__setCanvasPositionFulfill(value)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasPositionAxis(self, currentAst):
+        """Set canvas position axis
+
+        :canvas.position.axis
+        """
+        fctLabel='Action ***set canvas position axis***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
+
+        self.verbose(f"set canvas position axis {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.axis')}", currentAst)
+
+
+        self.__delay()
+        return None
+
+    def __executeActionSetCanvasPositionModel(self, currentAst):
+        """Set canvas position model
+
+        :canvas.position.model
+        """
+        fctLabel='Action ***set canvas position model***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, 'MODEL', value in BSInterpreter.CONST_POSITIONMODEL, f"model value for position can be: {', '.join(BSInterpreter.CONST_POSITIONMODEL)}")
+
+        self.verbose(f"set canvas position model {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.model')}", currentAst)
+
 
         self.__delay()
         return None

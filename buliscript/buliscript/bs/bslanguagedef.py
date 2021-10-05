@@ -143,6 +143,7 @@ class BSLanguageDef(LanguageDef):
         CONSTANT_BLENDINGMODE = ('constBlendingMode', 'A blending mode')
         CONSTANT_SELECTIONMODE = ('constSelectMode', 'A selection mode')
         CONSTANT_COLORLABEL = ('constColorlabel', 'A color label value')
+        CONSTANT_POSITIONMODEL = ('constPositionModel', 'A position model')
 
         TEXT=('default text', 'a default text')
 
@@ -735,7 +736,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will define an origin size of 40 pixels')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, r"^\x20*\bset\s+canvas\s+position\s+(?:color|opacity|size|fulfilled)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, r"^\x20*\bset\s+canvas\s+position\s+(?:color|opacity|size|fulfilled|axis|model)\b",
                                                                     'Settings/Canvas/Position',
                                                                     [('set canvas position color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
@@ -794,6 +795,33 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas position size 20 PX`**\n\n'
                                                                                 'Will define an position size of 20 pixels')),
+                                                                     ('set canvas position axis \x01<SWITCH>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas position axis]',
+                                                                                # description
+                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas position axis visible or not\n\n'
+                                                                                'Given *<SWITCH>* can be:\n'
+                                                                                ' - **`ON`**: draw position axis\n'
+                                                                                ' - **`OFF`**: do not draw position axis',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas position axis ON`**\n\n'
+                                                                                'Will define a position axis as visible')),
+                                                                     ('set canvas position model \x01<MODEL>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas position model]',
+                                                                                # description
+                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas position model\n\n'
+                                                                                'Given *<MODEL>* can be:\n'
+                                                                                ' - **`BASIC`**: basic position model, a simple triangle\n'
+                                                                                ' - **`ARROWHEAD`**: a position model as arrow head shape\n'
+                                                                                ' - **`UPWARD`**: a position model as upward arrow',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas position model BASIC`**\n\n'
+                                                                                'Will define a basic model to render position on canvas')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity|from\s+(?:document|color|layer\s+(?:name|active|id)))\b",
@@ -2325,7 +2353,10 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script\s+randomize|script|canvas\s+background\s+from\s+layer|canvas\s+background\s+from|canvas\s+background)))"
+                                                                       r"(?:set(?:\s+(?:"
+                                                                            "unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|"
+                                                                            "script\s+execution|script\s+randomize|script|"
+                                                                            "canvas\s+background\s+from\s+layer|canvas\s+background\s+from|canvas\s+background|canvas\s+origin|canvas\s+grid|canvas\s+position|canvas\s+rulers|canvas\s+)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
                                                                        r"|(?:clear|apply(?:\s+to)?)"
@@ -3806,6 +3837,11 @@ class BSLanguageDef(LanguageDef):
                                                                     'c',
                                                                     onInitValue=self.__initTokenUpper),
 
+            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, r"\b(?:BASIC|ARROWHEAD|UPWARD)\b",
+                                                                    'Constants/Canvas/Position',['BASIC','ARROWHEAD','UPWARD'],
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
+
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bmath\.(?:pi|e|phi)\b",
                                                                     'Variables/Math',
@@ -4493,6 +4529,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, '#24ff8d', True, False),
 
             (BSLanguageDef.ITokenType.TEXT, '#ffffff', False, False),
             (BSLanguageDef.ITokenType.COMMENT, '#999999', False, True),
@@ -4584,6 +4621,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, '#24ff8d', True, False),
 
             (BSLanguageDef.ITokenType.TEXT, '#6aafec', False, False),
             (BSLanguageDef.ITokenType.COMMENT, '#c278da', False, False),
@@ -4680,6 +4718,8 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Position_Size',
                       'Action_Set_Canvas_Position_Opacity',
                       'Action_Set_Canvas_Position_Fulfill',
+                      'Action_Set_Canvas_Position_Axis',
+                      'Action_Set_Canvas_Position_Model',
                       'Action_Set_Canvas_Background_Opacity',
                       'Action_Set_Canvas_Background_From_Document',
                       'Action_Set_Canvas_Background_From_Layer_Name',
@@ -5069,6 +5109,22 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position fulfilled', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Position_Axis',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position axis', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Position_Model',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position model', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -5901,6 +5957,7 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_COLORLABEL),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL),
                       'List_Value',
                     ),
                 GRNoneOrMore('List_Index_Expression')

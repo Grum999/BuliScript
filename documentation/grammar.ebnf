@@ -183,7 +183,11 @@ Action_Set_Canvas
 
                 ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
-                'position' ( 'fulfilled' Evaluate_Boolean_Expression ) |
+                'position' (
+                    ( 'fulfilled' Evaluate_Boolean_Expression ) |
+                    ( 'model' PositionModel_Expression ) |
+                    ( 'axis' Evaluate_Boolean_Expression )
+                ) |
                 'background' 'from' (
                         ( 'color' Color_Expression ) |
                         ( 'layer' ((('name' | 'id') Evaluate_String_Expression ) | 'Active' )) |
@@ -499,6 +503,9 @@ PositionH_Expression
 
 PositionV_Expression
         ::= ( 'TOP' | 'MIDDLE' | 'CENTER' ) | Function | Variable
+
+PositionModel_Expression
+        ::= ( 'BASIC' | 'ARROWHEAD' | 'UPWARD' ) | Function | Variable
 
 BlendingMode_Expression
         ::= ( 'NORMAL' |
