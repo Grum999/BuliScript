@@ -1992,7 +1992,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ignoreIndent=True),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint(?:\s+formatted)?(?:\s+error|\s+warning|\s+verbose|\s+valid)?\b",
                                                                     'User interface/Console',
                                                                     [('print \x01<INFO>[, <INFO>]',
                                                                             TokenizerRule.formatDescription(
@@ -2004,6 +2004,109 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`print "hello!"`**\n\n'
                                                                                 'Will print text `hello!` to console')),
+                                                                     ('print formatted \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted information to console]',
+                                                                                # description
+                                                                                'Print given formatted *<INFO>* to console\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, with the `world` word formatted as green bold text')),
+                                                                     ('print error \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print error information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as error\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as error in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print error "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as an error information in console')),
+                                                                     ('print warning \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print warning information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as warning\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as warning in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print warning "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as a warning information in console')),
+                                                                     ('print verbose \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print verbose information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as verbose\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as verbose in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print verbose "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as a verbose information in console')),
+                                                                     ('print valid \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print valid information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as valid\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as valid in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print valid "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as a valid information in console')),
+                                                                     ('print formatted error \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted error information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as error\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as error in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted error "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a error information in console, with the `world` word formatted as green bold text')),
+                                                                     ('print formatted warning \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted warning information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as warning\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as warning in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted warning "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a warning information in console, with the `world` word formatted as green bold text')),
+                                                                     ('print formatted verbose \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted verbose information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as verbose\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as verbose in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted verbose "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a verbose information in console, with the `world` word formatted as green bold text')),
+                                                                     ('print formatted valid \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted valid information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as valid\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as valid in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted valid "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a valid information in console, with the `world` word formatted as green bold text')),
                                                                     ],
                                                                     'A'),
 
@@ -4632,6 +4735,15 @@ class BSLanguageDef(LanguageDef):
                       'Action_Canvas_Show_Rulers',
                       'Action_Canvas_Hide_Rulers',
                       'Action_UIConsole_Print',
+                      'Action_UIConsole_Print_Formatted',
+                      'Action_UIConsole_Print_Error',
+                      'Action_UIConsole_Print_Formatted_Error',
+                      'Action_UIConsole_Print_Warning',
+                      'Action_UIConsole_Print_Formatted_Warning',
+                      'Action_UIConsole_Print_Verbose',
+                      'Action_UIConsole_Print_Formatted_Verbose',
+                      'Action_UIConsole_Print_Valid',
+                      'Action_UIConsole_Print_Formatted_Valid',
                       'Action_UIDialog_Message',
                       'Action_UIDialog_Boolean_Input',
                       'Action_UIDialog_Integer_Input',
@@ -5363,6 +5475,78 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Error',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print error', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Warning',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print warning', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Verbose',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print verbose', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Valid',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print valid', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Error',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted error', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Warning',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted warning', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Verbose',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted verbose', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Valid',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted valid', False),
                 GROneOrMore('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )

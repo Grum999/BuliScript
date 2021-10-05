@@ -275,7 +275,7 @@ Action_Canvas
 
 
 Action_UIConsole
-        ::= 'print'
+        ::= 'print' 'formatted'? ('error'|'warning'|'verbose'|'valid')?
             Any_Expression+
 
 

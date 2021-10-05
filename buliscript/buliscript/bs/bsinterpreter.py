@@ -845,6 +845,24 @@ class BSInterpreter(QObject):
             return self.__executeActionCanvasHideRulers(currentAst)
         elif currentAst.id() == 'Action_UIConsole_Print':
             return self.__executeActionUIConsolePrint(currentAst)
+        elif currentAst.id() == 'Action_UIConsole_Print_Formatted':
+            return self.__executeActionUIConsolePrint(currentAst, formatted=True)
+        elif currentAst.id() == 'Action_UIConsole_Print_Error':
+            return self.__executeActionUIConsolePrint(currentAst, consoleType=WConsoleType.ERROR)
+        elif currentAst.id() == 'Action_UIConsole_Print_Warning':
+            return self.__executeActionUIConsolePrint(currentAst, consoleType=WConsoleType.WARNING)
+        elif currentAst.id() == 'Action_UIConsole_Print_Verbose':
+            return self.__executeActionUIConsolePrint(currentAst, consoleType=WConsoleType.INFO)
+        elif currentAst.id() == 'Action_UIConsole_Print_Valid':
+            return self.__executeActionUIConsolePrint(currentAst, consoleType=WConsoleType.VALID)
+        elif currentAst.id() == 'Action_UIConsole_Print_Formatted_Error':
+            return self.__executeActionUIConsolePrint(currentAst, formatted=True, consoleType=WConsoleType.ERROR)
+        elif currentAst.id() == 'Action_UIConsole_Print_Formatted_Warning':
+            return self.__executeActionUIConsolePrint(currentAst, formatted=True, consoleType=WConsoleType.WARNING)
+        elif currentAst.id() == 'Action_UIConsole_Print_Formatted_Verbose':
+            return self.__executeActionUIConsolePrint(currentAst, formatted=True, consoleType=WConsoleType.INFO)
+        elif currentAst.id() == 'Action_UIConsole_Print_Formatted_Valid':
+            return self.__executeActionUIConsolePrint(currentAst, formatted=True, consoleType=WConsoleType.VALID)
         elif currentAst.id() == 'Action_UIDialog_Message':
             return self.__executeActionUIDialogMessage(currentAst)
         elif currentAst.id() == 'Action_UIDialog_Boolean_Input':
@@ -3166,7 +3184,7 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
-    def __executeActionUIConsolePrint(self, currentAst):
+    def __executeActionUIConsolePrint(self, currentAst, formatted=False, consoleType=WConsoleType.NORMAL):
         """Print"""
         fctLabel='Action ***print***'
 
@@ -3176,9 +3194,12 @@ class BSInterpreter(QObject):
 
         printed=[]
         for node in currentAst.nodes():
-            printed.append(str(self.__strValue(self.__evaluate(node))))
+            value=self.__evaluate(node)
+            if not formatted and isinstance(value, str):
+                value=WConsole.escape(value)
+            printed.append(str(self.__strValue(value)))
 
-        self.print(' '.join(printed))
+        self.print(' '.join(printed), consoleType)
 
         #self.__delay()
         return None
