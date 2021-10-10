@@ -57,7 +57,8 @@ class BSDockWidgetLangageQuickHelp(WDockWidget):
         self.__title=QLabel(self)
         self.__title.setSizePolicy(QSizePolicy(QSizePolicy.Preferred,QSizePolicy.Maximum))
         self.__title.setText(i18n("Language Quick Help"))
-        self.__title.setStyleSheet("QLabel { background-color: palette(light); padding: 6; font-weight: bold; }")
+        #self.__title.setStyleSheet("QLabel { background-color: palette(light); padding: 6; font-weight: bold; }")
+        self.__title.setStyleSheet("QLabel { font-weight: bold; }")
 
         self.__documentation=QTextBrowser(self)
         self.__documentation.setOpenExternalLinks(True)

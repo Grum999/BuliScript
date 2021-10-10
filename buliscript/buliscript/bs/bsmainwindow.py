@@ -42,6 +42,7 @@ from PyQt5.QtWidgets import (
     )
 
 from .bslanguagedef import BSLanguageDef
+from .bsrenderer import BSWRendererScene
 
 from buliscript.pktk.modules.uitheme import UITheme
 from buliscript.pktk.modules.utils import loadXmlUi
@@ -157,7 +158,62 @@ class BSMainWindow(QMainWindow):
 
         self.__initStatusBar()
         self.__initBSDocuments()
+        self.__initCanvas()
 
+        # tweak a little bit how tabs are rendered
+        self.setStyleSheet("""
+            QTabBar {
+                background: palette(Base);
+                padding: 0px;
+                border: 0px none;
+                margin: 0px;
+                qproperty-drawBase: 0;
+            }
+
+            QTabBar::tab {
+                height: 3ex;
+                padding: 0px 1ex;
+                border-left: 0px none;
+                border-right: 0px none;
+                border-bottom: 1px solid palette(Base);
+                border-top: 3px solid palette(Base);
+                background: palette(Base);
+                color:palette(Text);
+                margin: 0px;
+            }
+            QTabBar::tab:selected {
+                border-top: 3px solid palette(Highlight);
+                background: palette(Window);
+                border-bottom: 1px solid palette(Window);
+            }
+
+            QTabBar::tab:hover {
+                background: palette(Highlight);
+                border-top: 3px solid palette(Highlight);
+                color: palette(HighlightedText);
+            }
+            QTabBar::close-button {
+                height: 8px;
+                width: 8px;
+            }
+            QTabBar::scroller {
+                width: 4ex;
+            }
+
+            BSDocuments>* {
+                padding: 4px 0 0 0;
+                margin: -2px;
+                border: 0px none;
+                background: palette(Window);
+
+            }
+            BSDocuments::pane{
+                padding: 0px;
+                margin: 0px;
+                border: 0px none;
+                background: palette(Window);
+            }
+        """)
 
     def __initStatusBar(self):
         """Initialise status bar
@@ -207,6 +263,15 @@ class BSMainWindow(QMainWindow):
         """Initialise documents manager"""
         self.twDocuments.initialise(self, self.__uiController)
 
+    def __initCanvas(self):
+        """Initialise canvas"""
+        self.gvCanvas.setScene(self.__uiController.renderedScene())
+        self.gvCanvas.zoomChanged.connect(self.__canvasZoomChanged)
+        self.__uiController.renderedScene().setSize(20000,20000)
+        self.__uiController.renderedScene().sceneUpdated.connect(self.__canvasSceneUpdated)
+
+        self.lblZoomLevel.mousePressEvent=lambda x: self.gvCanvas.setZoom(1.0)
+        self.__canvasSceneUpdated({})
 
     def initMainView(self):
         """Initialise main view content"""
@@ -312,7 +377,6 @@ class BSMainWindow(QMainWindow):
         """
         self.__uiController.buildmenuFileRecent(self.menuFileRecent)
 
-
     def __actionNotYetImplemented(self, v=None):
         """"Method called when an action not yet implemented is triggered"""
         QMessageBox.warning(
@@ -320,6 +384,30 @@ class BSMainWindow(QMainWindow):
                 self.__uiController.name(),
                 i18n(f"Sorry! Action has not yet been implemented ({v})")
             )
+
+    def __canvasZoomChanged(self, zoomLevel):
+        """Update zoom level for canvas"""
+        self.lblZoomLevel.setText(f"{100*zoomLevel:.2f}%")
+
+    def __canvasSceneUpdated(self, position):
+        """Scene has been updated, refresh position&rotation info"""
+        if 'r' in position:
+            rotation=round(position['r'], 2)
+
+            textR=''
+            if rotation>0:
+                textR=f'Left'
+            elif rotation<0:
+                textR=f'Right'
+
+            self.lblNfoRotation.setText(f"Rotation: {abs(rotation)%360:.2f}° {textR}")
+        else:
+            self.lblNfoRotation.setText('')
+
+        if 'x' in position and 'y' in position:
+            self.lblNfoPosition.setText(f"Position: {position['x']:.2f} {position['y']:.2f}")
+        else:
+            self.lblNfoPosition.setText('')
 
     # endregion: define actions method -----------------------------------------
 

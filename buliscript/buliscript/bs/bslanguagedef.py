@@ -62,6 +62,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_SET_TEXT = ('setText', 'A <SET TEXT> action')
         ACTION_SET_DRAW = ('setDraw', 'A <SET DRAW> action')
         ACTION_SET_CANVAS_GRID = ('setCanvasGrid', 'A <SET CANVAS GRID> action')
+        ACTION_SET_CANVAS_RULERS = ('setCanvasRuler', 'A <SET CANVAS RULER> action')
         ACTION_SET_CANVAS_ORIGIN = ('setCanvasOrigin', 'A <SET CANVAS ORIGIN> action')
         ACTION_SET_CANVAS_POSITION = ('setCanvasPosition', 'A <SET CANVAS POSITION> action')
         ACTION_SET_CANVAS_BACKGROUND = ('setCanvasBackground', 'A <SET CANVAS POSITION> action')
@@ -75,6 +76,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_DRAW_PEN = ('drawPen', 'A <PEN> action')
         ACTION_DRAW_MOVE = ('drawMove', 'A <MOVE> action')
         ACTION_DRAW_TURN = ('drawTurn', 'A <TURN> action')
+        ACTION_DRAW_OPTION = ('drawOption', 'A <DRAW> option')
 
         ACTION_CANVAS = ('canvas', 'A <CANVAS> action')
 
@@ -142,6 +144,7 @@ class BSLanguageDef(LanguageDef):
         CONSTANT_BLENDINGMODE = ('constBlendingMode', 'A blending mode')
         CONSTANT_SELECTIONMODE = ('constSelectMode', 'A selection mode')
         CONSTANT_COLORLABEL = ('constColorlabel', 'A color label value')
+        CONSTANT_POSITIONMODEL = ('constPositionModel', 'A position model')
 
         TEXT=('default text', 'a default text')
 
@@ -343,7 +346,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_TEXT, r"^\x20*\bset\s+text\s+(?:color|opacity|font|size|bold|italic|outline|letter\s+spacing|stretch|horizontal\s+alignment|vertical\s+alignment|position)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_TEXT, r"^\x20*\bset\s+text\s+(?:color|opacity|font|size|bold|italic|letter\s+spacing|stretch|horizontal\s+alignment|vertical\s+alignment|position)\b",
                                                                     'Settings/Text',
                                                                     [('set text color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
@@ -429,18 +432,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text italic ON`**\n\n'
                                                                                 'Will define text as italic')),
-                                                                     ('set text outline \x01<SWITCH>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define text style: outline]',
-                                                                                # description
-                                                                                'Set text style outline\n\n'
-                                                                                'Given *<SWITCH>* can be:\n'
-                                                                                ' - **`ON`**: enable outline text\n'
-                                                                                ' - **`OFF`**: disable outline text',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set text outline ON`**\n\n'
-                                                                                'Will define text as outline')),
                                                                      ('set text letter spacing \x01<SPACING> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text letter spacing]',
@@ -503,7 +494,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode|opacity)\b",
                                                                     'Settings/Draw',
                                                                     [('set draw antialiasing \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -563,35 +554,51 @@ class BSLanguageDef(LanguageDef):
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set draw blending MULTIPLY`**\n\n'
-                                                                                'Will define blending mode as MULTIPLY'))
+                                                                                'Will define blending mode as MULTIPLY')),
+                                                                     ('set draw opacity \x01<OPACITY>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define global opacity]',
+                                                                                # description
+                                                                                'Set global opacity\n\n'
+                                                                                'Given *<OPACITY>* can be:\n'
+                                                                                ' - **`int`**: a number; integer values from 0 to 255\n'
+                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
+                                                                                'The global opacity is applied on all drawing action (shapes, images, ...)',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set global opacity 128`**\n'
+                                                                                '**`set global opacity 0.5`**\n\n'
+                                                                                'Will both define a global opacity of 50%'))
                                                                     ],
                                                                     'A'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, r"^\x20*\bset\s+canvas\s+grid\s+(?:color|style|opacity|size)\b",
                                                                     'Settings/Canvas/Grid',
-                                                                    [('set canvas grid color \x01<COLOR>',
+                                                                    [('set canvas grid color \x01<COLOR> [<BGCOLOR>]',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas grid color]',
+                                                                                'Action [Define canvas grid colors]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
+                                                                                'The *<BGCOLOR>* define background color outside drawing area and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid color #880000FF`**\n\n'
                                                                                 'Will set a blue grid with 50% opacity')),
-                                                                     ('set canvas grid style \x01<STYLE>',
+                                                                     ('set canvas grid style \x01<STYLE-MAIN> [<STYLE-SECONDARY>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid style]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set stroke style for canvas grid\n\n'
-                                                                                'Given *<STYLE>* can be:\n'
+                                                                                'Given *<STYLE-MAIN>* and *<STYLE-SECONDARY>* can be:\n'
                                                                                 ' - **`SOLID`**\n'
                                                                                 ' - **`DASH`**\n'
                                                                                 ' - **`DOT`**\n'
                                                                                 ' - **`DASHDOT`**\n'
-                                                                                ' - **`NONE`**',
+                                                                                ' - **`NONE`**\n\n'
+                                                                                'When *<STYLE-SECONDARY>* is omitted, given *<STYLE-MAIN>* is applied to both grid lines',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid style DOT`**\n\n'
@@ -611,19 +618,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas grid opacity 128`**\n'
                                                                                 '**`set canvas grid opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas grid size \x01<MAJOR> [<MINOR>] [<UNIT>]',
+                                                                     ('set canvas grid size \x01<WIDTH> [<MAIN>] [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas grid size]',
                                                                                 # description
                                                                                 '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
                                                                                 'Set canvas grid size\n\n'
-                                                                                'Given *<MAJOR>* is a positive number that define major grid line size, expressed:\n'
+                                                                                'Given *<WIDTH>* is a positive number that define grid size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<MINOR>*, if provided, is a zero or positive number that define minor grid line size, expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                'Given *<MAIN>*, if provided, is a positive integer greater than zero that define frequency of main grid line\n\n'
+                                                                                'Given *<UNIT>* if provided is applied to <WIDTH> and can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
                                                                                 ' - **`MM`**: use millimeters\n'
@@ -631,10 +636,26 @@ class BSLanguageDef(LanguageDef):
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid size 50 PX`**\n\n'
-                                                                                'Will define a major grid for which line is drawn every 50 pixels\n\n'
+                                                                                'Will define a grid for which line is drawn every 50 pixels\n\n'
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas grid size 10 5 MM`**\n\n'
-                                                                                'Will define a major grid for which line is drawn every 10 millimeters and a minor grid drawn every 5 millimeters')),
+                                                                                'Will define a main grid for which line is drawn every 10 millimeters and a main grid line drawn every 5 grid line')),
+                                                                    ],
+                                                                    'A'),
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, r"^\x20*\bset\s+canvas\s+rulers\s+(?:color)\b",
+                                                                    'Settings/Canvas/Rulers',
+                                                                    [('set canvas rulers color \x01<COLOR> [<BGCOLOR>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas rulers colors]',
+                                                                                # description
+                                                                                '*Canvas rulers is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set color for canvas rulers\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
+                                                                                'The *<BGCOLOR>* define background color and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas rulers color #0000FF #FFFFFF`**\n\n'
+                                                                                'Will set a blue ruler on white background'))
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size|position)\b",
@@ -718,7 +739,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will define an origin size of 40 pixels')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, r"^\x20*\bset\s+canvas\s+position\s+(?:color|opacity|size|fulfilled)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, r"^\x20*\bset\s+canvas\s+position\s+(?:color|opacity|size|fulfilled|axis|model)\b",
                                                                     'Settings/Canvas/Position',
                                                                     [('set canvas position color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
@@ -777,9 +798,36 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set canvas position size 20 PX`**\n\n'
                                                                                 'Will define an position size of 20 pixels')),
+                                                                     ('set canvas position axis \x01<SWITCH>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas position axis]',
+                                                                                # description
+                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas position axis visible or not\n\n'
+                                                                                'Given *<SWITCH>* can be:\n'
+                                                                                ' - **`ON`**: draw position axis\n'
+                                                                                ' - **`OFF`**: do not draw position axis',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas position axis ON`**\n\n'
+                                                                                'Will define a position axis as visible')),
+                                                                     ('set canvas position model \x01<MODEL>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas position model]',
+                                                                                # description
+                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas position model\n\n'
+                                                                                'Given *<MODEL>* can be:\n'
+                                                                                ' - **`BASIC`**: basic position model, a simple triangle\n'
+                                                                                ' - **`ARROWHEAD`**: a position model as arrow head shape\n'
+                                                                                ' - **`UPWARD`**: a position model as upward arrow',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas position model BASIC`**\n\n'
+                                                                                'Will define a basic model to render position on canvas')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity|from\s+(?:document|color|layer\s+(?:name|active|id)))\b",
                                                                     'Settings/Canvas/Background',
                                                                     [('set canvas background opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
@@ -795,6 +843,62 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`set canvas background opacity 128`**\n'
                                                                                 '**`set canvas background opacity 0.5`**\n\n'
                                                                                 'Will both define a canvas background opacity of 50%')),
+                                                                     ('set canvas background from color \x01<COLOR>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from color]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from a given color\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from color #FFFFFF`**\n\n'
+                                                                                'Will define a white canvas background')),
+                                                                     ('set canvas background from document',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from document]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from current document projection',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from document`**\n\n'
+                                                                                'Will define current document projection as canvas background')),
+                                                                     ('set canvas background from layer active',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from active layer]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from current layer',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from layer active`**\n\n'
+                                                                                'Will define current layer content as canvas background')),
+                                                                     ('set canvas background from layer name \x01<NAME>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from defined layer]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from layer designed by given name\n\n'
+                                                                                'Given *<NAME>* can be a **`string`** or an expression returning a **`string`**\n'
+                                                                                'The first layer for which name match given reference is used; if no layer is found, active layer will be used',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from layer name "test"`**\n\n'
+                                                                                'Will define layer `"test"` content as canvas background')),
+                                                                     ('set canvas background from layer id \x01<ID>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define canvas background content from defined layer]',
+                                                                                # description
+                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set canvas background from layer designed by given ID\n\n'
+                                                                                'Given *<ID>* can be a **`string`** or an expression returning a **`string`**\n'
+                                                                                'If no layer is found, active layer will be used',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set canvas background from layer id "{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}"`**\n\n'
+                                                                                'Will define layer `{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}` content as canvas background')),
+
                                                                     ],
                                                                     'A'),
 
@@ -942,9 +1046,29 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
             # todo: add |left arc|right arc|bezier|spline
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:line|round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star)\b",
                                                                     'Drawing/Shapes',
-                                                                    [('draw square \x01<WIDTH> [<UNIT>]',
+                                                                    [('draw line \x01<LENGTH> [<UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw a line]',
+                                                                                # description
+                                                                                'Draw a line from current point\n'
+                                                                                'Given *<LENGTH>* define line lenght and is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
+                                                                                ' - With given **`UNIT`** if provided\n\n'
+                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw line 40`**\n\n'
+                                                                                'Draw a line of 40 pixels length if default canvas unit is **`PX`**\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`draw line 40 MM`**\n\n'
+                                                                                'Draw a line of 40 millimeters length whatever is default canvas unit')),
+                                                                     ('draw square \x01<WIDTH> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a square]',
                                                                                 # description
@@ -1150,17 +1274,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - Center is current position\n'
                                                                                 ' - Dimension is original image dimension\n'
                                                                                 ' - Content is defined by given reference <IMAGE>\n\n'
-                                                                                'Given *<IMAGE>* is a string reference to an image:\n'
-                                                                                ' - Can be full path/file name to a PNG/JPEG image\n'
-                                                                                ' - Can be a reference to a pre-loaded image',
+                                                                                'Given *<IMAGE>* is a string reference of an image previously loaded into library',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`draw image "~/Images/test.png"`**\n\n'
-                                                                                'Draw image file "~/Images/test.png" to current position**\n\n'
-                                                                                'Following instruction:\n'
                                                                                 '**`draw image "testing image"`**\n\n'
-                                                                                'Draw pre-loaded image referenced by  id "testing image" to current position**')),
-                                                                    ('draw scaled image \x01<IMAGE> <WIDTH> <HEIGHT> [<UNIT>]',
+                                                                                'Draw image referenced in image library by id "testing image" to current position**')),
+                                                                    ('draw scaled image \x01<IMAGE> <WIDTH> [<UNIT-WIDTH>] <HEIGHT> [<UNIT-HEIGHT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw an image (using given dimensions)]',
                                                                                 # description
@@ -1168,16 +1287,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - Center is current position\n'
                                                                                 ' - Dimension is scaled to given <WIDTH> and <HEIGHT>\n'
                                                                                 ' - Content is defined by given reference <IMAGE>\n\n'
-                                                                                'Given *<IMAGE>* is a string reference to an image:\n'
-                                                                                ' - Can be full path/file name to a PNG/JPEG image\n'
-                                                                                ' - Can be a reference to a pre-loaded image'
-                                                                                'Given *<WIDTH>* is a positive number expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<HEIGHT>* is a positive number expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                'Given *<IMAGE>* is a string reference of an image previously loaded into library'
+                                                                                'Given *<WIDTH>* is a number expressed:\n'
+                                                                                ' - With given **`UNIT-WIDTH`** if provided\n'
+                                                                                ' - With given **`UNIT-HEIGHT`** if provided and **`UNIT-WIDTH`** is not proivded\n'
+                                                                                ' - With default canvas unit otherwise\n'
+                                                                                'When given *<WIDTH>* is *`0`*, image is scaled using given *<HEIGHT>* and keep ratio to calculate width\n\n'
+                                                                                'Given *<HEIGHT>* is a number expressed:\n'
+                                                                                ' - With given **`UNIT-HEIGHT`** if provided\n'
+                                                                                ' - With default canvas unit otherwise\n'
+                                                                                'When given *<HEIGHT>* is *`0`*, image is scaled using given *<WIDTH>* and keep ratio to calculate height\n\n'
+                                                                                'Given *<UNIT-WIDTH>* and *<UNIT-HEIGHT>*, if provided can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
                                                                                 ' - **`RPCT`**: use percentage relative to original image size\n'
@@ -1185,11 +1305,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`INCH`**: use inches',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`draw scaled image "~/Images/test.png" 50 50 RPCT`**\n\n'
-                                                                                'Draw image file "~/Images/test.png" to current position, scaled at 50% of original width and height**\n\n'
-                                                                                'Following instruction:\n'
                                                                                 '**`draw image "testing image" 100 150 PX`**\n\n'
-                                                                                'Draw pre-loaded image referenced by  id "testing image" to current position, scaled at 100 pixels width and 150 pixels height**')),
+                                                                                'Draw image referenced by id "testing image" to current position, scaled at 100 pixels width and 150 pixels height**')),
                                                                     ('draw text \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a text]',
@@ -1243,28 +1360,116 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, r"^\x20*\b(?:clear\s+canvas|apply\s+to\s+layer)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, r"^\x20*\b(?:clear\s+canvas|fill\s+canvas\s+from(?:\s+color|\s+image))\b",
                                                                     'Drawing/Miscellaneous',
                                                                     [('clear canvas',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Clear canvas content]',
                                                                                 # description
-                                                                                'Clear current canvas',
+                                                                                'Clear current canvas (set all pixels as fully transparent)',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`clear canvas`**\n\n'
                                                                                 'Will clear all content already drawn on canvas')),
-                                                                    ('apply to layer',
+                                                                    ('fill canvas from color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Apply result to *Krita*\'s layer]',
+                                                                                'Action [Fill current canvas with given color]',
                                                                                 # description
-                                                                                'Apply current canvas content to current *Krita*\'s layer (current layer content is replaced by canvas content)',
+                                                                                'Fill canvas with given color *<COLOR>*)',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`apply to layer`**\n\n'
-                                                                                'All content drawn on canvas is applied to current layer')),
+                                                                                '**`fill canvas from color #ff0000`**\n\n'
+                                                                                'Fill entirely the canvas with a red color')),
+                                                                    ('fill canvas from image \x01<IMAGE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill current canvas with given image]',
+                                                                                # description
+                                                                                'Fill canvas with image referenced by *<IMAGE>* into library\n'
+                                                                                'Image is *always* positionned in Top-Left corner of canvas, whatever the origin of position is\n'
+                                                                                'If image is too small to fill entirely the canvas, right/bottom part not overrided by image stay unchanged\n'
+                                                                                'If image is too large to fit in the canvas, right/bottom part of image are cropped\n\n'
+                                                                                'Following options can be used:\n'
+                                                                                '- **`with tiling`**: image is used as a tile pattern to fill canvas (image is repeated horizontaly and verticaly)\n'
+                                                                                '- **`with scale`**: image is scaled to given size'
+                                                                                '- **`with offset`**: image is translated by given offset'
+                                                                                '- **`with rotation`**: image is rotated with given angle\n\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`fill canvas from image "test"`***\n'
+                                                                                'Fill canvas with image\n\n'
+                                                                                '**`fill canvas from image "test"`***\n'
+                                                                                '**`     with tiling`***\n'
+                                                                                '**`     with offset -50 RPCT -50 RPCT`***\n'
+                                                                                'Fill canvas with repeated image, for which an offset of 50% of image size has been applied')),
                                                                     ],
                                                                     'A'),
+
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, r"\x20*\bwith(?:\s+(?:offset|scale|tiling|rotation\s+(?:left|right)))\b",
+                                                                    'Drawing/Miscellaneous/Options',
+                                                                    [('with tiling',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Activate tiling fill mode')),
+                                                                    ('with offset \x01<ABSISSA> [<ABSISSA-UNIT>] <ORDINATE> [<ORDINATE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply an offset to image use to fill canvas\n'
+                                                                                'Given *<ABSISSA>* define horizontal offset to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<ABSISSA-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ABSISSA-UNIT>`** if provided\n\n'
+                                                                                'Given *<ORDINATE>* define vertical offset to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<ORDINATE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ORDINATE-UNIT>`** if provided\n\n'
+                                                                                'Given *<ABSISSA-UNIT>* and *<ORDINATE-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`RPCT`**: use percentage relative to image size\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches')),
+                                                                    ('with scale \x01<WIDTH> [<WIDTH-UNIT>] <HEIGHT> [<HEIGHT-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply a scale to image use to fill canvas\n'
+                                                                                'Given *<WIDTH>* define horizontal scale to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<WIDTH-UNIT>`** is omited\n'
+                                                                                ' - With given **`<WIDTH-UNIT>`** if provided\n\n'
+                                                                                'Given *<HEIGHT>* define vertical scale to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<HEIGHT-UNIT>`** is omited\n'
+                                                                                ' - With given **`<HEIGHT-UNIT>`** if provided\n\n'
+                                                                                'Given *<WIDTH-UNIT>* and *<HEIGHT-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`RPCT`**: use percentage relative to image size\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches')),
+                                                                    ('with rotation left \x01<ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply a rotation to left direction (counterclockwise) to image use to fill canvas\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for width; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)')),
+                                                                    ('with rotation right \x01<ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply a rotation to right direction (clockwise) to image use to fill canvas\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for width; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)'))
+                                                                    ],
+                                                                    'A',
+                                                                    ignoreIndent=True),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\b(?:start|stop)\s+to\s+draw\s+shape\b",
                                                                     'Drawing/Shapes',
@@ -1570,7 +1775,7 @@ class BSLanguageDef(LanguageDef):
 
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background|rulers)\b",
                                                                     'Canvas',
                                                                     [('show canvas grid',
                                                                             TokenizerRule.formatDescription(
@@ -1596,6 +1801,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Render background under canvas\n'
                                                                                 'Background (made from current document projection) is drawn under canvas and is not rendered on final drawing')),
+                                                                    ('show canvas rulers',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set canvas rulers visible]',
+                                                                                # description
+                                                                                'Render rulers over canvas\n'
+                                                                                'Rulers are drawn over canvas and are not rendered on final drawing')),
                                                                     ('hide canvas grid',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Set canvas grid invisible]',
@@ -1616,6 +1827,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Action [Set background invisible]',
                                                                                 # description
                                                                                 'Do not render background')),
+                                                                    ('hide canvas rulers',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Set canvas rulers invisible]',
+                                                                                # description
+                                                                                'Do not render rulers'))
                                                                     ],
                                                                     'A'),
 
@@ -1888,7 +2104,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ignoreIndent=True),
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UICONSOLE, r"^\x20*\bprint(?:\s+formatted)?(?:\s+error|\s+warning|\s+verbose|\s+valid)?\b",
                                                                     'User interface/Console',
                                                                     [('print \x01<INFO>[, <INFO>]',
                                                                             TokenizerRule.formatDescription(
@@ -1900,6 +2116,109 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`print "hello!"`**\n\n'
                                                                                 'Will print text `hello!` to console')),
+                                                                     ('print formatted \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted information to console]',
+                                                                                # description
+                                                                                'Print given formatted *<INFO>* to console\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, with the `world` word formatted as green bold text')),
+                                                                     ('print error \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print error information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as error\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as error in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print error "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as an error information in console')),
+                                                                     ('print warning \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print warning information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as warning\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as warning in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print warning "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as a warning information in console')),
+                                                                     ('print verbose \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print verbose information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as verbose\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as verbose in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print verbose "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as a verbose information in console')),
+                                                                     ('print valid \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print valid information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as valid\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'Provided information is flagged as valid in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print valid "Hello!`\n\n'
+                                                                                'Will print text `Hello!` to console, flagged as a valid information in console')),
+                                                                     ('print formatted error \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted error information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as error\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as error in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted error "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a error information in console, with the `world` word formatted as green bold text')),
+                                                                     ('print formatted warning \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted warning information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as warning\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as warning in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted warning "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a warning information in console, with the `world` word formatted as green bold text')),
+                                                                     ('print formatted verbose \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted verbose information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as verbose\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as verbose in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted verbose "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a verbose information in console, with the `world` word formatted as green bold text')),
+                                                                     ('print formatted valid \x01<INFO>[, <INFO>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Print formatted valid information to console]',
+                                                                                # description
+                                                                                'Print given *<INFO>* to console as valid\n\n'
+                                                                                'Given *<INFO>* can be of any type, and any number of <INFO> can be provided\n'
+                                                                                'When a string is provided, string is analyzed to print formatted text\n'
+                                                                                'Provided information is flagged as valid in console',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`print formatted valid "Hello #g#**world!**#"`\n\n'
+                                                                                'Will print text `Hello world!` to console, flagged as a valid information in console, with the `world` word formatted as green bold text')),
                                                                     ],
                                                                     'A'),
 
@@ -1965,36 +2284,106 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+(?:macro|image)\s+from\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+buliscript\s+file\b",
                                                                     'Flow/Declarations',
-                                                                    [('import macro from \x01<TEXT>',
+                                                                    [('import buliscript file \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Flow [Import macro defined from an another script document]',
+                                                                                'Flow [Import and execute a BuliScript from an another document]',
                                                                                 # description
-                                                                                'Import macro from defined path\n'
-                                                                                'When imported, only defined macro are taken in account\n'
-                                                                                'If imported script contain execution flow, they\'re ignored\n\n'
-                                                                                'Given *<TEXT>* is a string that define a BuliScript file name; can be:\n'
+                                                                                'Import and execute a BuliScript from path defined by *<FILE-NAME>*\n'
+                                                                                'When imported, defined macro are taken in account, image are loaded, script is executed immediately\n\n'
+                                                                                'Given *<FILE-NAME>* is a string that define a BuliScript file name; can be:\n'
                                                                                 '- A full path/file name\n'
                                                                                 '- A file name: in this case, consider that file is in the same directory than executed script',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`import macro from "my_filename.bs"`**\n\n'
-                                                                                'Will import all macro defined in file `my_filename.bs`')),
-                                                                    ('import image from \x01<TEXT> \x01as \x01<RESNAME>',
+                                                                                '**`import buliscript from "my_filename.bs"`**\n\n'
+                                                                                'Will execute script file `my_filename.bs`')),
+                                                                    ],
+                                                                    'F'),
+
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+(?:(?:(?:document|canvas)\s+into\s+image\s+library)|(?:layer\s+into\s+image\s+library\s+from\s+(?:name|id|current))|(?:file\s+into\s+image\s+library\s+from))\b",
+                                                                    'Flow/Declarations',
+                                                                    [('import file into image library from \x01<FILE-NAME>\x01 as \x01<RESOURCE-NAME>\x01 ',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Flow [Import an image]',
+                                                                                'Flow [Import an image from a PNG/JPEG file]',
                                                                                 # description
-                                                                                'Import image from defined path <TEXT> and store it as <RESNAME>\n'
-                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n'
-                                                                                'This can avoid for action that use image to execute load on each call (especially in loops)\n\n'
-                                                                                'Given *<TEXT>* is a string that define a PNG/JPEG file name; can be:\n'
+                                                                                'Import image from defined path *<FILE-NAME>* and store it as *<RESOURCE-NAME>* in image library\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'Given *<FILE-NAME>* is a string that define a PNG/JPEG file name; can be:\n'
                                                                                 '- A full path/file name\n'
-                                                                                '- A file name: in this case, consider that file is in the same directory than executed script',
+                                                                                '- A file name: in this case, consider that file is in the same directory than executed script\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`import image from "test_brush.png" as "test brush"`**\n\n'
-                                                                                'Will load image `test_brush.png` and store it in memory with `test brush` for identifier')),
+                                                                                '**`import file into image library from "test_brush.png" as "test brush"`**\n\n'
+                                                                                'Will load image `test_brush.png` and store it in memory with `test brush` as resource identifier')),
+                                                                     ('import layer into image library from name \x01<LAYER-NAME>\x01 as \x01<RESOURCE-NAME>\x01 ',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from a layer]',
+                                                                                # description
+                                                                                'Import image from layer designed by name *<LAYER-NAME>* and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'Given *<LAYER-NAME>* is a string that define a layer name in current active document file name; can be:\n'
+                                                                                '- A full layer path name\n'
+                                                                                '- A layer name: in this case, the first layer for which name match the given *<NAME>* is loaded\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import layer into image library from name "test" as "test layer"`**\n\n'
+                                                                                'Will load first layer matching given name `test` and store it in memory with `test layer` as resource identifier\n\n'
+                                                                                '**`import layer into image library from name "test group/group blue/test" as "test layer"`**\n\n'
+                                                                                'Will load first layer matching given name `test` in group `group blue` under group `test group` and store it in memory with `test layer` as resource identifier'
+                                                                                )),
+                                                                     ('import layer into image library from id \x01<LAYER-ID>\x01 as \x01<RESOURCE-NAME>\x01 ',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from a layer]',
+                                                                                # description
+                                                                                'Import image from layer designed by Id *<LAYER-ID>* and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'Given *<LAYER-ID>* is a string that define a layer unique identifier in current active document file name\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import layer into image library from id "{4f96f7d7-10e5-4251-bfe9-539eb4f2126a}" as "test layer"`**\n\n'
+                                                                                'Will load layer matching given id `{4f96f7d7-10e5-4251-bfe9-539eb4f2126a}` and store it in memory with `test layer` as resource identifier'
+                                                                                )),
+                                                                     ('import layer into image library from current as \x01<RESOURCE-NAME>\x01 ',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from current layer]',
+                                                                                # description
+                                                                                'Import image from current active layer and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import layer into image library from current as "test layer"`**\n\n'
+                                                                                'Will load current active layer and store it in memory with `test layer` as resource identifier'
+                                                                                )),
+                                                                     ('import document into image library as \x01<RESOURCE-NAME>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from current document]',
+                                                                                # description
+                                                                                'Import image from current active document projection and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import document into image library as "test document"`**\n\n'
+                                                                                'Will load document projection and store it in memory with `test document` as resource identifier'
+                                                                                )),
+                                                                     ('import canvas into image library as \x01<RESOURCE-NAME>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from current canvas]',
+                                                                                # description
+                                                                                'Import image from current canvas and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import canvas  into image library as "test canvas"`**\n\n'
+                                                                                'Will load canvas and store it in memory with `test canvas` as resource identifier'
+                                                                                )),
                                                                     ],
                                                                     'F'),
 
@@ -2118,23 +2507,29 @@ class BSLanguageDef(LanguageDef):
                                                                     'F'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UNCOMPLETE, r"^\x20*\b(?:"
-                                                                       r"(?:set(?:\s+(?:unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|script\s+execution|script\s+randomize|script)))"
+                                                                       r"(?:set(?:\s+(?:"
+                                                                            "unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|"
+                                                                            "script\s+execution|script\s+randomize|script|"
+                                                                            "canvas\s+background\s+from\s+layer|canvas\s+background\s+from|canvas\s+background|canvas\s+origin|canvas\s+grid|canvas\s+position|canvas\s+rulers|canvas\s+)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
-                                                                       r"|(?:clear|apply(?:\s+to)?)"
+                                                                       r"|(?:clear)"
+                                                                       r"|(?:fill(?:\s+canvas(?:\s+from)?)?)"
                                                                        r"|(?:pen|move|turn|push|pop|activate|deactivate)"
                                                                        r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
                                                                        r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|(?:single|multiple)(?:\s+choice)?))?)?)?)"
-                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
+                                                                       r"|(?:with(?:\s+(?:rotation|minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
-
                                                                        # (?:single|multiple) (?:\s+(?:choice)?)?
                                                                        # (?:combobox|radio)(?:\s+(?:button)?)?
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for(?:\s+(?:each(?:\s+(?:item))?))?)"
-                                                                       r"|(?:import(?:\s+(?:macro|image))?)"
+                                                                       r"|(?:import\s+buliscript)"
+                                                                       r"|(?:import(?:\s+(?:document|canvas)(?:\s+into(?:\s+image)?)?))"
+                                                                       r"|(?:import(?:\s+file(?:\s+into(?:\s+image(?:\s+library)?)?)?))"
+                                                                       r"|(?:import(?:\s+layer(?:\s+into(?:\s+image(?:\s+library(?:\s+from)?)?)?)?))"
                                                                        r"|(?:set\s+global)"
                                                                        r"|(?:and\s+store(?:\s+(?:result(?:\s+(?:into))?))?)"
                                                                        r")\b"
@@ -3600,6 +3995,11 @@ class BSLanguageDef(LanguageDef):
                                                                     'c',
                                                                     onInitValue=self.__initTokenUpper),
 
+            TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, r"\b(?:BASIC|ARROWHEAD|UPWARD)\b",
+                                                                    'Constants/Canvas/Position',['BASIC','ARROWHEAD','UPWARD'],
+                                                                    'c',
+                                                                    onInitValue=self.__initTokenUpper),
+
 
             TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bmath\.(?:pi|e|phi)\b",
                                                                     'Variables/Math',
@@ -3672,7 +4072,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
             # todo: add |brush
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|width|style|cap|join|status)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bpen\.(?:color|size|style|cap|join|status)\b",
                                                                     'Variables/Pen',
                                                                     [(':pen.color',
                                                                             TokenizerRule.formatDescription(
@@ -3680,11 +4080,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current pen color\n'
                                                                                 'Returned as color value')),
-                                                                     (':pen.width',
+                                                                     (':pen.size',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current pen width]',
+                                                                                'Reserved variable [Current pen size]',
                                                                                 # description
-                                                                                'Current pen width in current canvas unit\n'
+                                                                                'Current pen size in current canvas unit\n'
                                                                                 'Returned as decimal value')),
                                                                      (':pen.style',
                                                                             TokenizerRule.formatDescription(
@@ -3737,7 +4137,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape])\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape\.status)\b",
                                                                     'Variables/Draw',
                                                                     [(':draw.antialiasing',
                                                                             TokenizerRule.formatDescription(
@@ -3760,7 +4160,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letterspacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|letterspacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
                                                                     'Variables/Text',
                                                                     [(':text.color',
                                                                             TokenizerRule.formatDescription(
@@ -3791,12 +4191,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current text style: italic status]',
                                                                                 # description
                                                                                 'Current italic status\n'
-                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
-                                                                     (':text.outline',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current text style: outline status]',
-                                                                                # description
-                                                                                'Current outline status\n'
                                                                                 'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.letterSpacing.spacing',
                                                                             TokenizerRule.formatDescription(
@@ -3832,7 +4226,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|size\.major|size\.minor|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|bgColor|size\.main|size\.width|style|opacity)\b",
                                                                     'Variables/Canvas/Grid',
                                                                     [(':canvas.grid.color',
                                                                             TokenizerRule.formatDescription(
@@ -3840,35 +4234,40 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current canvas grid color\n'
                                                                                 'Returned as color value')),
+                                                                     (':canvas.grid.bgColor',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Reserved variable [Current canvas grid background color]',
+                                                                                # description
+                                                                                'Current canvas grid background color\n'
+                                                                                'Returned as color value')),
                                                                      (':canvas.grid.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas grid visibility]',
                                                                                  # description
                                                                                  'Current canvas grid visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.grid.size.major',
+                                                                     (':canvas.grid.size.main',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas major grid size]',
+                                                                                 'Reserved variable [Current canvas main grid frequency]',
                                                                                  # description
-                                                                                 'Current canvas major grid size\n'
+                                                                                 'Current canvas main grid frequency\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.grid.size.minor',
+                                                                     (':canvas.grid.size.width',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas minor grid size]',
+                                                                                 'Reserved variable [Current canvas grid size]',
                                                                                  # description
-                                                                                 'Current canvas minor grid size\n'
+                                                                                 'Current canvas grid size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.grid.size.unit',
+                                                                     (':canvas.grid.style.main',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid unit]',
+                                                                                 'Reserved variable [Current canvas grid style (main grid)]',
                                                                                  # description
-                                                                                 'Current canvas grid unit\n'
-                                                                                 'Returned as string')),
-                                                                     (':canvas.grid.style',
+                                                                                 'Current canvas grid style (main grid)')),
+                                                                     (':canvas.grid.style.secondary',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid style]',
+                                                                                 'Reserved variable [Current canvas grid style (secondary grid)]',
                                                                                  # description
-                                                                                 'Current canvas grid style')),
+                                                                                 'Current canvas grid style (secondary grid)')),
                                                                      (':canvas.grid.opacity',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas grid opacity]',
@@ -3878,7 +4277,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:status|color|size|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:visibility|color|size|style|opacity|position\.(?:absissa|ordinate))\b",
                                                                     'Variables/Canvas/Origin',
                                                                     [(':canvas.origin.color',
                                                                             TokenizerRule.formatDescription(
@@ -3886,11 +4285,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current canvas origin color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.origin.status',
+                                                                     (':canvas.origin.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas origin visibility]',
                                                                                  # description
-                                                                                 'Current canvas origin status (visible or not)\n'
+                                                                                 'Current canvas origin visibility\n'
                                                                                  'Returned as boolean value')),
                                                                      (':canvas.origin.size',
                                                                              TokenizerRule.formatDescription(
@@ -3924,7 +4323,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:status|color|size|style|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:visibility|color|size|opacity|fulfill)\b",
                                                                     'Variables/Canvas/Position',
                                                                     [(':canvas.position.color',
                                                                             TokenizerRule.formatDescription(
@@ -3932,11 +4331,11 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current canvas position color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.position.status',
+                                                                     (':canvas.position.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas position/direction visibility]',
                                                                                  # description
-                                                                                 'Current canvas position status (visible or not)\n'
+                                                                                 'Current canvas position visibility\n'
                                                                                  'Returned as boolean value')),
                                                                      (':canvas.position.size',
                                                                              TokenizerRule.formatDescription(
@@ -3944,11 +4343,6 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current position size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.position.style',
-                                                                             TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas position/direction style]',
-                                                                                 # description
-                                                                                 'Current canvas position style')),
                                                                      (':canvas.position.opacity',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas position/direction opacity]',
@@ -3964,13 +4358,13 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:status|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:visibility|opacity|source\.type|source\.value)\b",
                                                                     'Variables/Canvas/Background',
-                                                                    [(':canvas.background.status',
+                                                                    [(':canvas.background.visibility',
                                                                              TokenizerRule.formatDescription(
                                                                                  'Reserved variable [Current canvas background visibility]',
                                                                                  # description
-                                                                                 'Current canvas background status (visible or not)\n'
+                                                                                 'Current canvas background visibility\n'
                                                                                  'Returned as boolean value')),
                                                                      (':canvas.background.opacity',
                                                                              TokenizerRule.formatDescription(
@@ -3978,10 +4372,53 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas background opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
+                                                                     (':canvas.background.source.type',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas background source]',
+                                                                                 # description
+                                                                                 'Current canvas background source is string value for which value can be\n:'
+                                                                                 '- **`color`**: a color\n'
+                                                                                 '- **`document`**: current document projection\n'
+                                                                                 '- **`layer active`**: current active layer\n'
+                                                                                 '- **`layer name`**: layer designed by name\n'
+                                                                                 '- **`layer id`**: layer designed by Id')),
+                                                                     (':canvas.background.source.value',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas background value linked to source]',
+                                                                                 # description
+                                                                                 'Current canvas background source is a value linked to source type and can be\n:'
+                                                                                 '- **`color`**: a color\n'
+                                                                                 '- **`document`**: current document file name\n'
+                                                                                 '- **`layer active`**: current active layer name\n'
+                                                                                 '- **`layer name`**: layer name\n'
+                                                                                 '- **`layer id`**: layer Id')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.geometry\.(?:width|height|top|bottom|left|right)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.rulers\.(?:visibility|color|bgColor)\b",
+                                                                    'Variables/Canvas/Rulers',
+                                                                    [(':canvas.rulers.visibility',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas rulers visibility]',
+                                                                                 # description
+                                                                                 'Current canvas rulers visibility\n'
+                                                                                 'Returned as boolean value')),
+                                                                     (':canvas.rulers.color',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas rulers color]',
+                                                                                 # description
+                                                                                 'Current canvas rulers color\n'
+                                                                                 'Returned as color value')),
+                                                                     (':canvas.rulers.bgColor',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas rulers background color]',
+                                                                                 # description
+                                                                                 'Current canvas rulers background color\n'
+                                                                                 'Returned as color value'))
+                                                                    ],
+                                                                    'v',
+                                                                    onInitValue=self.__initTokenLower),
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.geometry\.(?:width|height|top|bottom|left|right|resolution)\b",
                                                                     'Variables/Canvas/Geometry',
                                                                     [(':canvas.geometry.width',
                                                                              TokenizerRule.formatDescription(
@@ -4019,6 +4456,12 @@ class BSLanguageDef(LanguageDef):
                                                                                  # description
                                                                                  'Current canvas bottom position, relative to origin\n'
                                                                                  'Returned in current unit')),
+                                                                    (':canvas.geometry.resolution',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas resolution]',
+                                                                                 # description
+                                                                                 'Current canvas resolution\n'
+                                                                                 'Returned in DPI')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -4180,12 +4623,14 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_TEXT, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_DRAW, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#e5dd82', True, False),
@@ -4237,6 +4682,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, '#24ff8d', True, False),
 
             (BSLanguageDef.ITokenType.TEXT, '#ffffff', False, False),
             (BSLanguageDef.ITokenType.COMMENT, '#999999', False, True),
@@ -4274,12 +4720,14 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_TEXT, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_DRAW, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#c278da', True, False),
@@ -4327,6 +4775,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE, '#24ff8d', True, False),
             (BSLanguageDef.ITokenType.CONSTANT_COLORLABEL, '#24ff8d', True, False),
+            (BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, '#24ff8d', True, False),
 
             (BSLanguageDef.ITokenType.TEXT, '#6aafec', False, False),
             (BSLanguageDef.ITokenType.COMMENT, '#c278da', False, False),
@@ -4377,8 +4826,13 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Declarations_Section',
                 GROneOrMore('Comment',
                             'Flow_Set_Variable',
-                            'Flow_Import_Macro',
-                            'Flow_Import_Image',
+                            'Flow_Import_Script',
+                            'Flow_Import_Image_From_File',
+                            'Flow_Import_Image_From_LayerName',
+                            'Flow_Import_Image_From_LayerId',
+                            'Flow_Import_Image_From_LayerCurrent',
+                            'Flow_Import_Image_From_Document',
+                            'Flow_Import_Image_From_Canvas',
                             'Flow_Define_Macro',
                             #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
                         )
@@ -4402,17 +4856,18 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Text_Size',
                       'Action_Set_Text_Bold',
                       'Action_Set_Text_Italic',
-                      'Action_Set_Text_Outline',
                       'Action_Set_Text_Letter_Spacing',
                       'Action_Set_Text_Stretch',
                       'Action_Set_Text_HAlignment',
                       'Action_Set_Text_VAlignment',
                       'Action_Set_Draw_Antialiasing',
                       'Action_Set_Draw_Blending',
+                      'Action_Set_Draw_Opacity',
                       'Action_Set_Canvas_Grid_Color',
                       'Action_Set_Canvas_Grid_Style',
                       'Action_Set_Canvas_Grid_Size',
                       'Action_Set_Canvas_Grid_Opacity',
+                      'Action_Set_Canvas_Rulers_Color',
                       'Action_Set_Canvas_Origin_Color',
                       'Action_Set_Canvas_Origin_Style',
                       'Action_Set_Canvas_Origin_Size',
@@ -4422,12 +4877,17 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Position_Size',
                       'Action_Set_Canvas_Position_Opacity',
                       'Action_Set_Canvas_Position_Fulfill',
+                      'Action_Set_Canvas_Position_Axis',
+                      'Action_Set_Canvas_Position_Model',
                       'Action_Set_Canvas_Background_Opacity',
-                      # TODO
-                      #'Action_Set_Layer',
-                      #'Action_Set_Selection',
+                      'Action_Set_Canvas_Background_From_Document',
+                      'Action_Set_Canvas_Background_From_Layer_Name',
+                      'Action_Set_Canvas_Background_From_Layer_Id',
+                      'Action_Set_Canvas_Background_From_Layer_Active',
+                      'Action_Set_Canvas_Background_From_Color',
                       'Action_Set_Script_Execution_Verbose',
                       'Action_Set_Script_Randomize_Seed',
+                      'Action_Draw_Shape_Line',
                       'Action_Draw_Shape_Square',
                       'Action_Draw_Shape_Round_Square',
                       'Action_Draw_Shape_Rect',
@@ -4441,8 +4901,8 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Shape_Text',
                       'Action_Draw_Shape_Star',
                       'Action_Draw_Misc_Clear_Canvas',
-                      # TODO
-                      #'Action_Draw_Misc_Apply_To_Layer',
+                      'Action_Draw_Misc_Fill_Canvas_From_Color',
+                      'Action_Draw_Misc_Fill_Canvas_From_Image',
                       'Action_Draw_Shape_Start',
                       'Action_Draw_Shape_Stop',
                       'Action_Draw_Fill_Activate',
@@ -4468,7 +4928,18 @@ class BSLanguageDef(LanguageDef):
                       'Action_Canvas_Hide_Position',
                       'Action_Canvas_Show_Background',
                       'Action_Canvas_Hide_Background',
+                      'Action_Canvas_Show_Rulers',
+                      'Action_Canvas_Hide_Rulers',
                       'Action_UIConsole_Print',
+                      'Action_UIConsole_Print_Formatted',
+                      'Action_UIConsole_Print_Error',
+                      'Action_UIConsole_Print_Formatted_Error',
+                      'Action_UIConsole_Print_Warning',
+                      'Action_UIConsole_Print_Formatted_Warning',
+                      'Action_UIConsole_Print_Verbose',
+                      'Action_UIConsole_Print_Formatted_Verbose',
+                      'Action_UIConsole_Print_Valid',
+                      'Action_UIConsole_Print_Formatted_Valid',
                       'Action_UIDialog_Message',
                       'Action_UIDialog_Boolean_Input',
                       'Action_UIDialog_Integer_Input',
@@ -4619,14 +5090,6 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Text_Outline',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_TEXT, 'set text outline', False),
-                'Any_Expression',
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
         GrammarRule('Action_Set_Text_Letter_Spacing',
                 GrammarRule.OPTION_AST,
                 # --
@@ -4676,11 +5139,20 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
+        GrammarRule('Action_Set_Draw_Opacity',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw opacity', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
         GrammarRule('Action_Set_Canvas_Grid_Color',
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid color', False),
                 'Any_Expression',
+                GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -4689,6 +5161,7 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid style', False),
                 'Any_Expression',
+                GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -4707,6 +5180,15 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid opacity', False),
                 'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Rulers_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, 'set canvas rulers color', False),
+                'Any_Expression',
+                GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -4787,10 +5269,64 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
+        GrammarRule('Action_Set_Canvas_Position_Axis',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position axis', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Position_Model',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position model', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
         GrammarRule('Action_Set_Canvas_Background_Opacity',
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background opacity', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Document',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from document', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Layer_Name',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer name', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Layer_Id',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer id', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Layer_Active',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer active', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Canvas_Background_From_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from color', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -4815,6 +5351,15 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw square', False),
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Line',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw line', False),
                 'Any_Expression',
                 GROptional('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
@@ -4902,6 +5447,7 @@ class BSLanguageDef(LanguageDef):
                 'Any_Expression',
                 'Any_Expression',
                 GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -4930,6 +5476,74 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, 'clear canvas', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, 'fill canvas from color', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, 'fill canvas from image', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+                GRNoneOrMore('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Tiling',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Scale',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Offset',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Left',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Right')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Tiling',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with tiling', False)
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Scale',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with scale', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Offset',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with offset', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Left',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with rotation left', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                GROptional('Any_Expression')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Right',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with rotation right', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                GROptional('Any_Expression')
             )
 
         GrammarRule('Action_Draw_Shape_Start',
@@ -5124,10 +5738,96 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
+        GrammarRule('Action_Canvas_Show_Rulers',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas rulers', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Canvas_Hide_Rulers',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas rulers', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
         GrammarRule('Action_UIConsole_Print',
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Error',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print error', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Warning',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print warning', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Verbose',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print verbose', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Valid',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print valid', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Error',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted error', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Warning',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted warning', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Verbose',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted verbose', False),
+                GROneOrMore('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_UIConsole_Print_Formatted_Valid',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UICONSOLE, 'print formatted valid', False),
                 GROneOrMore('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -5307,6 +6007,12 @@ class BSLanguageDef(LanguageDef):
 
         GrammarRule('Flow',
                 GROne('Flow_Set_Variable',
+                      'Flow_Import_Image_From_File',
+                      'Flow_Import_Image_From_LayerName',
+                      'Flow_Import_Image_From_LayerId',
+                      'Flow_Import_Image_From_LayerCurrent',
+                      'Flow_Import_Image_From_Document',
+                      'Flow_Import_Image_From_Canvas',
                       'Flow_Stop_Script',
                       'Flow_Call_Macro',
                       'Flow_If',
@@ -5325,22 +6031,74 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 
-        GrammarRule('Flow_Import_Macro',
+        GrammarRule('Flow_Import_Script',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import macro from', False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import buliscript file', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 
-        GrammarRule('Flow_Import_Image',
+        GrammarRule('Flow_Import_Image_From_File',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import image from', False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import file into image library from', False),
                 'Any_Expression',
                 #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
                 GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
-                GROne('String_Value'),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_LayerName',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import layer into image library from name', False),
+                'Any_Expression',
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_LayerId',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import layer into image library from id', False),
+                'Any_Expression',
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_LayerCurrent',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import layer into image library from current', False),
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_Document',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import document into image library', False),
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_Canvas',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import canvas into image library', False),
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 
@@ -5468,6 +6226,7 @@ class BSLanguageDef(LanguageDef):
                       'String_Value',
                       GRToken(BSLanguageDef.ITokenType.NUMBER),
                       GRToken(BSLanguageDef.ITokenType.COLOR_CODE),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_NONE),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_ONOFF),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_UNITS_M),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_UNITS_R),
@@ -5479,6 +6238,9 @@ class BSLanguageDef(LanguageDef):
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_POSHALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_POSVALIGN),
                       GRToken(BSLanguageDef.ITokenType.CONSTANT_BLENDINGMODE),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_SELECTIONMODE),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_COLORLABEL),
+                      GRToken(BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL),
                       'List_Value',
                     ),
                 GRNoneOrMore('List_Index_Expression')

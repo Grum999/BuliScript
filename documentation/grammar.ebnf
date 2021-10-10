@@ -64,13 +64,10 @@ Declarations_Section
         ::= (
                 Comment |
                 ( ( Flow_Set_Variable |
-                    Flow_Import |
+                    Flow_Import_Script |
                     Flow_Define_Macro )
                 )
             )+
-
-
-
 /*
     ----------------------------------------------------------------------------
     Comments are currently defined as single-lines comments
@@ -150,7 +147,6 @@ Action_Set_Text
                 ( 'size'                Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'bold'                Evaluate_Boolean_Expression ) |
                 ( 'italic'              Evaluate_Boolean_Expression ) |
-                ( 'outline'             Evaluate_Boolean_Expression ) |
                 ( 'letter' 'spacing'    Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'stretch'             Evaluate_Number_Expression ) |
                 ( 'horizontal' 'alignment'
@@ -164,26 +160,36 @@ Action_Set_Text
 Action_Set_Draw
         ::= 'set' 'draw' (
                 ( 'antialiasing'        Evaluate_Boolean_Expression ) |
-                ( 'blending' 'mode'     BlendingMode_Expression )
+                ( 'blending' 'mode'     BlendingMode_Expression ) |
+                ( 'opacity'             Evaluate_Number_Expression )
             )
 
 
 /* Settings: Canvas grid */
 Action_Set_Canvas
         ::= 'set' 'canvas' (
-                ( 'grid' | 'origin' | 'position' ) (
-                    ( 'color'   Color_Expression ) |
-                    ( 'style'   PenStyle_Expression )
-                ) |
+                ( 'grid' | 'rulers' ) ( 'color' Color_Expression Color_Expression? ) |
+
+                (  'origin' | 'position' ) ( 'color'   Color_Expression ) |
+
+                ( 'grid' | 'origin' ) ( 'style'   PenStyle_Expression ) |
 
                 ( 'grid' 'size'  Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? ) |
                 ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
 
 
-                ( )
                 ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
-                'position' ( 'fulfilled' Evaluate_Boolean_Expression )
+                'position' (
+                    ( 'fulfilled' Evaluate_Boolean_Expression ) |
+                    ( 'model' PositionModel_Expression ) |
+                    ( 'axis' Evaluate_Boolean_Expression )
+                ) |
+                'background' 'from' (
+                        ( 'color' Color_Expression ) |
+                        ( 'layer' ((('name' | 'id') Evaluate_String_Expression ) | 'Active' )) |
+                        'document'
+                    )
             )
 
 
@@ -204,6 +210,7 @@ Action_Set_Script_Execution
 
 Action_Draw_Shape
         ::= 'draw' (
+                ( 'line' Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'square' Evaluate_Number_Expression Unit_M_Expression? ) |
                 ( 'round' (
                         ('square' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
@@ -216,7 +223,7 @@ Action_Draw_Shape
                   'dot'  |
                   'pixel' |
                 ( 'image' Evaluate_String_Expression ) |
-                ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Evaluate_Number_Expression Unit_RM_Expression? ) |
+                ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Unit_RM_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
                 ( 'text' Evaluate_String_Expression ) |
                 ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
             ) |
@@ -225,11 +232,20 @@ Action_Draw_Shape
 
 Action_Draw_Misc
         ::= (
-                'clear' 'canvas'
-                /*
-                |
-                'apply' 'to' 'layer'
-                */
+                ('clear' 'canvas') |
+                ('fill' 'canvas' 'from'
+                    ( ('color' Color_Expression) |
+                      ('image' Evaluate_String_Expression
+                          (
+                              'with' (
+                                    ( 'offset'|'scale' ) Evaluate_Number_Expression Unit_RM_Expression? Evaluate_Number_Expression Unit_RM_Expression? |
+                                    'tiling' |
+                                    ( 'rotation' ('left'|'right') Evaluate_Number_Expression Unit_R_Expression? )
+                                )
+                          )*
+                      )
+                    )
+                )
             )
 
 
@@ -265,11 +281,11 @@ Action_State
 
 
 Action_Canvas
-        ::= ( 'show' | 'hide' ) 'canvas' ( 'grid' | 'origin' | 'position' | 'background' )
+        ::= ( 'show' | 'hide' ) 'canvas' ( 'grid' | 'origin' | 'position' | 'background' | 'rulers' )
 
 
 Action_UIConsole
-        ::= 'print'
+        ::= 'print' 'formatted'? ('error'|'warning'|'verbose'|'valid')?
             Any_Expression+
 
 
@@ -337,6 +353,7 @@ Action_UIDialog
 */
 Flow    ::= (
                 Flow_Set_Variable |
+                Flow_Import_Image |
                 Flow_Execution |
                 Flow_Call |
                 Flow_If |
@@ -350,11 +367,18 @@ Flow_Set_Variable
         ::= 'set' 'global'? 'variable' User_Variable '=' Any_Expression
 
 
-Flow_Import
-        ::= 'import' (
-                ( 'macro' 'from' Evaluate_String_Expression ) |
-                ( 'image' 'from' Evaluate_String_Expression 'as' String_Value )
-            )
+Flow_Import_Script
+        ::= 'import' 'buliscript' 'file' Evaluate_String_Expression
+
+
+Flow_Import_Image
+        ::= 'import'
+                (
+                    ('file' 'into' 'image' 'library' 'from' Evaluate_String_Expression) |
+                    ('layer' 'into' 'image' 'library' 'from' (('name'|'id') Evaluate_String_Expression | 'current')) |
+                    ('document' | 'canvas') 'into' 'image' 'library'
+                )
+                'as' Evaluate_String_Expression
 
 
 Flow_Define_Macro
@@ -493,6 +517,9 @@ PositionH_Expression
 
 PositionV_Expression
         ::= ( 'TOP' | 'MIDDLE' | 'CENTER' ) | Function | Variable
+
+PositionModel_Expression
+        ::= ( 'BASIC' | 'ARROWHEAD' | 'UPWARD' ) | Function | Variable
 
 BlendingMode_Expression
         ::= ( 'NORMAL' |
@@ -695,16 +722,23 @@ Reserved_Variable
             ( 'position' '.' ( 'x' | 'y' ) ) |
             'angle' |
             ( 'unit' '.' ( 'rotation' | 'canvas' ) ) |
-            ( 'pen' '.' ( 'color' | 'width' | 'style' | 'cap' | 'join' | 'status' ) ) |
+            ( 'pen' '.' ( 'color' | 'size' | 'style' | 'cap' | 'join' | 'status' ) ) |
             ( 'fill' '.' ( 'color' | 'rule' | 'status' ) ) |
-            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'outline' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
+            ( 'text' '.' ( 'color' | 'font' | 'size' | 'bold' | 'italic' | 'letterSpacing' '.' ( 'spacing' | 'unit') | 'stretch' | 'alignment' '.' ( 'horizontal' | 'vertical' ) ) ) |
             ( 'draw' '.' ( 'antialiasing' | 'blendingMode' | 'shape' '.' 'status') ) |
-            ( 'canvas' '.'
-                ( 'grid' '.' ( 'color' | 'visibility' | 'size' '.' ( 'major' | 'minor' | 'unit' ) | 'style' | 'opacity' ) ) |
-                ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
-                ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'fulfill' ) ) |
-                ( 'background' '.' ( 'visibility' | 'opacity' ) ) |
-                ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' ) )
+            ( 'canvas' '.' (
+                    ( 'grid' '.' ( 'color' | 'bgColor' | 'visibility' | 'size' '.' ( 'main' | 'width' ) | 'style' '.' ( 'main' | 'secondary' ) | 'opacity' ) ) |
+                    ( 'origin' '.' ( 'color' | 'visibility' | 'size' | 'style' | 'opacity' | 'position' '.' ( 'absissa' | 'ordinate') ) ) |
+                    ( 'position' '.' ( 'color' | 'visibility' | 'size' | 'opacity' | 'fulfill' ) ) |
+                    ( 'background' '.' (
+                            'visibility' |
+                            'opacity' |
+                            'source' '.' ('type' | 'value')
+                        )
+                    ) |
+                    ( 'rulers' '.' ( 'visibility' | 'color' | 'bgColor' ) ) |
+                    ( 'geometry' '.' ( 'width' | 'height' | 'left' | 'right' | 'top' | 'bottom' | 'resolution' ) )
+                )
             ) |
             ( 'script' '.' ('execution' '.' 'verbose' | 'randomize' '.' 'seed' ) ) |
             ( 'repeat' '.' ( 'currentIteration' | 'totalIteration' | 'isFirstIteration' | 'isLastIteration' | 'incAngle' | 'currentAngle' ) ) |
