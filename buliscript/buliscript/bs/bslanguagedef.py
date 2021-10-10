@@ -76,6 +76,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_DRAW_PEN = ('drawPen', 'A <PEN> action')
         ACTION_DRAW_MOVE = ('drawMove', 'A <MOVE> action')
         ACTION_DRAW_TURN = ('drawTurn', 'A <TURN> action')
+        ACTION_DRAW_OPTION = ('drawOption', 'A <DRAW> option')
 
         ACTION_CANVAS = ('canvas', 'A <CANVAS> action')
 
@@ -345,7 +346,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_TEXT, r"^\x20*\bset\s+text\s+(?:color|opacity|font|size|bold|italic|outline|letter\s+spacing|stretch|horizontal\s+alignment|vertical\s+alignment|position)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_TEXT, r"^\x20*\bset\s+text\s+(?:color|opacity|font|size|bold|italic|letter\s+spacing|stretch|horizontal\s+alignment|vertical\s+alignment|position)\b",
                                                                     'Settings/Text',
                                                                     [('set text color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
@@ -431,18 +432,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set text italic ON`**\n\n'
                                                                                 'Will define text as italic')),
-                                                                     ('set text outline \x01<SWITCH>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define text style: outline]',
-                                                                                # description
-                                                                                'Set text style outline\n\n'
-                                                                                'Given *<SWITCH>* can be:\n'
-                                                                                ' - **`ON`**: enable outline text\n'
-                                                                                ' - **`OFF`**: disable outline text',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set text outline ON`**\n\n'
-                                                                                'Will define text as outline')),
                                                                      ('set text letter spacing \x01<SPACING> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define text letter spacing]',
@@ -505,7 +494,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode|opacity)\b",
                                                                     'Settings/Draw',
                                                                     [('set draw antialiasing \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -565,7 +554,21 @@ class BSLanguageDef(LanguageDef):
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`set draw blending MULTIPLY`**\n\n'
-                                                                                'Will define blending mode as MULTIPLY'))
+                                                                                'Will define blending mode as MULTIPLY')),
+                                                                     ('set draw opacity \x01<OPACITY>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define global opacity]',
+                                                                                # description
+                                                                                'Set global opacity\n\n'
+                                                                                'Given *<OPACITY>* can be:\n'
+                                                                                ' - **`int`**: a number; integer values from 0 to 255\n'
+                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
+                                                                                'The global opacity is applied on all drawing action (shapes, images, ...)',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set global opacity 128`**\n'
+                                                                                '**`set global opacity 0.5`**\n\n'
+                                                                                'Will both define a global opacity of 50%'))
                                                                     ],
                                                                     'A'),
 
@@ -1271,17 +1274,12 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - Center is current position\n'
                                                                                 ' - Dimension is original image dimension\n'
                                                                                 ' - Content is defined by given reference <IMAGE>\n\n'
-                                                                                'Given *<IMAGE>* is a string reference to an image:\n'
-                                                                                ' - Can be full path/file name to a PNG/JPEG image\n'
-                                                                                ' - Can be a reference to a pre-loaded image',
+                                                                                'Given *<IMAGE>* is a string reference of an image previously loaded into library',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`draw image "~/Images/test.png"`**\n\n'
-                                                                                'Draw image file "~/Images/test.png" to current position**\n\n'
-                                                                                'Following instruction:\n'
                                                                                 '**`draw image "testing image"`**\n\n'
-                                                                                'Draw pre-loaded image referenced by  id "testing image" to current position**')),
-                                                                    ('draw scaled image \x01<IMAGE> <WIDTH> <HEIGHT> [<UNIT>]',
+                                                                                'Draw image referenced in image library by id "testing image" to current position**')),
+                                                                    ('draw scaled image \x01<IMAGE> <WIDTH> [<UNIT-WIDTH>] <HEIGHT> [<UNIT-HEIGHT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw an image (using given dimensions)]',
                                                                                 # description
@@ -1289,16 +1287,17 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - Center is current position\n'
                                                                                 ' - Dimension is scaled to given <WIDTH> and <HEIGHT>\n'
                                                                                 ' - Content is defined by given reference <IMAGE>\n\n'
-                                                                                'Given *<IMAGE>* is a string reference to an image:\n'
-                                                                                ' - Can be full path/file name to a PNG/JPEG image\n'
-                                                                                ' - Can be a reference to a pre-loaded image'
-                                                                                'Given *<WIDTH>* is a positive number expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<HEIGHT>* is a positive number expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                'Given *<IMAGE>* is a string reference of an image previously loaded into library'
+                                                                                'Given *<WIDTH>* is a number expressed:\n'
+                                                                                ' - With given **`UNIT-WIDTH`** if provided\n'
+                                                                                ' - With given **`UNIT-HEIGHT`** if provided and **`UNIT-WIDTH`** is not proivded\n'
+                                                                                ' - With default canvas unit otherwise\n'
+                                                                                'When given *<WIDTH>* is *`0`*, image is scaled using given *<HEIGHT>* and keep ratio to calculate width\n\n'
+                                                                                'Given *<HEIGHT>* is a number expressed:\n'
+                                                                                ' - With given **`UNIT-HEIGHT`** if provided\n'
+                                                                                ' - With default canvas unit otherwise\n'
+                                                                                'When given *<HEIGHT>* is *`0`*, image is scaled using given *<WIDTH>* and keep ratio to calculate height\n\n'
+                                                                                'Given *<UNIT-WIDTH>* and *<UNIT-HEIGHT>*, if provided can be:\n'
                                                                                 ' - **`PX`**: use pixels\n'
                                                                                 ' - **`PCT`**: use percentage of document width/height\n'
                                                                                 ' - **`RPCT`**: use percentage relative to original image size\n'
@@ -1306,11 +1305,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`INCH`**: use inches',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`draw scaled image "~/Images/test.png" 50 50 RPCT`**\n\n'
-                                                                                'Draw image file "~/Images/test.png" to current position, scaled at 50% of original width and height**\n\n'
-                                                                                'Following instruction:\n'
                                                                                 '**`draw image "testing image" 100 150 PX`**\n\n'
-                                                                                'Draw pre-loaded image referenced by  id "testing image" to current position, scaled at 100 pixels width and 150 pixels height**')),
+                                                                                'Draw image referenced by id "testing image" to current position, scaled at 100 pixels width and 150 pixels height**')),
                                                                     ('draw text \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a text]',
@@ -1364,28 +1360,116 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, r"^\x20*\b(?:clear\s+canvas|apply\s+to\s+layer)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, r"^\x20*\b(?:clear\s+canvas|fill\s+canvas\s+from(?:\s+color|\s+image))\b",
                                                                     'Drawing/Miscellaneous',
                                                                     [('clear canvas',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Clear canvas content]',
                                                                                 # description
-                                                                                'Clear current canvas',
+                                                                                'Clear current canvas (set all pixels as fully transparent)',
                                                                                 # example
                                                                                 'Following instruction:\n'
                                                                                 '**`clear canvas`**\n\n'
                                                                                 'Will clear all content already drawn on canvas')),
-                                                                    ('apply to layer',
+                                                                    ('fill canvas from color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Apply result to *Krita*\'s layer]',
+                                                                                'Action [Fill current canvas with given color]',
                                                                                 # description
-                                                                                'Apply current canvas content to current *Krita*\'s layer (current layer content is replaced by canvas content)',
+                                                                                'Fill canvas with given color *<COLOR>*)',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`apply to layer`**\n\n'
-                                                                                'All content drawn on canvas is applied to current layer')),
+                                                                                '**`fill canvas from color #ff0000`**\n\n'
+                                                                                'Fill entirely the canvas with a red color')),
+                                                                    ('fill canvas from image \x01<IMAGE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill current canvas with given image]',
+                                                                                # description
+                                                                                'Fill canvas with image referenced by *<IMAGE>* into library\n'
+                                                                                'Image is *always* positionned in Top-Left corner of canvas, whatever the origin of position is\n'
+                                                                                'If image is too small to fill entirely the canvas, right/bottom part not overrided by image stay unchanged\n'
+                                                                                'If image is too large to fit in the canvas, right/bottom part of image are cropped\n\n'
+                                                                                'Following options can be used:\n'
+                                                                                '- **`with tiling`**: image is used as a tile pattern to fill canvas (image is repeated horizontaly and verticaly)\n'
+                                                                                '- **`with scale`**: image is scaled to given size'
+                                                                                '- **`with offset`**: image is translated by given offset'
+                                                                                '- **`with rotation`**: image is rotated with given angle\n\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`fill canvas from image "test"`***\n'
+                                                                                'Fill canvas with image\n\n'
+                                                                                '**`fill canvas from image "test"`***\n'
+                                                                                '**`     with tiling`***\n'
+                                                                                '**`     with offset -50 RPCT -50 RPCT`***\n'
+                                                                                'Fill canvas with repeated image, for which an offset of 50% of image size has been applied')),
                                                                     ],
                                                                     'A'),
+
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, r"\x20*\bwith(?:\s+(?:offset|scale|tiling|rotation\s+(?:left|right)))\b",
+                                                                    'Drawing/Miscellaneous/Options',
+                                                                    [('with tiling',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Activate tiling fill mode')),
+                                                                    ('with offset \x01<ABSISSA> [<ABSISSA-UNIT>] <ORDINATE> [<ORDINATE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply an offset to image use to fill canvas\n'
+                                                                                'Given *<ABSISSA>* define horizontal offset to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<ABSISSA-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ABSISSA-UNIT>`** if provided\n\n'
+                                                                                'Given *<ORDINATE>* define vertical offset to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<ORDINATE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ORDINATE-UNIT>`** if provided\n\n'
+                                                                                'Given *<ABSISSA-UNIT>* and *<ORDINATE-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`RPCT`**: use percentage relative to image size\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches')),
+                                                                    ('with scale \x01<WIDTH> [<WIDTH-UNIT>] <HEIGHT> [<HEIGHT-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply a scale to image use to fill canvas\n'
+                                                                                'Given *<WIDTH>* define horizontal scale to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<WIDTH-UNIT>`** is omited\n'
+                                                                                ' - With given **`<WIDTH-UNIT>`** if provided\n\n'
+                                                                                'Given *<HEIGHT>* define vertical scale to apply and is a number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<HEIGHT-UNIT>`** is omited\n'
+                                                                                ' - With given **`<HEIGHT-UNIT>`** if provided\n\n'
+                                                                                'Given *<WIDTH-UNIT>* and *<HEIGHT-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`RPCT`**: use percentage relative to image size\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches')),
+                                                                    ('with rotation left \x01<ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply a rotation to left direction (counterclockwise) to image use to fill canvas\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for width; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)')),
+                                                                    ('with rotation right \x01<ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Fill canvas from image option]',
+                                                                                # description
+                                                                                'Apply a rotation to right direction (clockwise) to image use to fill canvas\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for width; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)'))
+                                                                    ],
+                                                                    'A',
+                                                                    ignoreIndent=True),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\b(?:start|stop)\s+to\s+draw\s+shape\b",
                                                                     'Drawing/Shapes',
@@ -2200,36 +2284,106 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'F'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+(?:macro|image)\s+from\b",
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+buliscript\s+file\b",
                                                                     'Flow/Declarations',
-                                                                    [('import macro from \x01<TEXT>',
+                                                                    [('import buliscript file \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Flow [Import macro defined from an another script document]',
+                                                                                'Flow [Import and execute a BuliScript from an another document]',
                                                                                 # description
-                                                                                'Import macro from defined path\n'
-                                                                                'When imported, only defined macro are taken in account\n'
-                                                                                'If imported script contain execution flow, they\'re ignored\n\n'
-                                                                                'Given *<TEXT>* is a string that define a BuliScript file name; can be:\n'
+                                                                                'Import and execute a BuliScript from path defined by *<FILE-NAME>*\n'
+                                                                                'When imported, defined macro are taken in account, image are loaded, script is executed immediately\n\n'
+                                                                                'Given *<FILE-NAME>* is a string that define a BuliScript file name; can be:\n'
                                                                                 '- A full path/file name\n'
                                                                                 '- A file name: in this case, consider that file is in the same directory than executed script',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`import macro from "my_filename.bs"`**\n\n'
-                                                                                'Will import all macro defined in file `my_filename.bs`')),
-                                                                    ('import image from \x01<TEXT> \x01as \x01<RESNAME>',
+                                                                                '**`import buliscript from "my_filename.bs"`**\n\n'
+                                                                                'Will execute script file `my_filename.bs`')),
+                                                                    ],
+                                                                    'F'),
+
+            TokenizerRule(BSLanguageDef.ITokenType.FLOW_IMPORT, r"^\x20*\bimport\s+(?:(?:(?:document|canvas)\s+into\s+image\s+library)|(?:layer\s+into\s+image\s+library\s+from\s+(?:name|id|current))|(?:file\s+into\s+image\s+library\s+from))\b",
+                                                                    'Flow/Declarations',
+                                                                    [('import file into image library from \x01<FILE-NAME>\x01 as \x01<RESOURCE-NAME>\x01 ',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Flow [Import an image]',
+                                                                                'Flow [Import an image from a PNG/JPEG file]',
                                                                                 # description
-                                                                                'Import image from defined path <TEXT> and store it as <RESNAME>\n'
-                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n'
-                                                                                'This can avoid for action that use image to execute load on each call (especially in loops)\n\n'
-                                                                                'Given *<TEXT>* is a string that define a PNG/JPEG file name; can be:\n'
+                                                                                'Import image from defined path *<FILE-NAME>* and store it as *<RESOURCE-NAME>* in image library\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'Given *<FILE-NAME>* is a string that define a PNG/JPEG file name; can be:\n'
                                                                                 '- A full path/file name\n'
-                                                                                '- A file name: in this case, consider that file is in the same directory than executed script',
+                                                                                '- A file name: in this case, consider that file is in the same directory than executed script\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`import image from "test_brush.png" as "test brush"`**\n\n'
-                                                                                'Will load image `test_brush.png` and store it in memory with `test brush` for identifier')),
+                                                                                '**`import file into image library from "test_brush.png" as "test brush"`**\n\n'
+                                                                                'Will load image `test_brush.png` and store it in memory with `test brush` as resource identifier')),
+                                                                     ('import layer into image library from name \x01<LAYER-NAME>\x01 as \x01<RESOURCE-NAME>\x01 ',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from a layer]',
+                                                                                # description
+                                                                                'Import image from layer designed by name *<LAYER-NAME>* and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'Given *<LAYER-NAME>* is a string that define a layer name in current active document file name; can be:\n'
+                                                                                '- A full layer path name\n'
+                                                                                '- A layer name: in this case, the first layer for which name match the given *<NAME>* is loaded\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import layer into image library from name "test" as "test layer"`**\n\n'
+                                                                                'Will load first layer matching given name `test` and store it in memory with `test layer` as resource identifier\n\n'
+                                                                                '**`import layer into image library from name "test group/group blue/test" as "test layer"`**\n\n'
+                                                                                'Will load first layer matching given name `test` in group `group blue` under group `test group` and store it in memory with `test layer` as resource identifier'
+                                                                                )),
+                                                                     ('import layer into image library from id \x01<LAYER-ID>\x01 as \x01<RESOURCE-NAME>\x01 ',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from a layer]',
+                                                                                # description
+                                                                                'Import image from layer designed by Id *<LAYER-ID>* and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'Given *<LAYER-ID>* is a string that define a layer unique identifier in current active document file name\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import layer into image library from id "{4f96f7d7-10e5-4251-bfe9-539eb4f2126a}" as "test layer"`**\n\n'
+                                                                                'Will load layer matching given id `{4f96f7d7-10e5-4251-bfe9-539eb4f2126a}` and store it in memory with `test layer` as resource identifier'
+                                                                                )),
+                                                                     ('import layer into image library from current as \x01<RESOURCE-NAME>\x01 ',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from current layer]',
+                                                                                # description
+                                                                                'Import image from current active layer and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import layer into image library from current as "test layer"`**\n\n'
+                                                                                'Will load current active layer and store it in memory with `test layer` as resource identifier'
+                                                                                )),
+                                                                     ('import document into image library as \x01<RESOURCE-NAME>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from current document]',
+                                                                                # description
+                                                                                'Import image from current active document projection and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import document into image library as "test document"`**\n\n'
+                                                                                'Will load document projection and store it in memory with `test document` as resource identifier'
+                                                                                )),
+                                                                     ('import canvas into image library as \x01<RESOURCE-NAME>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Flow [Import an image from current canvas]',
+                                                                                # description
+                                                                                'Import image from current canvas and store it as *<RESOURCE-NAME>*\n'
+                                                                                'When imported, image is loaded once and stored in memory and can be used with action that need image as parameter\n\n'
+                                                                                'If an image already exist with given *<RESOURCE-NAME>*, it will be overrided\n',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`import canvas  into image library as "test canvas"`**\n\n'
+                                                                                'Will load canvas and store it in memory with `test canvas` as resource identifier'
+                                                                                )),
                                                                     ],
                                                                     'F'),
 
@@ -2359,11 +2513,12 @@ class BSLanguageDef(LanguageDef):
                                                                             "canvas\s+background\s+from\s+layer|canvas\s+background\s+from|canvas\s+background|canvas\s+origin|canvas\s+grid|canvas\s+position|canvas\s+rulers|canvas\s+)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
-                                                                       r"|(?:clear|apply(?:\s+to)?)"
+                                                                       r"|(?:clear)"
+                                                                       r"|(?:fill(?:\s+canvas(?:\s+from)?)?)"
                                                                        r"|(?:pen|move|turn|push|pop|activate|deactivate)"
                                                                        r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
                                                                        r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|(?:single|multiple)(?:\s+choice)?))?)?)?)"
-                                                                       r"|(?:with(?:\s+(?:minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
+                                                                       r"|(?:with(?:\s+(?:rotation|minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
                                                                        # (?:single|multiple) (?:\s+(?:choice)?)?
@@ -2371,7 +2526,10 @@ class BSLanguageDef(LanguageDef):
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for(?:\s+(?:each(?:\s+(?:item))?))?)"
-                                                                       r"|(?:import(?:\s+(?:macro|image))?)"
+                                                                       r"|(?:import\s+buliscript)"
+                                                                       r"|(?:import(?:\s+(?:document|canvas)(?:\s+into(?:\s+image)?)?))"
+                                                                       r"|(?:import(?:\s+file(?:\s+into(?:\s+image(?:\s+library)?)?)?))"
+                                                                       r"|(?:import(?:\s+layer(?:\s+into(?:\s+image(?:\s+library(?:\s+from)?)?)?)?))"
                                                                        r"|(?:set\s+global)"
                                                                        r"|(?:and\s+store(?:\s+(?:result(?:\s+(?:into))?))?)"
                                                                        r")\b"
@@ -4002,7 +4160,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|outline|letterspacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\btext\.(?:font|size|bold|italic|letterspacing\.(?:spacing|unit)|stretch|color|alignment\.(?:horizontal|vertical))\b",
                                                                     'Variables/Text',
                                                                     [(':text.color',
                                                                             TokenizerRule.formatDescription(
@@ -4033,12 +4191,6 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Reserved variable [Current text style: italic status]',
                                                                                 # description
                                                                                 'Current italic status\n'
-                                                                                'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
-                                                                     (':text.outline',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current text style: outline status]',
-                                                                                # description
-                                                                                'Current outline status\n'
                                                                                 'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
                                                                      (':text.letterSpacing.spacing',
                                                                             TokenizerRule.formatDescription(
@@ -4478,6 +4630,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#e5dd82', True, False),
@@ -4574,6 +4727,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_FILL, '#c278da', True, False),
@@ -4672,8 +4826,13 @@ class BSLanguageDef(LanguageDef):
         GrammarRule('Declarations_Section',
                 GROneOrMore('Comment',
                             'Flow_Set_Variable',
-                            'Flow_Import_Macro',
-                            'Flow_Import_Image',
+                            'Flow_Import_Script',
+                            'Flow_Import_Image_From_File',
+                            'Flow_Import_Image_From_LayerName',
+                            'Flow_Import_Image_From_LayerId',
+                            'Flow_Import_Image_From_LayerCurrent',
+                            'Flow_Import_Image_From_Document',
+                            'Flow_Import_Image_From_Canvas',
                             'Flow_Define_Macro',
                             #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
                         )
@@ -4697,13 +4856,13 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Text_Size',
                       'Action_Set_Text_Bold',
                       'Action_Set_Text_Italic',
-                      'Action_Set_Text_Outline',
                       'Action_Set_Text_Letter_Spacing',
                       'Action_Set_Text_Stretch',
                       'Action_Set_Text_HAlignment',
                       'Action_Set_Text_VAlignment',
                       'Action_Set_Draw_Antialiasing',
                       'Action_Set_Draw_Blending',
+                      'Action_Set_Draw_Opacity',
                       'Action_Set_Canvas_Grid_Color',
                       'Action_Set_Canvas_Grid_Style',
                       'Action_Set_Canvas_Grid_Size',
@@ -4726,9 +4885,6 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Canvas_Background_From_Layer_Id',
                       'Action_Set_Canvas_Background_From_Layer_Active',
                       'Action_Set_Canvas_Background_From_Color',
-                      # TODO
-                      #'Action_Set_Layer',
-                      #'Action_Set_Selection',
                       'Action_Set_Script_Execution_Verbose',
                       'Action_Set_Script_Randomize_Seed',
                       'Action_Draw_Shape_Line',
@@ -4745,8 +4901,8 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Shape_Text',
                       'Action_Draw_Shape_Star',
                       'Action_Draw_Misc_Clear_Canvas',
-                      # TODO
-                      #'Action_Draw_Misc_Apply_To_Layer',
+                      'Action_Draw_Misc_Fill_Canvas_From_Color',
+                      'Action_Draw_Misc_Fill_Canvas_From_Image',
                       'Action_Draw_Shape_Start',
                       'Action_Draw_Shape_Stop',
                       'Action_Draw_Fill_Activate',
@@ -4934,14 +5090,6 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Text_Outline',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_TEXT, 'set text outline', False),
-                'Any_Expression',
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
         GrammarRule('Action_Set_Text_Letter_Spacing',
                 GrammarRule.OPTION_AST,
                 # --
@@ -4987,6 +5135,14 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw blending mode', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_Draw_Opacity',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw opacity', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -5291,6 +5447,7 @@ class BSLanguageDef(LanguageDef):
                 'Any_Expression',
                 'Any_Expression',
                 GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -5319,6 +5476,74 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, 'clear canvas', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, 'fill canvas from color', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_MISC, 'fill canvas from image', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+                GRNoneOrMore('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Tiling',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Scale',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Offset',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Left',
+                             'Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Right')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Tiling',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with tiling', False)
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Scale',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with scale', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Offset',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with offset', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Left',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with rotation left', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                GROptional('Any_Expression')
+            )
+
+        GrammarRule('Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Right',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, 'with rotation right', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                'Any_Expression',
+                GROptional('Any_Expression')
             )
 
         GrammarRule('Action_Draw_Shape_Start',
@@ -5782,6 +6007,12 @@ class BSLanguageDef(LanguageDef):
 
         GrammarRule('Flow',
                 GROne('Flow_Set_Variable',
+                      'Flow_Import_Image_From_File',
+                      'Flow_Import_Image_From_LayerName',
+                      'Flow_Import_Image_From_LayerId',
+                      'Flow_Import_Image_From_LayerCurrent',
+                      'Flow_Import_Image_From_Document',
+                      'Flow_Import_Image_From_Canvas',
                       'Flow_Stop_Script',
                       'Flow_Call_Macro',
                       'Flow_If',
@@ -5800,22 +6031,74 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 
-        GrammarRule('Flow_Import_Macro',
+        GrammarRule('Flow_Import_Script',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import macro from', False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import buliscript file', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 
-        GrammarRule('Flow_Import_Image',
+        GrammarRule('Flow_Import_Image_From_File',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import image from', False),
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import file into image library from', False),
                 'Any_Expression',
                 #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
                 GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
-                GROne('String_Value'),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_LayerName',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import layer into image library from name', False),
+                'Any_Expression',
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_LayerId',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import layer into image library from id', False),
+                'Any_Expression',
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_LayerCurrent',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import layer into image library from current', False),
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_Document',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import document into image library', False),
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+            )
+
+        GrammarRule('Flow_Import_Image_From_Canvas',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.FLOW_IMPORT, 'import canvas into image library', False),
+                #GROptional(GRToken(BSLanguageDef.ITokenType.NEWLINE, False)),
+                GRToken(BSLanguageDef.ITokenType.FLOW_AS, False),
+                GROne('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
             )
 

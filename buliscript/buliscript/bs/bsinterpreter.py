@@ -225,7 +225,7 @@ class BSInterpreter(QObject):
 
         # verbose mode by default is False
         # when True, all action will generate a verbose information
-        self.__optionVerboseMode=False
+        self.__optionVerboseMode=True
 
         # delay mode by default is 0
         # when set, a delay is applied between each instruction
@@ -667,6 +667,18 @@ class BSInterpreter(QObject):
             return self.__executeFlowRepeat(currentAst)
         elif currentAst.id() == 'Flow_ForEach':
             return self.__executeFlowForEach(currentAst)
+        elif currentAst.id() == 'Flow_Import_Image_From_File':
+            return self.__executeFlowImportImageFromFile(currentAst)
+        elif currentAst.id() == 'Flow_Import_Image_From_LayerName':
+            return self.__executeFlowImportImageFromLayerName(currentAst)
+        elif currentAst.id() == 'Flow_Import_Image_From_LayerId':
+            return self.__executeFlowImportImageFromLayerId(currentAst)
+        elif currentAst.id() == 'Flow_Import_Image_From_LayerCurrent':
+            return self.__executeFlowImportImageFromLayerCurrent(currentAst)
+        elif currentAst.id() == 'Flow_Import_Image_From_Document':
+            return self.__executeFlowImportImageFromDocument(currentAst)
+        elif currentAst.id() == 'Flow_Import_Image_From_Canvas':
+            return self.__executeFlowImportImageFromCanvas(currentAst)
 
         # ----------------------------------------------------------------------
         # Actions
@@ -705,8 +717,6 @@ class BSInterpreter(QObject):
             return self.__executeActionSetTextBold(currentAst)
         elif currentAst.id() == 'Action_Set_Text_Italic':
             return self.__executeActionSetTextItalic(currentAst)
-        elif currentAst.id() == 'Action_Set_Text_Outline':
-            return self.__executeActionSetTextOutline(currentAst)
         elif currentAst.id() == 'Action_Set_Text_Letter_Spacing':
             return self.__executeActionSetTextLetterSpacing(currentAst)
         elif currentAst.id() == 'Action_Set_Text_Stretch':
@@ -719,6 +729,8 @@ class BSInterpreter(QObject):
             return self.__executeActionSetDrawAntialiasing(currentAst)
         elif currentAst.id() == 'Action_Set_Draw_Blending':
             return self.__executeActionSetDrawBlending(currentAst)
+        elif currentAst.id() == 'Action_Set_Draw_Opacity':
+            return self.__executeActionSetDrawOpacity(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Grid_Color':
             return self.__executeActionSetCanvasGridColor(currentAst)
         elif currentAst.id() == 'Action_Set_Canvas_Grid_Style':
@@ -795,8 +807,10 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawShapeStar(currentAst)
         elif currentAst.id() == 'Action_Draw_Misc_Clear_Canvas':
             return self.__executeActionDrawMiscClearCanvas(currentAst)
-        elif currentAst.id() == 'Action_Draw_Misc_Apply_To_Layer':
-            return self.__executeActionDrawMiscApplyToLayer(currentAst)
+        elif currentAst.id() == 'Action_Draw_Misc_Fill_Canvas_From_Color':
+            return self.__executeActionDrawMiscFillCanvasFromColor(currentAst)
+        elif currentAst.id() == 'Action_Draw_Misc_Fill_Canvas_From_Image':
+            return self.__executeActionDrawMiscFillCanvasFromImage(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Start':
             return self.__executeActionDrawShapeStart(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Stop':
@@ -1293,6 +1307,207 @@ class BSInterpreter(QObject):
 
         return None
 
+    def __executeFlowImportImageFromFile(self, currentAst):
+        """import file into image library from
+
+        Import a file in image library
+        """
+        fctLabel='Flow ***import file into image library from***'
+
+        # 1st parameter: file name
+        # 2nd parameter: resource name
+        self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        sourceName=self.__evaluate(currentAst.node(0))
+        targetName=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, 'FILE-NAME', sourceName, str)
+        self.__checkParamType(currentAst, fctLabel, 'RESOURCE-NAME', targetName, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'FILE-NAME', sourceName!='', "File name can't be empty string")
+        self.__checkParamDomain(currentAst, fctLabel, 'RESOURCE-NAME', targetName!='', "Resource name can't be empty string")
+
+
+        self.verbose(f"import file into image library from *'{self.__strValue(sourceName)}'* as *'{self.__strValue(targetName)}'*", currentAst)
+        if self.__imagesLibrary.alreadyDefined(targetName):
+            self.verbose(f"> Will replace current content for *{self.__strValue(targetName)}*", currentAst)
+
+        currentPath=os.path.dirname(os.path.normpath(os.path.expanduser("sourceName")))
+        if currentPath == '':
+            # file name only => need to search in current path
+            if not self.__scriptSourceFileName is None:
+                scriptSourcePath=os.path.dirname(os.path.normpath(os.path.expanduser(self.__scriptSourceFileName)))
+            else:
+                scriptSourcePath=os.path.normpath(os.path.expanduser("~"))
+
+            sourceFileName=os.path.join(scriptSourcePath, sourceName)
+        else:
+            sourceFileName=sourceName
+
+        sourceFileName=os.path.normpath(sourceFileName)
+
+        if os.path.exists(sourceFileName):
+            returned=self.__loadImage(targetName, f"file:{sourceFileName}")
+            if not returned[0]:
+                self.warning(f"Can't load image file into library: *{self.__strValue(sourceFileName)}*", currentAst)
+                self.warning(returned[1], currentAst)
+            else:
+                self.verbose(f"Image loaded: *{self.__strValue(returned[1])}x{self.__strValue(returned[2])}*", currentAst)
+        else:
+            self.warning(f"Can't load image file into library: *{self.__strValue(sourceFileName)}*", currentAst)
+            self.warning("File not found", currentAst)
+
+
+        return None
+
+    def __executeFlowImportImageFromLayerName(self, currentAst):
+        """import layer into image library from name
+
+        Import a layer in image library
+        """
+        fctLabel='Flow ***import layer into image library from name***'
+
+        # 1st parameter: file name
+        # 2nd parameter: resource name
+        self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        sourceName=self.__evaluate(currentAst.node(0))
+        targetName=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamType(currentAst, fctLabel, 'LAYER-NAME', sourceName, str)
+        self.__checkParamType(currentAst, fctLabel, 'RESOURCE-NAME', targetName, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'LAYER-NAME', sourceName!='', "Layer name can't be empty string")
+        self.__checkParamDomain(currentAst, fctLabel, 'RESOURCE-NAME', targetName!='', "Resource name can't be empty string")
+
+        self.verbose(f"import layer into image library from name *'{self.__strValue(sourceName)}'* as *'{self.__strValue(targetName)}'* ", currentAst)
+        if self.__imagesLibrary.alreadyDefined(targetName):
+            self.verbose(f"> Will replace current content for *{self.__strValue(targetName)}* ", currentAst)
+
+        returned=self.__loadImage(targetName, f"layer:name:{sourceName}")
+        if not returned[0]:
+            self.warning(f"Can't load layer into library: *{self.__strValue(sourceName)}* ", currentAst)
+            self.warning(returned[1], currentAst)
+        else:
+            self.verbose(f"Image loaded: *{self.__strValue(returned[1])}x{self.__strValue(returned[2])}* ", currentAst)
+
+        return None
+
+    def __executeFlowImportImageFromLayerId(self, currentAst):
+        """import layer into image library from id
+
+        Import a layer in image library
+        """
+        fctLabel='Flow ***import layer into image library from id***'
+
+        # 1st parameter: file name
+        # 2nd parameter: resource name
+        self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        sourceName=self.__evaluate(currentAst.node(0))
+        targetName=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamDomain(currentAst, fctLabel, 'LAYER-ID', sourceName!='', "Layer identifier can't be empty string")
+        self.__checkParamDomain(currentAst, fctLabel, 'LAYER-ID', re.match('\d{8}-\d{4}-\d{4}-\d{4}-\d{12}|\{\d{8}-\d{4}-\d{4}-\d{4}-\d{12}\}', sourceName), "Invalid format for layer identifier")
+        self.__checkParamDomain(currentAst, fctLabel, 'RESOURCE-NAME', targetName!='', "Resource name can't be empty string")
+
+        self.verbose(f"import layer into image library from id *'{self.__strValue(sourceName)}'* as *'{self.__strValue(targetName)}'* ", currentAst)
+        if self.__imagesLibrary.alreadyDefined(targetName):
+            self.verbose(f"> Will replace current content for *{self.__strValue(targetName)}* ", currentAst)
+
+        returned=self.__loadImage(targetName, f"layer:id:{sourceName}")
+        if not returned[0]:
+            self.warning(f"Can't load layer into library: *{self.__strValue(sourceName)}* ", currentAst)
+            self.warning(returned[1], currentAst)
+        else:
+            self.verbose(f"Image loaded: *{self.__strValue(returned[1])}x{self.__strValue(returned[2])}* ", currentAst)
+
+        return None
+
+    def __executeFlowImportImageFromLayerCurrent(self, currentAst):
+        """import layer into image library from current
+
+        Import current layer in image library
+        """
+        fctLabel='Flow ***import layer into image library from current***'
+
+        # 1st parameter: file name
+        # 2nd parameter: resource name
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        targetName=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RESOURCE-NAME', targetName!='', "Resource name can't be empty string")
+
+        self.verbose(f"import layer into image library from current as *'{self.__strValue(targetName)}'* ", currentAst)
+        if self.__imagesLibrary.alreadyDefined(targetName):
+            self.verbose(f"> Will replace current content for *{self.__strValue(targetName)}*", currentAst)
+
+        returned=self.__loadImage(targetName, f"layer:current")
+        if not returned[0]:
+            self.warning(f"Can't load current layer into library", currentAst)
+            self.warning(returned[1], currentAst)
+        else:
+            self.verbose(f"Image loaded: *{self.__strValue(returned[1])}x{self.__strValue(returned[2])}* ", currentAst)
+
+        return None
+
+    def __executeFlowImportImageFromDocument(self, currentAst):
+        """import document into image library
+
+        Import current document in image library
+        """
+        fctLabel='Flow ***import document into image library***'
+
+        # 1st parameter: file name
+        # 2nd parameter: resource name
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        targetName=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RESOURCE-NAME', targetName!='', "Resource name can't be empty string")
+
+        self.verbose(f"import document into image library as *'{self.__strValue(targetName)}'* ", currentAst)
+        if self.__imagesLibrary.alreadyDefined(targetName):
+            self.verbose(f"> Will replace current content for *{self.__strValue(targetName)}* ", currentAst)
+
+        returned=self.__loadImage(targetName, f"document:")
+        if not returned[0]:
+            self.warning(f"Can't load current document into library", currentAst)
+            self.warning(returned[1], currentAst)
+        else:
+            self.verbose(f"Image loaded: *{self.__strValue(returned[1])}x{self.__strValue(returned[2])}* ", currentAst)
+
+        return None
+
+    def __executeFlowImportImageFromCanvas(self, currentAst):
+        """import canvas into image library
+
+        Import current canvas in image library
+        """
+        fctLabel='Flow ***import canvas into image library***'
+
+        # 1st parameter: file name
+        # 2nd parameter: resource name
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        targetName=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RESOURCE-NAME', targetName!='', "Resource name can't be empty string")
+
+        self.verbose(f"import canvas into image library as *'{self.__strValue(targetName)}'*", currentAst)
+        if self.__imagesLibrary.alreadyDefined(targetName):
+            self.verbose(f"> Will replace current content for *{self.__strValue(targetName)}*", currentAst)
+
+        returned=self.__loadImage(targetName, f"canvas:")
+        if not returned[0]:
+            self.warning(f"Can't load current canvas into library", currentAst)
+            self.warning(returned[1], currentAst)
+        else:
+            self.verbose(f"Image loaded: *{self.__strValue(returned[1])}x{self.__strValue(returned[2])}*", currentAst)
+
+        return None
+
 
     # --------------------------------------------------------------------------
     # Actions
@@ -1651,24 +1866,6 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
-    def __executeActionSetTextOutline(self, currentAst):
-        """Set text outline
-
-        :text.outline
-        """
-        fctLabel='Action ***set text outline***'
-        self.__checkParamNumber(currentAst, fctLabel, 1)
-        value=self.__evaluate(currentAst.node(0))
-
-        self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
-
-        self.verbose(f"set text outline {self.__strValue(value)}{self.__formatStoreResult(':text.outline')}", currentAst)
-
-        self.__setTextOutline(value)
-
-        self.__delay()
-        return None
-
     def __executeActionSetTextLetterSpacing(self, currentAst):
         """Set text letter spacing
 
@@ -1791,6 +1988,23 @@ class BSInterpreter(QObject):
         self.verbose(f"set draw blending mode {self.__strValue(value)}{self.__formatStoreResult(':draw.blendingMode')}", currentAst)
 
         self.__setDrawBlending(value)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetDrawOpacity(self, currentAst):
+        """Set draw opacity
+
+        :draw.opacity
+        """
+        fctLabel='Action ***set draw opacity***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
+        value=self.__evaluate(currentAst.node(0))
+
+        self.__checkParamType(currentAst, fctLabel, 'OPACITY', value, int, float)
+
+        self.verbose(f"set draw opacity {self.__strValue(value)}{self.__formatStoreResult(':draw.opacity')}", currentAst)
+
 
         self.__delay()
         return None
@@ -2364,6 +2578,8 @@ class BSInterpreter(QObject):
 
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"draw line {self.__strValue(length)} {self.__strValue(unit)}", currentAst)
+
+
         self.__delay()
         return None
 
@@ -2623,20 +2839,11 @@ class BSInterpreter(QObject):
         fctLabel='Action ***draw image***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
-        fileName=self.__evaluate(currentAst.node(0))
+        imageReference=self.__evaluate(currentAst.node(0))
 
-        self.__checkParamType(currentAst, fctLabel, 'IMAGE', fileName, str)
+        self.__checkParamType(currentAst, fctLabel, 'IMAGE', imageReference, str)
 
-        # TODO: implement file management
-        fileIsValid=True
-
-        if not self.__checkParamDomain(currentAst, fctLabel, 'IMAGE', fileIsValid, f"image can't be found: {fileName}", False):
-            # if value<=0, exit
-            self.verbose(f"draw image {self.__strValue(fileName)}     => Cancelled", currentAst)
-            self.__delay()
-            return None
-
-        self.verbose(f"draw image {self.__strValue(fileName)}", currentAst)
+        self.verbose(f"draw image *'{self.__strValue(imageReference)}'*", currentAst)
 
         # TODO: implement canvas render
 
@@ -2646,42 +2853,54 @@ class BSInterpreter(QObject):
     def __executeActionDrawShapeScaledImage(self, currentAst):
         """Draw scaled image"""
         fctLabel='Action ***draw scaled image***'
-        self.__checkParamNumber(currentAst, fctLabel, 3, 4)
+        self.__checkParamNumber(currentAst, fctLabel, 3, 4, 5)
 
-        fileName=self.__evaluate(currentAst.node(0))
+        imageReference=self.__evaluate(currentAst.node(0))
         width=self.__evaluate(currentAst.node(1))
-        height=self.__evaluate(currentAst.node(2))
-        unit=self.__evaluate(currentAst.node(3, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
 
-        self.__checkParamType(currentAst, fctLabel, 'IMAGE', fileName, str)
+        p2=self.__evaluate(currentAst.node(2))
+        p3=self.__evaluate(currentAst.node(3))
+        p4=self.__evaluate(currentAst.node(4))
+
+        if isinstance(p2, (int, float)):
+            # p2 is a numeric value
+            # consider we have
+            #   draw scaled image "image ref" width height [unit]
+            # same unit for witdh and height
+            height=p2
+            unitW=self.__evaluate(currentAst.node(3, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+            unitH=unitW
+        elif isinstance(p2, str):
+            # p2 is a string value
+            # consider we have
+            #   draw scaled image "image ref" width unit height [unit]
+            unitW=self.__evaluate(currentAst.node(2, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+            height=p3
+            unitH=self.__evaluate(currentAst.node(4, self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')))
+
+        self.__checkParamType(currentAst, fctLabel, 'IMAGE', imageReference, str)
         self.__checkParamType(currentAst, fctLabel, 'WIDTH', width, int, float)
         self.__checkParamType(currentAst, fctLabel, 'HEIGHT', height, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'UNIT-WIDTH', unitW, str)
+        self.__checkParamType(currentAst, fctLabel, 'UNIT-HEIGHT', unitH, str)
 
-        # TODO: implement file management
-        fileIsValid=True
+        #if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>=0, f"a positive number is expected (current={width})", False):
+        #    # if value<=0, exit
+        #    self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+        #    self.__delay()
+        #    return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, 'IMAGE', fileIsValid, f"image can't be found: {fileName}", False):
-            # if value<=0, exit
-            self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
-            self.__delay()
-            return None
+        #if not self.__checkParamDomain(currentAst, fctLabel, 'HEIGHT', height>=0, f"a positive number is expected (current={height})", False):
+        #    # if value<=0, exit
+        #    self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
+        #    self.__delay()
+        #    return None
 
-        if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
-            # if value<=0, exit
-            self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
-            self.__delay()
-            return None
-
-        if not self.__checkParamDomain(currentAst, fctLabel, 'HEIGHT', height>0, f"a positive number is expected (current={height})", False):
-            # if value<=0, exit
-            self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}     => Cancelled", currentAst)
-            self.__delay()
-            return None
-
-        self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT-WIDTH', unitW in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'UNIT-HEIGHT', unitH in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
 
 
-        self.verbose(f"draw scaled image {self.__strValue(fileName)} {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
+        self.verbose(f"draw scaled image *'{self.__strValue(imageReference)}'* {self.__strValue(width)} {self.__strValue(unitW)} {self.__strValue(height)} {self.__strValue(unitH)}", currentAst)
 
         # TODO: implement canvas render
 
@@ -2778,17 +2997,195 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
-    def __executeActionDrawMiscApplyToLayer(self, currentAst):
-        """Apply to layer"""
-        fctLabel='Action ***apply to layer***'
-        self.__checkParamNumber(currentAst, fctLabel, 0)
+    def __executeActionDrawMiscFillCanvasFromColor(self, currentAst):
+        """Fill canvas from color"""
+        fctLabel='Action ***fill canvas from color***'
+        self.__checkParamNumber(currentAst, fctLabel, 1)
 
-        self.verbose(f"apply to layer", currentAst)
+        value=self.__evaluate(currentAst.node(0))
 
-        # TODO: implement canvas render
+        self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
+
+        self.verbose(f"fill canvas from color {self.__strValue(value)}", currentAst)
+
 
         self.__delay()
         return None
+
+    def __executeActionDrawMiscFillCanvasFromImage(self, currentAst):
+        """Fill canvas from image"""
+        fctLabel='Action ***fill canvas from image***'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        imageReference=self.__evaluate(currentAst.node(0))
+        tiling=False
+        scale=None
+        rotation=None
+        offset=None
+
+        self.__checkParamType(currentAst, fctLabel, 'IMAGE', imageReference, str)
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Tiling":
+                tiling=self.__executeActionDrawMiscFillCanvasFromImageOptionTiling(node)
+            elif node.id()=="Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Scale":
+                scale=self.__executeActionDrawMiscFillCanvasFromImageOptionScale(node)
+            elif node.id()=="Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Offset":
+                offset=self.__executeActionDrawMiscFillCanvasFromImageOptionOffset(node)
+            elif node.id()=="Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Left":
+                rotation=self.__executeActionDrawMiscFillCanvasFromImageOptionRotation(node, 'L')
+            elif node.id()=="Action_Draw_Misc_Fill_Canvas_From_Image_Option_With_Rotation_Right":
+                rotation=self.__executeActionDrawMiscFillCanvasFromImageOptionRotation(node, 'R')
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawMiscFillCanvasFromImageOptionTiling(self, currentAst):
+        """with tiling
+
+        Return optional tiling option for draw fill image action
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option ***with tiling***'
+        self.__checkParamNumber(currentAst, fctLabel, 0)
+
+        return True
+
+    def __executeActionDrawMiscFillCanvasFromImageOptionScale(self, currentAst):
+        """with scale
+
+        Return optional scale option for draw fill image action
+        Returned value is a tuple(float, str, float, str)
+
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option ***with scale***'
+        self.__checkParamNumber(currentAst, fctLabel, 2,3,4)
+
+        scaleH=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is v scale
+            scaleV=p2
+            unitScaleH=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitScaleV=unitScaleH
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # a unit
+                unitScaleH=p2
+                # third parameter is v scale
+                scaleV=p3
+                unitScaleV=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            elif isinstance(p2, (int, float)):
+                # second parameter is v scale
+                scaleV=p2
+                unitScaleH=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitScaleV=p3
+        elif len(currentAst.nodes())==4:
+                unitScaleH=p2
+                scaleV=p3
+                unitScaleV=p4
+
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH', scaleH, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'HEIGHT', scaleV, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'WIDTH-UNIT', unitScaleH, str)
+        self.__checkParamType(currentAst, fctLabel, 'HEIGHT-UNIT', unitScaleV, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'WIDTH-UNIT', unitScaleH in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'HEIGHT-UNIT', unitScaleV in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+
+        return (scaleH, unitScaleH, scaleV, unitScaleV)
+
+    def __executeActionDrawMiscFillCanvasFromImageOptionOffset(self, currentAst):
+        """with offset
+
+        Return optional offset option for draw fill image action
+        Returned value is a tuple(float, str, float, str)
+
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option ***with offset***'
+        self.__checkParamNumber(currentAst, fctLabel, 2,3,4)
+
+        offsetH=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is v offset
+            offsetV=p2
+            unitOffsetH=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitOffsetV=unitOffsetH
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # a unit
+                unitOffsetH=p2
+                # third parameter is v offset
+                offsetV=p3
+                unitOffsetV=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            elif isinstance(p2, (int, float)):
+                # second parameter is v offset
+                offsetV=p2
+                unitOffsetH=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitOffsetV=p3
+        elif len(currentAst.nodes())==4:
+                unitOffsetH=p2
+                offsetV=p3
+                unitOffsetV=p4
+
+        self.__checkParamType(currentAst, fctLabel, 'ABSISSA', offsetH, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ORDINATE', offsetV, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ABSISSA-UNIT', unitOffsetH, str)
+        self.__checkParamType(currentAst, fctLabel, 'ORDINATE-UNIT', unitOffsetV, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'ABSISSA-UNIT', unitOffsetH in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ORDINATE-UNIT', unitOffsetV in BSInterpreter.CONST_MEASURE_UNIT_RPCT, f"unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT_RPCT)}")
+
+        return (offsetH, unitOffsetH, offsetV, unitOffsetV)
+
+    def __executeActionDrawMiscFillCanvasFromImageOptionRotation(self, currentAst, direction):
+        """with rotation
+
+        Return optional rotation option for draw fill image action
+        Returned value is a tuple(float, str)
+
+        Not aimed to be called directly from __executeAst() method
+        """
+        fctLabel='Option ***with rotation***'
+        self.__checkParamNumber(currentAst, fctLabel, 1, 2)
+
+        rotation=self.__evaluate(currentAst.node(0))
+        angle=self.__evaluate(currentAst.node(1))
+
+        if angle is None:
+            angle=self.__scriptBlockStack.current().variable(':unit.rotation', 'PX')
+
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE', rotation, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE-UNIT', angle, str)
+
+        if direction=='L':
+            rotation=-rotation
+
+        self.__checkParamDomain(currentAst, fctLabel, 'ORDINATE-UNIT', angle in BSInterpreter.CONST_ROTATION_UNIT, f"unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        return (rotation, angle)
 
     def __executeActionDrawShapeStart(self, currentAst):
         """Start to draw shape
@@ -5347,14 +5744,6 @@ class BSInterpreter(QObject):
         self.warning("to finalize: __setTextItalic")
         self.__scriptBlockStack.setVariable(':text.italic', value, BSVariableScope.CURRENT)
 
-    def __setTextOutline(self, value):
-        """Set text outline
-
-        :text.outline
-        """
-        self.warning("to finalize: __setTextOutline")
-        self.__scriptBlockStack.setVariable(':text.outline', value, BSVariableScope.CURRENT)
-
     def __setTextLetterSpacing(self, value, unit='PCT'):
         """Set text letter spacing
 
@@ -5404,6 +5793,19 @@ class BSInterpreter(QObject):
         """
         self.warning("to finalize: __setDrawBlending")
         self.__scriptBlockStack.setVariable(':draw.blendingmode', value, BSVariableScope.CURRENT)
+
+    def __setDrawFillStatus(self, value):
+        """Set if brush is activated or not
+
+        :fill.status
+        """
+        self.__scriptBlockStack.setVariable(':fill.status', value, BSVariableScope.CURRENT)
+    def __setDrawOpacity(self, value):
+        """Set global drawing opacity
+
+        :draw.opacity
+        """
+        self.__scriptBlockStack.setVariable(':draw.opacity', value, BSVariableScope.CURRENT)
 
     def __setCanvasGridColor(self, value):
         """Set canvas grid color
@@ -5568,6 +5970,20 @@ class BSInterpreter(QObject):
         """
         self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionFulfill(value)
+
+    def __setCanvasPositionAxis(self, value):
+        """Set canvas position axis
+
+        :canvas.position.axis
+        """
+        self.__scriptBlockStack.setVariable(':canvas.position.axis', value, BSVariableScope.GLOBAL)
+
+    def __setCanvasPositionModel(self, value):
+        """Set canvas position model
+
+        :canvas.position.model
+        """
+        self.__scriptBlockStack.setVariable(':canvas.position.model', value, BSVariableScope.GLOBAL)
 
     def __setCanvasBackgroundOpacity(self, value):
         """Set canvas background opacity
