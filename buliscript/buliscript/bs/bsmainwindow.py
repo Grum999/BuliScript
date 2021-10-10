@@ -160,6 +160,60 @@ class BSMainWindow(QMainWindow):
         self.__initBSDocuments()
         self.__initCanvas()
 
+        # tweak a little bit how tabs are rendered
+        self.setStyleSheet("""
+            QTabBar {
+                background: palette(Base);
+                padding: 0px;
+                border: 0px none;
+                margin: 0px;
+                qproperty-drawBase: 0;
+            }
+
+            QTabBar::tab {
+                height: 3ex;
+                padding: 0px 1ex;
+                border-left: 0px none;
+                border-right: 0px none;
+                border-bottom: 1px solid palette(Base);
+                border-top: 3px solid palette(Base);
+                background: palette(Base);
+                color:palette(Text);
+                margin: 0px;
+            }
+            QTabBar::tab:selected {
+                border-top: 3px solid palette(Highlight);
+                background: palette(Window);
+                border-bottom: 1px solid palette(Window);
+            }
+
+            QTabBar::tab:hover {
+                background: palette(Highlight);
+                border-top: 3px solid palette(Highlight);
+                color: palette(HighlightedText);
+            }
+            QTabBar::close-button {
+                height: 8px;
+                width: 8px;
+            }
+            QTabBar::scroller {
+                width: 4ex;
+            }
+
+            BSDocuments>* {
+                padding: 4px 0 0 0;
+                margin: -2px;
+                border: 0px none;
+                background: palette(Window);
+
+            }
+            BSDocuments::pane{
+                padding: 0px;
+                margin: 0px;
+                border: 0px none;
+                background: palette(Window);
+            }
+        """)
 
     def __initStatusBar(self):
         """Initialise status bar
