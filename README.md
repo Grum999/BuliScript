@@ -1,3 +1,12 @@
+> # Work in progress!!
+> BuliScript development is far from being finished, but current main branch provide a relatively stable version of plugin
+> There's some bug and many stuff not yet implemented, but it's already possible to play a bit with language
+>
+> Even README is not yet ready ^_^'
+
+
+
+
 # Buli Script
 
 A plugin for [Krita](https://krita.org).
@@ -7,25 +16,42 @@ A plugin for [Krita](https://krita.org).
 *Buli Script* is a Python plugin made for [Krita](https://krita.org) (free professional and open-source painting program).
 
 
-Like (Logo)[https://en.wikipedia.org/wiki/Logo_(programming_language)] programming language, *Buli Script* is a scripting language that can be used to draw thing programmatically.
+Like [Logo](https://en.wikipedia.org/wiki/Logo_(programming_language)) programming language, *Buli Script* is a scripting language that can be used to draw thing programmatically.
 
-But it differs from (Logo)[https://en.wikipedia.org/wiki/Logo_(programming_language)]:
+But it differs from [Logo](https://en.wikipedia.org/wiki/Logo_(programming_language)):
 - *Buli Script* provides a larger set of instructions, including some command that allows to drive [Krita](https://krita.org)
-- *Buli Script* language wants to be easier to use than (Logo)[https://en.wikipedia.org/wiki/Logo_(programming_language)]
-
+- *Buli Script* language wants to be easier to use than [Logo](https://en.wikipedia.org/wiki/Logo_(programming_language))
 
 
 ## Screenshots
 
-...
+Small WebM video (Unfortunately github is not able to embed WebM/WebP files properly... :-/ )
+
+![UI Interface example](https://github.com/Grum999/BuliScript/raw/main/documentation/buliscript_01.webm)
 
 
 ## Functionalities
 
-...
+- Integrated editor 
+  - Higlighted syntax 
+  - Multiple (tabbed) documents, with "unsaved state" management (like Atom editor does)
+  - Language help (language reference, quick help)
+  - Script execution output, with search functionnalities 
+  - Search&Replace functionnalities
+- Integrated canvas view  
+  - Zoom in/out, Pan
+  - Rulers & Grid
+- BuliScript Language
+  - Basic flows (if then else, loop)
+  - Macro definition
+  - Drawing primitive (line, rectangle, ellipse, ...)
 
 
 ## Download, Install & Execute
+
+> # Plugin is still in development phase, there's no release yet :)
+> Download source manually for testing
+
 
 ### Download
 + **[ZIP ARCHIVE - v0.0.0](https://github.com/Grum999/BuliScript/releases/download/0.0.0/buliscript.zip)**
@@ -40,6 +66,7 @@ Plugin installation in [Krita](https://krita.org) is not intuitive and needs som
 2. Restart [Krita](https://krita.org)
 3. To enable *Buli Script* go to **Settings** -> **Configure Krita...** -> **Python Plugin Manager** and click the checkbox to the left of the field that says **Buli Script**.
 4. Restart [Krita](https://krita.org)
+
 
 
 ### Execute
@@ -58,9 +85,7 @@ Currently don't kwow if plugin works on Windows and MacOs, but as plugin don't u
 
 ### What's new?
 
-_[yyyy-mm-dd] Version 0.0.0_ *[Show detailed release content](https://github.com/Grum999/BuliScript/blob/main/releases-notes/RELEASE-0.0.0.md)*
-
-- First implemented/released version!
+...
 
 
 
