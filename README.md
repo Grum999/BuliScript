@@ -25,6 +25,8 @@ But it differs from (Logo)[https://en.wikipedia.org/wiki/Logo_(programming_langu
 
 ## Screenshots
 
+Small WebM video (Unfortunately github is not able to embed WebM/WebP files properly... :-/ )
+
 ![UI Interface example](https://github.com/Grum999/BuliScript/raw/main/documentation/buliscript_01.webm)
 
 
