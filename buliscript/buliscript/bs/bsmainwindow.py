@@ -214,8 +214,10 @@ class BSMainWindow(QMainWindow):
         self.gvCanvas.setScene(self.__uiController.renderedScene())
         self.gvCanvas.zoomChanged.connect(self.__canvasZoomChanged)
         self.__uiController.renderedScene().setSize(20000,20000)
+        self.__uiController.renderedScene().sceneUpdated.connect(self.__canvasSceneUpdated)
 
         self.lblZoomLevel.mousePressEvent=lambda x: self.gvCanvas.setZoom(1.0)
+        self.__canvasSceneUpdated({})
 
     def initMainView(self):
         """Initialise main view content"""
@@ -332,6 +334,26 @@ class BSMainWindow(QMainWindow):
     def __canvasZoomChanged(self, zoomLevel):
         """Update zoom level for canvas"""
         self.lblZoomLevel.setText(f"{100*zoomLevel:.2f}%")
+
+    def __canvasSceneUpdated(self, position):
+        """Scene has been updated, refresh position&rotation info"""
+        if 'r' in position:
+            rotation=round(position['r'], 2)
+
+            textR=''
+            if rotation>0:
+                textR=f'Left'
+            elif rotation<0:
+                textR=f'Right'
+
+            self.lblNfoRotation.setText(f"Rotation: {abs(rotation)%360:.2f}° {textR}")
+        else:
+            self.lblNfoRotation.setText('')
+
+        if 'x' in position and 'y' in position:
+            self.lblNfoPosition.setText(f"Position: {position['x']:.2f} {position['y']:.2f}")
+        else:
+            self.lblNfoPosition.setText('')
 
     # endregion: define actions method -----------------------------------------
 

@@ -20,10 +20,19 @@
 # -----------------------------------------------------------------------------
 
 import math
+
 from PyQt5.Qt import *
 from PyQt5.QtCore import (
         pyqtSignal as Signal
     )
+
+try:
+    from PyQt5.QtSvg import *
+    QTSVG_AVAILABLE = True
+except:
+    # vector render mode won't be an option...
+    QTSVG_AVAILABLE = False
+
 
 from buliscript.pktk.modules.imgutils import checkerBoardBrush
 
@@ -286,11 +295,17 @@ class BSWRendererScene(QGraphicsScene):
     """Render canvas scene: grid, origin, bounds, background, rendered graphics...."""
     propertyChanged=Signal(tuple)       # tuple is defined by (<variable name>, <value)
                                         # => <variable name> is the same than one used in BuliScript language
+    sceneUpdated=Signal(dict)           # scene has been updated
 
     __SECONDARY_FACTOR_OPACITY = 0.5    # define opacity of secondary grid relative to main grid
     __FULFILL_FACTOR_OPACITY = 0.75     # define opacity of position fulfill
     __RULER_FONT_SIZE = 7               # in PT
     __ARROW_SIZE = 4                    # in PX, height of arrows drawn for origin
+
+
+    POSITION_MODEL_BASIC='BASIC'
+    POSITION_MODEL_ARROWHEAD='ARROWHEAD'
+    POSITION_MODEL_UPWARD='UPWARD'
 
     def __init__(self, parent=None):
         super(BSWRendererScene, self).__init__(parent)
@@ -322,6 +337,10 @@ class BSWRendererScene(QGraphicsScene):
         self.__positionPosition=QPoint()
         self.__positionAngle=0
         self.__positionVisible=True
+        self.__positionAxis=False
+        self.__positionModel=BSWRendererScene.POSITION_MODEL_BASIC
+        self.__positionAxisLength=0
+        self.__positionAxisClip=0
 
         # document dimension in PX
         self.__documentBounds=None
@@ -334,7 +353,6 @@ class BSWRendererScene(QGraphicsScene):
         # rendered image
         self.__renderedImage=None
 
-
         # internal data for rendering
         self.__gridStrokesRect=QRect()
         self.__gridStrokesMain=[]
@@ -346,11 +364,18 @@ class BSWRendererScene(QGraphicsScene):
         self.__originStrokes=[]
         self.__originStrokesArrows=[]
         self.__positionPoints=[]
+        self.__positionStrokes=[]
         self.__viewZoom=1.0
 
         self.__rulerSize=0
         self.__rulerFontHeight=0
         self.__rulerFontWidth=0
+
+        self.__rendererPositionX=0
+        self.__rendererPositionY=0
+        self.__rendererRotation=0
+        self.__rendererGeometry=BSGeometry()
+
 
         self.initialise()
         self.setBackgroundBrush(self.__gridBrush)
@@ -487,8 +512,6 @@ class BSWRendererScene(QGraphicsScene):
             # center or bottom ==> arrow to top direction
             self.__originStrokesArrows.append(arrow('T', size))
 
-
-
     def __generatePositionPoints(self):
         """Generate position strokes (avoid to regenerate them on each update)"""
         if len(self.__positionPoints)>0:
@@ -506,11 +529,38 @@ class BSWRendererScene(QGraphicsScene):
         size=self.__positionSize/2
         angle=math.pi/4
 
-        self.__positionPoints=[
-                QPoint(0, -size),
-                QPoint(size*math.cos(-angle), -size*math.sin(-angle)),
-                QPoint(size*math.cos(math.pi+angle), -size*math.sin(math.pi+angle))
+        if self.__positionModel==BSWRendererScene.POSITION_MODEL_ARROWHEAD:
+            self.__positionPoints=[
+                    QPoint(0, size),
+                    QPoint(size*math.cos(-angle), size*math.sin(-angle)),
+                    QPoint(0, -size*0.25),
+                    QPoint(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
+                ]
+        elif self.__positionModel==BSWRendererScene.POSITION_MODEL_UPWARD:
+            self.__positionPoints=[
+                    QPoint(0, size),
+                    QPoint(size*math.cos(-angle), size*math.sin(-angle)),
+                    QPoint(size*math.cos(-angle)/2, size*math.sin(-angle)),
+                    QPoint(size*math.cos(-angle)/2, -1.25*size),
+                    QPoint(size*math.cos(math.pi+angle)/2, -1.25*size),
+                    QPoint(size*math.cos(math.pi+angle)/2, size*math.sin(math.pi+angle)),
+                    QPoint(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
+                ]
+        else:
+            # BASIC
+            self.__positionPoints=[
+                    QPoint(0, size),
+                    QPoint(size*math.cos(-angle), size*math.sin(-angle)),
+                    QPoint(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
+                ]
+
+
+        # axis
+        self.__positionStrokes=[
+                QLine(0, self.__positionAxisLength, 0, -self.__positionAxisLength),
+                QLine(-self.__positionAxisLength, 0, self.__positionAxisLength, 0)
             ]
+
 
     def __calculateSceneSize(self):
         """Calculate scene size/rect according to current document & background bounds"""
@@ -551,6 +601,8 @@ class BSWRendererScene(QGraphicsScene):
             yValue=-(size+halfSize+rulerSize)
 
         self.setSceneRect(xValue, yValue, sceneSize, sceneSize)
+
+        self.__positionAxisLength=math.ceil(math.sqrt(2*size*size)+10)
 
 
     def initialise(self):
@@ -630,12 +682,25 @@ class BSWRendererScene(QGraphicsScene):
         # draw position
         if self.__positionVisible and len(self.__positionPoints):
             painter.save()
+            painter.setRenderHints(QPainter.Antialiasing, True)
             painter.setPen(self.__positionPen)
             if self.__positionFulfill:
                 painter.setBrush(self.__positionBrush)
             else:
                 painter.setBrush(QBrush(Qt.NoBrush))
+
+            transform=painter.transform()
+            transform.translate(self.__rendererGeometry.hScale()*self.__rendererPositionX, self.__rendererGeometry.vScale()*self.__rendererPositionY)
+            transform.rotate(-self.__rendererGeometry.hScale()*-self.__rendererGeometry.vScale()*self.__rendererRotation)
+            transform.scale(-self.__rendererGeometry.hScale(), self.__rendererGeometry.vScale())
+            painter.setTransform(transform)
             painter.drawPolygon(*self.__positionPoints)
+
+            if self.__positionAxis and len(self.__positionStrokes):
+                painter.setRenderHints(QPainter.Antialiasing, True)
+                painter.drawLines(*self.__positionStrokes)
+            else:
+                painter.drawEllipse(QPoint(0, 0), self.__positionSize/10, self.__positionSize/10)
             painter.restore()
 
         self.__gridStrokesRect=rect
@@ -755,6 +820,14 @@ class BSWRendererScene(QGraphicsScene):
     def positionFulfill(self):
         """Return settings used to define if position if fulfilled or not"""
         return self.__positionFulfill
+
+    def positionAxis(self):
+        """Return settings used to define if position axis is visible or not"""
+        return self.__positionAxis
+
+    def positionModel(self):
+        """Return settings used to define which position model is used"""
+        return self.__positionModel
 
 
     def documentBounds(self):
@@ -1020,6 +1093,20 @@ class BSWRendererScene(QGraphicsScene):
             self.__propertyChanged(':canvas.position.fulfill', self.__positionFulfill)
             self.update()
 
+    def setPositionAxis(self, value):
+        """Set settings used to define if position axis are visible or not"""
+        if self.__positionAxis!=value:
+            self.__positionAxis=value
+            self.__propertyChanged(':canvas.position.axis', self.__positionAxis)
+            self.update()
+
+    def setPositionModel(self, value):
+        """Set settings used to define which position model to use"""
+        if self.__positionModel!=value and self.__positionModel in [BSWRendererScene.POSITION_MODEL_BASIC, BSWRendererScene.POSITION_MODEL_UPWARD, BSWRendererScene.POSITION_MODEL_ARROWHEAD]:
+            self.__positionPoints=[]
+            self.__positionModel=value
+            self.__propertyChanged(':canvas.position.model', self.__positionModel)
+            self.update()
 
 
     def setDocumentBounds(self, bounds):
@@ -1066,3 +1153,351 @@ class BSWRendererScene(QGraphicsScene):
             self.__backgroundOpacity=max(0.0, min(1.0, value))
             self.__propertyChanged(':canvas.background.opacity', self.__backgroundOpacity)
             self.update()
+
+
+    def setRenderedContent(self, pixmap, position=None):
+        """Set current rendered result in scene"""
+        self.__renderedImage=pixmap
+        if not isinstance(position, dict):
+            position={}
+            self.__rendererPositionX=0
+            self.__rendererPositionY=0
+            self.__rendererRotation=0
+            self.__rendererGeometry=BSGeometry()
+        else:
+            self.__rendererPositionX=position['x']
+            self.__rendererPositionY=position['y']
+            self.__rendererRotation=position['r']
+            self.__rendererGeometry=position['g']
+
+        self.update()
+        self.sceneUpdated.emit(position)
+
+
+
+
+class BSRenderer(QObject):
+    """A class that allows to draw indifferently on a raster or vector painter
+
+    Notes:
+    - if QtSvg is not available, it's not possible to switch to vector painter mode
+    - vector painter mode IS NOT IMPLEMENTED YET
+        => only define generic access to simplify improvement later
+    """
+    OPTION_MODE_RASTER=1
+    OPTION_MODE_VECTOR=2
+
+    def __init__(self, parent=None):
+        super(BSRenderer, self).__init__(parent)
+
+        # current painter
+        self.__painter=None
+
+        # current geometry
+        self.__documentGeometry=BSGeometry()
+        self.__documentResolution=1.0
+
+        # current render mode active
+        self.__renderMode=None
+
+        # in vector mode, SVG content is stored in a buffer; need to keep it available in class scope
+        self.__vectorResult=None
+        # in raster mode, drawn content is stored in a QPixmap
+        self.__rasterResult=None
+
+        self.__transformOrigin=QTransform()
+        self.__transformPosition=QTransform()
+        self.__transform=QTransform()
+
+
+    def __initRenderer(self):
+        """Initialiser renderer painter"""
+        # if a painter is already initialised, need to be sure the painter is not active
+        # before creating a new one
+        self.__painter=self.finalize()
+
+        if self.__renderMode==BSRenderer.OPTION_MODE_RASTER:
+            # ensure no more vector data are kept in memory
+            self.__vectorResult=None
+            self.__rasterResult = QPixmap(int(self.__documentGeometry.width()), int(self.__documentGeometry.height()))
+            self.__rasterResult.fill(Qt.transparent)
+            self.__painter = QPainter(self.__rasterResult)
+        else:
+            # ensure no more raster data are kept in memory
+            self.__rasterResult=None
+
+            self.__vectorResult = QBuffer()
+            svgGenerator = QSvgGenerator()
+            svgGenerator.setOutputDevice(self.__vectorResult)
+            svgGenerator.setResolution(int(self.__documentResolution))
+            svgGenerator.setSize(QSize(int(self.__documentGeometry.width()), int(self.__documentGeometry.height())))
+            svgGenerator.setViewBox(QRectF(0, 0, self.__documentGeometry.width(), self.__documentGeometry.height()))
+            self.__painter = QPainter(svgGenerator)
+        self.__updateOrigin()
+
+    def __updateOrigin(self):
+        """Update painter origin according to geometry"""
+        self.__transformOrigin.reset()
+
+        self.__transformOrigin.scale(self.__documentGeometry.hScale(), self.__documentGeometry.vScale())
+        self.__transformOrigin.translate(self.__documentGeometry.hTranslate(), self.__documentGeometry.vTranslate())
+        #self.__transformOrigin.rotate(rotation)
+        self.__updateTransform()
+
+    def __updateTransform(self):
+        """Update all transformation into a single QTransform"""
+        self.__transform=QTransform(self.__transformPosition)
+        self.__transform*=self.__transformOrigin
+        if self.__painter:
+            self.__painter.setTransform(self.__transform, False)
+
+
+    def vectorModeAvailable(self):
+        """Return if vector mode is available or not"""
+        return QTSVG_AVAILABLE
+
+    def renderMode(self):
+        """Return current render mode"""
+        return self.__renderMode
+
+    def geometry(self):
+        """Return geometry of renderer"""
+        return self.__documentGeometry
+
+    def setGeometry(self, geometry):
+        """Set geometry for renderer"""
+        if not isinstance(geometry, (QRect, QRectF)):
+            raise EInvalidType("Given `geometry` must be a <QRect> or <QRectF>")
+
+        self.__documentGeometry.setGeometry(geometry.left(), geometry.top(), geometry.width(), geometry.height())
+        self.__updateOrigin()
+
+    def initialiseRender(self, mode, geometry, resolution):
+        """Initialise current render mode
+
+        Given `mode` can be:
+        - BSRenderer.OPTION_MODE_RASTER
+        - BSRenderer.OPTION_MODE_VECTOR
+
+        If vector mode is not available, raster mode is applied
+
+        Method return the render mode really applied
+        """
+        if not mode in (BSRenderer.OPTION_MODE_RASTER, BSRenderer.OPTION_MODE_VECTOR):
+            raise EInvalidValue("Given `value` must be a valid mode")
+        elif not isinstance(geometry, (QRect, QRectF)):
+            raise EInvalidValue("Given `geometry` must be a <QRect> or <QRectF>")
+        elif not isinstance(resolution, (int, float)) or resolution<1:
+            raise EInvalidValue("Given `resolution` must be a <int> or <float> greateror equal than 1")
+
+        if (mode==BSRenderer.OPTION_MODE_VECTOR and not QTSVG_AVAILABLE):
+            # no svg mode available, force raster mode
+            self.__renderMode=BSRenderer.OPTION_MODE_RASTER
+        else:
+            self.__renderMode=mode
+
+        self.__transformOrigin.reset()
+        self.__transformPosition.reset()
+        self.__documentGeometry=BSGeometry()
+        self.__documentResolution=resolution
+        self.setGeometry(geometry)
+
+        # do technical stuff in private method
+        self.__initRenderer()
+
+        return self.__renderMode
+
+    def result(self):
+        """Return rendered result
+
+        According to render mode:
+        - OPTION_MODE_RASTER: return a QPixmap
+        - OPTION_MODE_VECTOR: return SVG content as bytes[] array
+        """
+        if self.__renderMode==BSRenderer.OPTION_MODE_RASTER:
+            return self.__rasterResult
+        else:
+            return bytes(self.__vectorResult.buffer())
+
+    def painter(self):
+        """Return current painter"""
+        return self.__painter
+
+    def finalize(self):
+        """Finalize painter"""
+        if self.__painter and self.__painter.isActive():
+            self.__painter.end()
+        self.__painter=None
+        return None
+
+    def transform(self):
+        """Return QTransform for current position/rotation"""
+        return self.__transformPosition
+
+    def setRotation(self, angle, absolute=False):
+        """Rotate position to given angle (in degree)
+
+        Given `angle` is in degree
+        If `absolute` is true, do an absolute rotation to given angle
+        (otherwise, it's a relative rotation)
+
+        Note: angle=0 if Y+ direction
+        """
+        if absolute:
+            # absolute rotation
+            #
+            # need to reset rotation to be in default 0° rotation
+            # then do a rotation of -currentRotationAngle
+            rotationRadian=math.atan2(self.__transformPosition.m12(), self.__transformPosition.m11())
+            self.__transformPosition.rotateRadians(-rotationRadian)
+
+        # add rotation to current rotation transform
+        self.__transformPosition.rotate(angle)
+        self.__updateTransform()
+
+    def setTranslation(self, x, y, absolute=False):
+        """Translate position (in pixels)
+
+        Given `x` and `y` define translation coordinate
+        If `absolute` is true, do an absolute translation to coordinate
+        (otherwise, it's a relative translation)
+        """
+        if absolute:
+            # absolute translation
+            #
+            # need to reset rotation before doing translation
+            # then do a rotation of -currentRotationAngle
+            rotationRadian=math.atan2(self.__transformPosition.m12(), self.__transformPosition.m11())
+            self.__transformPosition.rotateRadians(-rotationRadian)
+            # and also need to go back to origin (0,0) then made a translation of -currentPositionX,-currentPositionY
+            self.__transformPosition.translate(-self.__transformPosition.dx(), -self.__transformPosition.dy())
+
+        # add rotation to current rotation transform
+        self.__transformPosition.translate(x, y)
+
+        if absolute:
+            # for absolute translation, as rotation has been reseted to 0, need to restore it
+            self.__transformPosition.rotateRadians(rotationRadian)
+
+        self.__updateTransform()
+
+    def position(self):
+        """Return a tuple about position information
+        (x, y, rotation)
+
+        Position is in Pixels, rotation in degree
+        """
+        #print([self.__transformPosition.m11(), self.__transformPosition.m12(), self.__transformPosition.m13()], '\n',
+        #      [self.__transformPosition.m21(), self.__transformPosition.m22(), self.__transformPosition.m23()], '\n',
+        #      [self.__transformPosition.m31(), self.__transformPosition.m32(), self.__transformPosition.m33()])
+        return {
+                'x': self.__transformPosition.dx(),   # m31()
+                'y': self.__transformPosition.dy(),   # m32()
+                'r': math.atan2(self.__transformPosition.m12(), self.__transformPosition.m11()) * 180/math.pi,
+                'g': self.__documentGeometry
+            }
+
+    def point(self, x, y):
+        return self.__transformPosition.map(QPointF(x, y))
+
+
+    def pushState(self):
+        """Push current painter state
+
+        Do a QPainter.save()
+        """
+        if self.__painter:
+            self.__painter.save()
+
+    def popState(self):
+        """Pop painter state
+
+        Do a QPainter.restore()
+        And reapply current transformation matrix
+        """
+        if self.__painter:
+            self.__painter.restore()
+            self.__painter.setTransform(self.__transform, False)
+
+
+class BSGeometry:
+    """QRect() was not able to manage 'absolute' width/height
+
+    Then a the BSGeomtry is like a QRect but more easy to use for renderer
+    Also provide scale/translation automatically according to left/right & top/bottom positions
+    """
+    
+    def __init__(self):
+        self.__left=0
+        self.__right=0
+        self.__top=0
+        self.__bottom=0
+
+        self.__width=0
+        self.__height=0
+
+        self.__hScale=1
+        self.__vScale=1
+
+        self.__hTranslate=0
+        self.__vTranslate=0
+
+    def __repr__(self):
+        return f"<BSGeometry(Pos({self.__left}, {self.__top} - {self.__right}, {self.__bottom}), Size({self.__width}, {self.__height}), Scale({self.__hScale}, {self.__vScale}), Translate({self.__hTranslate}, {self.__vTranslate}))>"
+
+    def setGeometry(self, left, top, width, height):
+        self.__left=left
+        self.__top=top
+
+        self.__width=abs(width)
+        self.__height=abs(height)
+
+        self.__hTranslate=-self.__left
+        if left>0:
+            self.__right=self.__left-self.__width
+            self.__hScale=-1
+        else:
+            self.__right=self.__left+self.__width
+            self.__hScale=1
+
+        if top>0:
+            self.__bottom=self.__top-self.__height
+            self.__vScale=-1
+            self.__vTranslate=-self.__top
+        else:
+            self.__bottom=self.__top+self.__height
+            self.__vScale=1
+            self.__vTranslate=self.__top
+
+    def width(self):
+        return self.__width
+
+    def height(self):
+        return self.__height
+
+    def left(self):
+        return self.__left
+
+    def right(self):
+        return self.__right
+
+    def top(self):
+        return self.__top
+
+    def bottom(self):
+        return self.__bottom
+
+    def hScale(self):
+        return self.__hScale
+
+    def vScale(self):
+        return self.__vScale
+
+    def hTranslate(self):
+        return self.__hTranslate
+
+    def vTranslate(self):
+        return self.__vTranslate
+
+    def size(self):
+        return QSize(self.__width, self.__height)

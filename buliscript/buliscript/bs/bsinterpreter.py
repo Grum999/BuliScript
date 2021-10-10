@@ -26,6 +26,7 @@ import uuid
 import random
 import math
 import time
+import os.path
 
 from enum import Enum
 
@@ -39,6 +40,7 @@ from .bssettings import (
         BSSettingsKey
     )
 from .bslanguagedef import BSLanguageDef
+from .bsrenderer import BSRenderer
 
 
 from buliscript.pktk.modules.ekrita import (
@@ -128,6 +130,7 @@ class BSInterpreter(QObject):
     actionExecuted = Signal(str)
     executionStarted = Signal()
     executionFinished = Signal()
+    updateRenderedScene = Signal(dict)
 
     output = Signal(str, WConsoleType, dict, bool)
 
@@ -146,6 +149,7 @@ class BSInterpreter(QObject):
     CONST_VALIGN=['TOP','MIDDLE','BOTTOM']
     CONST_DRAW_BLENDING_MODE=['NORMAL','SOURCE_OVER','DESTINATION_CLEAR','DESTINATION_OVER','SOURCE_IN','SOURCE_OUT','DESTINATION_IN','DESTINATION_OUT','DESTINATION_ATOP','SOURCE_ATOP','EXCLUSIVE_OR','PLUS','MULTIPLY','SCREEN','OVERLAY','DARKEN','LIGHTEN','COLORDODGE','COLORBURN','HARD_LIGHT','SOFT_LIGHT','DIFFERENCE','EXCLUSION',
                               'BITWISE_S_OR_D','BITWISE_S_AND_D','BITWISE_S_XOR_D','BITWISE_S_NOR_D','BITWISE_S_NAND_D','BITWISE_NS_XOR_D','BITWISE_S_NOT','BITWISE_NS_AND_D','BITWISE_S_AND_ND','BITWISE_NS_OR_D','BITWISE_CLEAR','BITWISE_SET','BITWISE_NOT_D','BITWISE_S_OR_ND']
+    CONST_POSITIONMODEL=['BASIC','ARROWHEAD','UPWARD']
 
     # conversion tables BuliScript<>Qt
     __CONV_PEN_STYLE={
@@ -154,6 +158,63 @@ class BSInterpreter(QObject):
             'DOT': Qt.DotLine,
             'DASHDOT': Qt.DashDotLine,
             'NONE': Qt.NoPen
+        }
+
+    __CONV_PEN_CAP={
+            'SQUARE': Qt.SquareCap,
+            'FLAT': Qt.FlatCap,
+            'ROUNDCAP': Qt.RoundCap,
+        }
+
+    __CONV_PEN_JOIN={
+            'BEVEL': Qt.BevelJoin,
+            'MITTER': Qt.MiterJoin,
+            'ROUNDJOIN': Qt.RoundJoin,
+        }
+
+    __CONV_FILL_RULE={
+            'EVEN': Qt.OddEvenFill,
+            'WINDING': Qt.WindingFill,
+        }
+
+    __CONV_DRAW_BLENDING_MODE={
+            'NORMAL': QPainter.CompositionMode_SourceOver,
+            'SOURCE_OVER': QPainter.CompositionMode_SourceOver,
+            'DESTINATION_CLEAR': QPainter.CompositionMode_Clear,
+            'DESTINATION_OVER': QPainter.CompositionMode_DestinationOver,
+            'SOURCE_IN': QPainter.CompositionMode_SourceIn,
+            'SOURCE_OUT': QPainter.CompositionMode_SourceOut,
+            'DESTINATION_IN': QPainter.CompositionMode_DestinationIn,
+            'DESTINATION_OUT': QPainter.CompositionMode_DestinationOut,
+            'DESTINATION_ATOP': QPainter.CompositionMode_DestinationAtop,
+            'SOURCE_ATOP': QPainter.CompositionMode_SourceAtop,
+            'EXCLUSIVE_OR': QPainter.CompositionMode_Xor,
+            'PLUS': QPainter.CompositionMode_Plus,
+            'MULTIPLY': QPainter.CompositionMode_Multiply,
+            'SCREEN': QPainter.CompositionMode_Screen,
+            'OVERLAY': QPainter.CompositionMode_Overlay,
+            'DARKEN': QPainter.CompositionMode_Darken,
+            'LIGHTEN': QPainter.CompositionMode_Lighten,
+            'COLORDODGE': QPainter.CompositionMode_ColorDodge,
+            'COLORBURN': QPainter.CompositionMode_ColorBurn,
+            'HARD_LIGHT': QPainter.CompositionMode_HardLight,
+            'SOFT_LIGHT': QPainter.CompositionMode_SoftLight,
+            'DIFFERENCE': QPainter.CompositionMode_Difference,
+            'EXCLUSION': QPainter.CompositionMode_Exclusion,
+            'BITWISE_S_OR_D': QPainter.RasterOp_SourceOrDestination,
+            'BITWISE_S_AND_D': QPainter.RasterOp_SourceAndDestination,
+            'BITWISE_S_XOR_D': QPainter.RasterOp_SourceXorDestination,
+            'BITWISE_S_NOR_D': QPainter.RasterOp_NotSourceAndNotDestination,
+            'BITWISE_S_NAND_D': QPainter.RasterOp_NotSourceOrNotDestination,
+            'BITWISE_NS_XOR_D': QPainter.RasterOp_NotSourceXorDestination,
+            'BITWISE_S_NOT': QPainter.RasterOp_NotSource,
+            'BITWISE_NS_AND_D': QPainter.RasterOp_NotSourceAndDestination,
+            'BITWISE_S_AND_ND': QPainter.RasterOp_SourceAndNotDestination,
+            'BITWISE_NS_OR_D': QPainter.RasterOp_NotSourceOrDestination,
+            'BITWISE_CLEAR': QPainter.RasterOp_ClearDestination,
+            'BITWISE_SET': QPainter.RasterOp_SetDestination,
+            'BITWISE_NOT_D': QPainter.RasterOp_NotDestination,
+            'BITWISE_S_OR_ND': QPainter.RasterOp_SourceOrNotDestination
         }
 
     __CONST_HALIGN={
@@ -178,6 +239,7 @@ class BSInterpreter(QObject):
 
         # script to execute
         self.__script=''
+        self.__scriptSourceFileName=None
 
         # main Abstract Syntax Tree is a ASTItem
         self.__astRoot=None
@@ -186,7 +248,10 @@ class BSInterpreter(QObject):
         self.__scriptBlockStack=BSScriptBlockStack()
 
         # macro definitions
-        self.__macroDefinitions=BSScriptBlockDefinedMacros()
+        self.__macroDefinitions=BSDefinedMacros()
+
+        # images library
+        self.__imagesLibrary=BSImagesLibrary()
 
         # language definition; once defined, can't be changed
         self.__languageDef=languageDef
@@ -201,8 +266,9 @@ class BSInterpreter(QObject):
         # internal value to define if an execution is currently running
         self.__isRunning=False
 
-        # canvas is a QPaintDevice on which everything will be drawn
-        self.__canvas=None
+        # renderer provide a QPainter ready to use
+        self.__renderer=BSRenderer()
+        self.__painter=None
 
         # store current document usefull informations
         # . current document (Document)
@@ -273,7 +339,6 @@ class BSInterpreter(QObject):
 
         # define rendered scene, on which grid, origin, ... are drawn
         self.__renderedScene=renderedScene
-        self.__renderedScene.propertyChanged.connect(lambda x: print(x))
 
     # --------------------------------------------------------------------------
     # utils methods
@@ -493,6 +558,26 @@ class BSInterpreter(QObject):
         else:
             return "UNKNOWN"
 
+    def __unitCanvas(self, value=None):
+        """Return given `value` if provided, otherwise return current canvas unit"""
+        if value:
+            return value
+        return self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+
+    def __unitRotation(self, value=None):
+        """Return given `value` if provided, otherwise return current rotation unit"""
+        if value:
+            return value
+        return self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+
+    def __updateRenderedScene(self):
+        """Update rendered scene"""
+
+        if self.__renderer and self.__painter:
+            self.__renderedScene.setRenderedContent(self.__renderer.result(), self.__renderer.position())
+        else:
+            self.__renderedScene.setRenderedContent(None, None)
+
     # --------------------------------------------------------------------------
     # Script execution methods
     # --------------------------------------------------------------------------
@@ -561,40 +646,6 @@ class BSInterpreter(QObject):
             elif self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_COLOR:
                 self.__setCanvasBackgroundFromColor(self.__optionDefaulCanvasBackgroundFromColor)
 
-
-            # -- default environment initialisation:
-            #       hardcoded to ensure that default values are always the same for everyone
-            #       let user's define default value they're prefering through scripting
-            self.__setUnitRotation('DEGREE')
-            self.__setUnitCanvas('PX')
-
-            self.__setPenColor(QColor(Qt.black))
-            self.__setPenSize(5.0)
-            self.__setPenStyle('SOLID')
-            self.__setPenCap('FLAT')
-            self.__setPenJoin('MITTER')
-            self.__setPenOpacity(True)
-
-            self.__setFillColor(QColor(Qt.black))
-            self.__setFillRule('EVEN')
-            self.__setFillOpacity(False)
-
-            self.__setTextColor(QColor(Qt.black))
-            self.__setTextOpacity(1.0)
-            self.__setTextFont("Helvetica")
-            self.__setTextSize(25)
-            self.__setTextBold(False)
-            self.__setTextItalic(False)
-            self.__setTextOutline(False)
-            self.__setTextLetterSpacing(100.0, 'PCT')
-            self.__setTextStretch(100.0)
-            self.__setTextHAlignment('LEFT')
-            self.__setTextVAlignment('TOP')
-
-            self.__setDrawAntialiasing(True)
-            self.__setDrawBlending('NORMAL')
-            self.__setDrawShapeStatus(False)
-
             # -- misc initialisation
             self.__setExecutionVerbose(self.__optionVerboseMode)
             self.__setRandomizeSeed()
@@ -606,6 +657,57 @@ class BSInterpreter(QObject):
 
         self.__renderedScene.setBackgroundImage(EKritaNode.toQPixmap(self.__currentLayer), self.__currentLayerBounds)
 
+        # NOTE:
+        #   Currently, renderer initialisation is hardcoded here (as currently, there's no possibility to use vector mode)
+        #   Todo:
+        #       . Improve BuliScript language to allow to change mode
+        #           "set canvas mode RASTER"
+        #           "set canvas mode VECTOR"
+        #       . Update interpreter to take in account this new action
+        #           When set, content is lost
+        #           Add a warning to inform user that mode has been changed and may be,
+        #           content have to be applied to current Krita's document
+        #
+        self.warning("to finalize: RENDERER INITIALISATION DONE >> NEED TO REVIEW CURRENT 'HARDCODED' INITIALISATION")
+        self.__renderer.initialiseRender(BSRenderer.OPTION_MODE_RASTER, self.__currentDocumentGeometry, self.__currentDocumentResolution)
+        self.__painter=self.__renderer.painter()
+
+
+        if reset:
+            # -- default environment initialisation:
+            #       hardcoded to ensure that default values are always the same for everyone
+            #       let user's define default value they're prefering through scripting
+            self.__setUnitRotation('DEGREE')
+            self.__setUnitCanvas('PX')
+
+            # done after painter initialisation
+            self.__setPenColor(QColor(Qt.black))
+            self.__setPenSize(5.0)
+            self.__setPenStyle('SOLID')
+            self.__setPenCap('FLAT')
+            self.__setPenJoin('MITTER')
+            self.__setPenOpacity(1.0)
+
+            self.__setFillColor(QColor(Qt.black))
+            self.__setFillRule('EVEN')
+            self.__setFillOpacity(1.0)
+
+            self.__setTextColor(QColor(Qt.black))
+            self.__setTextOpacity(1.0)
+            self.__setTextFont("Helvetica")
+            self.__setTextSize(25)
+            self.__setTextBold(False)
+            self.__setTextItalic(False)
+            self.__setTextLetterSpacing(100.0, 'PCT')
+            self.__setTextStretch(100)
+            self.__setTextHAlignment('CENTER')
+            self.__setTextVAlignment('MIDDLE')
+
+            self.__setDrawAntialiasing(True)
+            self.__setDrawBlending('NORMAL')
+            self.__setDrawShapeStatus(False)
+            self.__setDrawFillStatus(False)
+
         self.valid(f"**Start script execution**# #w#[##lw#*{time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}*##w#]")
         if self.__astRoot.id()==ASTSpecialItemType.ROOT:
             startTime=time.time()
@@ -613,13 +715,20 @@ class BSInterpreter(QObject):
                 returned=self.__executeAst(self.__astRoot)
                 totalTime=round(time.time()-startTime,4)
                 self.valid(f"**Script executed**# #w#[Executed in# #lw#*{totalTime}s*##w#]")
+                self.__updateRenderedScene()
+                # need to review this...
+                self.__painter=self.__renderer.finalize()
                 return returned
             except EInterpreter as e:
+                # need to review this...
+                self.__painter=self.__renderer.finalize()
                 if e.errorLevel()==EInterpreter.ERROR_LEVEL_STOP:
                     totalTime=round(time.time()-startTime, 4)
                     raise EInterpreter(f"{str(e)}\nInformation# #lw#>># #lg#**Script executed **# #w#[Executed in# #lw#*{totalTime}s*##w#]", e.ast(), EInterpreter.ERROR_LEVEL_STOP)
                 raise e
             except Exception as e:
+                # need to review this...
+                self.__painter=self.__renderer.finalize()
                 raise e
 
         raise EInterpreterInternalError("Invalid ROOT", self.__astRoot)
@@ -930,7 +1039,7 @@ class BSInterpreter(QObject):
         # Forgotten to implement something?
         # ---------------------------------
         else:
-            print('************************************************************* TODO: implement', currentAst.id())
+            self.error(f'* TODO: implement {currentAst.id()}')
             return None
 
     def __executeScriptBlock(self, currentAst, allowLocalVariable, name, createLocalVariables=None):
@@ -951,6 +1060,10 @@ class BSInterpreter(QObject):
         self.verbose(f"Enter scriptblock: '{name}'", currentAst)
         self.__scriptBlockStack.push(currentAst, allowLocalVariable, name)
 
+        if allowLocalVariable:
+            # automatically save painter state
+            self.__renderer.pushState()
+
         if isinstance(createLocalVariables, dict):
             # create local variables if any provided before starting block execution
             for variableName in createLocalVariables:
@@ -970,6 +1083,9 @@ class BSInterpreter(QObject):
                 break
 
         #Debug.print("Variables: {0}", scriptBlock.variables(True))
+        if allowLocalVariable:
+            self.__renderer.popState()
+
         self.__scriptBlockStack.pop()
         self.verbose(f"Exit scriptblock: '{name}'", currentAst)
 
@@ -2005,6 +2121,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set draw opacity {self.__strValue(value)}{self.__formatStoreResult(':draw.opacity')}", currentAst)
 
+        self.__setDrawOpacity(value)
 
         self.__delay()
         return None
@@ -2379,6 +2496,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position axis {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.axis')}", currentAst)
 
+        self.__setCanvasPositionAxis(value)
 
         self.__delay()
         return None
@@ -2396,6 +2514,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"set canvas position model {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.model')}", currentAst)
 
+        self.__setCanvasPositionModel(value)
 
         self.__delay()
         return None
@@ -2579,6 +2698,7 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"draw line {self.__strValue(length)} {self.__strValue(unit)}", currentAst)
 
+        self.__drawShapeLine(length, unit)
 
         self.__delay()
         return None
@@ -2601,7 +2721,7 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"width unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"draw square {self.__strValue(width)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeSquare(width, unit)
 
         self.__delay()
         return None
@@ -2655,7 +2775,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw round square {self.__strValue(width)} {self.__strValue(unitWidth)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeRoundSquare(width, radius, unitWidth, unitRadius)
 
         self.__delay()
         return None
@@ -2687,7 +2807,7 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"draw rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeRect(width, height, unit)
 
         self.__delay()
         return None
@@ -2750,7 +2870,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw round rect {self.__strValue(width)} {self.__strValue(height)} {self.__strValue(unitDimension)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeRoundRect(width, height, radius, unitDimension, unitRadius)
 
         self.__delay()
         return None
@@ -2773,7 +2893,7 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"draw circle {self.__strValue(radius)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeCircle(radius, unit)
 
         self.__delay()
         return None
@@ -2805,7 +2925,7 @@ class BSInterpreter(QObject):
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"dimension unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
         self.verbose(f"draw ellipse {self.__strValue(hRadius)} {self.__strValue(vRadius)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeEllipse(hRadius, vRadius, unit)
 
         self.__delay()
         return None
@@ -2817,7 +2937,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw dot", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeDot()
 
         self.__delay()
         return None
@@ -2829,7 +2949,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw pixel", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapePixel()
 
         self.__delay()
         return None
@@ -2845,7 +2965,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw image *'{self.__strValue(imageReference)}'*", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeImage(imageReference)
 
         self.__delay()
         return None
@@ -2902,7 +3022,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw scaled image *'{self.__strValue(imageReference)}'* {self.__strValue(width)} {self.__strValue(unitW)} {self.__strValue(height)} {self.__strValue(unitH)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawShapeImage(imageReference, width, height, unitW, unitH)
 
         self.__delay()
         return None
@@ -2918,7 +3038,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw text {self.__strValue(text)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawText(text)
 
         self.__delay()
         return None
@@ -2980,7 +3100,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawStar(branches, oRadius, iRadius, unitORadius, unitIRadius)
 
         self.__delay()
         return None
@@ -2992,7 +3112,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"clear canvas", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawClearCanvas()
 
         self.__delay()
         return None
@@ -3008,6 +3128,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"fill canvas from color {self.__strValue(value)}", currentAst)
 
+        self.__drawFillCanvasColor(value)
 
         self.__delay()
         return None
@@ -3049,6 +3170,7 @@ class BSInterpreter(QObject):
                 # force to raise an error
                 self.__checkOption(currentAst, fctLabel, node, True)
 
+        self.__drawFillCanvasImage(imageReference, tiling, scale, offset, rotation)
 
         self.__delay()
         return None
@@ -3227,9 +3349,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"activate fill", currentAst)
 
-        self.__scriptBlockStack.setVariable(':fill.status', True, BSVariableScope.CURRENT)
-
-        # TODO: implement canvas render
+        self.__setDrawFillStatus(True)
 
         self.__delay()
         return None
@@ -3244,8 +3364,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"deactivate fill", currentAst)
 
-        self.__scriptBlockStack.setVariable(':fill.status', False, BSVariableScope.CURRENT)
-        # TODO: implement canvas render
+        self.__setDrawFillStatus(False)
 
         self.__delay()
         return None
@@ -3290,7 +3409,8 @@ class BSInterpreter(QObject):
 
         self.verbose(f"move home", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawMove(0, 0, 'PX', True, self.__scriptBlockStack.variable(':pen.status', True))
+        self.__drawTurn(0, 'DEGREE', True)
 
         self.__delay()
         return None
@@ -3309,7 +3429,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"move forward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawMove(value, 0, unit, False, self.__scriptBlockStack.variable(':pen.status', True))
 
         self.__delay()
         return None
@@ -3328,7 +3448,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"move backward {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawMove(-value, 0, unit, False, self.__scriptBlockStack.variable(':pen.status', True))
 
         self.__delay()
         return None
@@ -3347,7 +3467,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"move left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawMove(0, -value, unit, False, self.__scriptBlockStack.variable(':pen.status', True))
 
         self.__delay()
         return None
@@ -3366,7 +3486,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"move right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawMove(0, value, unit, False, self.__scriptBlockStack.variable(':pen.status', True))
 
         self.__delay()
         return None
@@ -3387,7 +3507,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"move to {self.__strValue(valueX)} {self.__strValue(valueY)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawMove(valueY, valueX, unit, True, self.__scriptBlockStack.variable(':pen.status', True))
 
         self.__delay()
         return None
@@ -3406,7 +3526,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"turn left {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawTurn(value, unit, False)
 
         self.__delay()
         return None
@@ -3425,7 +3545,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"turn right {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawTurn(-value, unit, False)
 
         self.__delay()
         return None
@@ -3444,7 +3564,7 @@ class BSInterpreter(QObject):
 
         self.verbose(f"turn to {self.__strValue(value)} {self.__strValue(unit)}", currentAst)
 
-        # TODO: implement canvas render
+        self.__drawTurn(value, unit, True)
 
         self.__delay()
         return None
@@ -5586,12 +5706,79 @@ class BSInterpreter(QObject):
         BSConvertUnits.initMeasures(self.__currentDocumentGeometry, self.__currentDocumentResolution)
 
 
+    def __loadImage(self, targetName, sourceRef):
+        """Load image into image library
+
+        Given `targetName` define resoruce identifier for image in library
+
+        Given `sourceRef` can be:
+
+        sourceRef           | Description
+        --------------------+------------------------------------------------------------
+        file://<xx>         | <xx> is the full path/file name; must be PNG/JPEG file
+        layer://id/<xx>     | <xx> is the Id of layer
+        layer://name/<xx>   | <xx> is the Name of layer
+        layer://current     | current layer
+        document://         | current document
+        canvas://           | current canvas
+
+        Return a tuple
+
+            if image has been loaded in library
+                (True, image width, image height)
+            otherwise return
+                (False, <error message>)
+        """
+        pixmap=None
+        position=QPoint(0, 0)
+        try:
+            if result:=re.match("file:(.*)", sourceRef):
+                pixmap=QPixmap(result.groups()[0])
+            elif result:=re.match("layer:id:(.*)", sourceRef):
+                node=EKritaDocument.findLayerById(self.__currentDocument, QUuid(result.groups()[0]))
+                if node is None:
+                    return (False, "Unable to find layer with given Id")
+                else:
+                    position=node.bounds().topLeft()
+                    pixmap=EKritaNode.toQPixmap(node)
+            elif result:=re.match("layer:name:(.*)", sourceRef):
+                node=EKritaDocument.getLayerFromPath(self.__currentDocument, result.groups()[0])
+                if node is None:
+                    node=EKritaDocument.findFirstLayerByName(self.__currentDocument, result.groups()[0])
+
+                if node is None:
+                    return (False, "Unable to find layer with given name")
+                else:
+                    position=node.bounds().topLeft()
+                    pixmap=EKritaNode.toQPixmap(node)
+            elif result:=re.match("layer:current", sourceRef):
+                position=self.__currentLayer.bounds().topLeft()
+                pixmap=EKritaNode.toQPixmap(self.__currentLayer)
+            elif result:=re.match("document:", sourceRef):
+                bounds=self.__currentDocument.bounds()
+                position=bounds.topLeft()
+                pixmap=QPixmap.fromImage(self.__currentDocument.projection(bounds.left(), bounds.top(), bounds.width(), bounds.height()))
+            elif result:=re.match("canvas:", sourceRef):
+                if self.__renderer and self.__renderer.renderMode()==BSRenderer.OPTION_MODE_RASTER:
+                    pixmap=self.__renderer.result()
+                else:
+                    return (False, "Can't a load vector canvas in library")
+            else:
+                return (False, f"Invalid source provided ({sourceRef})")
+
+            if pixmap:
+                self.__imagesLibrary.add(targetName, pixmap, position)
+                return (True, pixmap.width(), pixmap.height())
+
+        except Exception as e:
+            return (False, str(e))
+
+
     def __setUnitCanvas(self, value):
         """Set canvas unit
 
         :unit.canvas
         """
-        self.warning("to finalize: __setUnitCanvas")
         self.__scriptBlockStack.setVariable(':unit.canvas', value, BSVariableScope.CURRENT)
 
     def __setUnitRotation(self, value):
@@ -5599,7 +5786,6 @@ class BSInterpreter(QObject):
 
         :unit.rotation
         """
-        self.warning("to finalize: __setUnitRotation")
         self.__scriptBlockStack.setVariable(':unit.rotation', value, BSVariableScope.CURRENT)
 
     def __setPenColor(self, value):
@@ -5607,49 +5793,63 @@ class BSInterpreter(QObject):
 
         :pen.color
         """
-        self.warning("to finalize: __setPenColor")
         color=self.__scriptBlockStack.current().variable(':pen.color', QColor(0,0,0))
         value.setAlpha(color.alpha())
         self.__scriptBlockStack.setVariable(':pen.color', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            pen=self.__painter.pen()
+            pen.setColor(value)
+            self.__painter.setPen(pen)
 
     def __setPenSize(self, value, unit=None):
         """Set pen size
 
         :pen.size
         """
-        self.warning("to finalize: __setPenSize")
         self.__scriptBlockStack.setVariable(':pen.size', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            pen=self.__painter.pen()
+            pen.setWidthF(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
+            self.__painter.setPen(pen)
 
     def __setPenStyle(self, value):
         """Set pen style
 
         :pen.style
         """
-        self.warning("to finalize: __setPenStyle")
         self.__scriptBlockStack.setVariable(':pen.style', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            pen=self.__painter.pen()
+            pen.setStyle(BSInterpreter.__CONV_PEN_STYLE[value])
+            self.__painter.setPen(pen)
 
     def __setPenCap(self, value):
         """Set pen cap
 
         :pen.cap
         """
-        self.warning("to finalize: __setPenCap")
         self.__scriptBlockStack.setVariable(':pen.cap', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            pen=self.__painter.pen()
+            pen.setCapStyle(BSInterpreter.__CONV_PEN_CAP[value])
+            self.__painter.setPen(pen)
 
     def __setPenJoin(self, value):
         """Set pen join
 
         :pen.join
         """
-        self.warning("to finalize: __setPenJoin")
         self.__scriptBlockStack.setVariable(':pen.join', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            pen=self.__painter.pen()
+            pen.setJoinStyle(BSInterpreter.__CONV_PEN_JOIN[value])
+            self.__painter.setPen(pen)
 
     def __setPenOpacity(self, value):
         """Set pen opacity
 
         :pen.color
         """
-        self.warning("to finalize: __setPenOpacity")
         color=self.__scriptBlockStack.current().variable(':pen.color', QColor(0,0,0))
         if isinstance(value, int):
             color.setAlpha(value)
@@ -5657,23 +5857,30 @@ class BSInterpreter(QObject):
             color.setAlphaF(value)
 
         self.__scriptBlockStack.setVariable(':pen.color', color, BSVariableScope.CURRENT)
+        if self.__painter:
+            pen=self.__painter.pen()
+            pen.setColor(color)
+            self.__painter.setPen(pen)
 
     def __setFillColor(self, value):
         """Set fill color
 
         :fill.color
         """
-        self.warning("to finalize: __setFillColor")
         color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
         value.setAlpha(color.alpha())
-        self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
+        self.__scriptBlockStack.setVariable(':fill.color', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            brush=self.__painter.brush()
+            brush.setColor(value)
+            self.__painter.setBrush(brush)
 
     def __setFillRule(self, value):
         """Set fill rule
 
         :fill.rule
         """
-        self.warning("to finalize: __setFillRule")
+        self.warning("to test: __setFillRule")
         self.__scriptBlockStack.setVariable(':fill.rule', value, BSVariableScope.CURRENT)
 
     def __setFillOpacity(self, value):
@@ -5681,20 +5888,22 @@ class BSInterpreter(QObject):
 
         :fill.color
         """
-        self.warning("to finalize: __setFillOpacity")
         color=self.__scriptBlockStack.current().variable(':fill.color', QColor(0,0,0))
         if isinstance(value, int):
             color.setAlpha(value)
         else:
             color.setAlphaF(value)
         self.__scriptBlockStack.setVariable(':fill.color', color, BSVariableScope.CURRENT)
+        if self.__painter:
+            brush=self.__painter.brush()
+            brush.setColor(color)
+            self.__painter.setBrush(brush)
 
     def __setTextColor(self, value):
         """Set text color
 
         :text.color
         """
-        self.warning("to finalize: __setTextColor")
         color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
         value.setAlpha(color.alpha())
         self.__scriptBlockStack.setVariable(':text.color', value, BSVariableScope.CURRENT)
@@ -5704,7 +5913,6 @@ class BSInterpreter(QObject):
 
         :text.color
         """
-        self.warning("to finalize: __setTextOpacity")
         color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
         if isinstance(value, int):
             color.setAlpha(value)
@@ -5717,32 +5925,44 @@ class BSInterpreter(QObject):
 
         :text.font
         """
-        self.warning("to finalize: __setTextFont")
         self.__scriptBlockStack.setVariable(':text.font', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            font=self.__painter.font()
+            font.setFamily(value)
+            self.__painter.setFont(font)
 
     def __setTextSize(self, value, unit=None):
         """Set text size
 
         :text.size
         """
-        self.warning("to finalize: __setTextSize")
         self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            font=self.__painter.font()
+            font.setPixelSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
+            self.__painter.setFont(font)
 
     def __setTextBold(self, value):
         """Set text bold
 
         :text.bold
         """
-        self.warning("to finalize: __setTextBold")
         self.__scriptBlockStack.setVariable(':text.bold', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            font=self.__painter.font()
+            font.setBold(value)
+            self.__painter.setFont(font)
 
     def __setTextItalic(self, value):
         """Set text italic
 
         :text.italic
         """
-        self.warning("to finalize: __setTextItalic")
         self.__scriptBlockStack.setVariable(':text.italic', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            font=self.__painter.font()
+            font.setItalic(value)
+            self.__painter.setFont(font)
 
     def __setTextLetterSpacing(self, value, unit='PCT'):
         """Set text letter spacing
@@ -5750,24 +5970,32 @@ class BSInterpreter(QObject):
         :text.letterSpacing.spacing
         :text.letterSpacing.unit
         """
-        self.warning("to finalize: __setTextLetterSpacing")
         self.__scriptBlockStack.setVariable(':text.letterspacing.spacing', value, BSVariableScope.CURRENT)
         self.__scriptBlockStack.setVariable(':text.letterspacing.unit', unit, BSVariableScope.CURRENT)
+        if self.__painter:
+            font=self.__painter.font()
+            if unit=='PCT':
+                font.setLetterSpacing(QFont.PercentageSpacing, value)
+            else:
+                font.setLetterSpacing(QFont.AbsoluteSpacing, BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
+            self.__painter.setFont(font)
 
     def __setTextStretch(self, value):
         """Set text stretch
 
         :text.stretch
         """
-        self.warning("to finalize: __setTextStretch")
         self.__scriptBlockStack.setVariable(':text.stretch', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            font=self.__painter.font()
+            font.setStretch(value)
+            self.__painter.setFont(font)
 
     def __setTextHAlignment(self, value):
         """Set text horizontal alignment
 
         :text.alignment.horizontal
         """
-        self.warning("to finalize: __setTextHAlignment")
         self.__scriptBlockStack.setVariable(':text.alignment.horizontal', value, BSVariableScope.CURRENT)
 
     def __setTextVAlignment(self, value):
@@ -5775,7 +6003,6 @@ class BSInterpreter(QObject):
 
         :text.alignment.vertical
         """
-        self.warning("to finalize: __setTextVAlignment")
         self.__scriptBlockStack.setVariable(':text.alignment.vertical', value, BSVariableScope.CURRENT)
 
     def __setDrawAntialiasing(self, value):
@@ -5783,16 +6010,27 @@ class BSInterpreter(QObject):
 
         :draw.antialiasing
         """
-        self.warning("to finalize: __setDrawAntialiasing")
         self.__scriptBlockStack.setVariable(':draw.antialiasing', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            if value:
+                self.__painter.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform, True)
+                font=self.__painter.font()
+                font.setStyleStrategy(QFont.PreferAntialias)
+                self.__painter.setFont(font)
+            else:
+                self.__painter.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform, False)
+                font=self.__painter.font()
+                font.setStyleStrategy(QFont.NoAntialias)
+                self.__painter.setFont(font)
 
     def __setDrawBlending(self, value):
         """Set draw blending mode
 
         :draw.blendingMode
         """
-        self.warning("to finalize: __setDrawBlending")
         self.__scriptBlockStack.setVariable(':draw.blendingmode', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            self.__painter.setCompositionMode(BSInterpreter.__CONV_DRAW_BLENDING_MODE[value])
 
     def __setDrawFillStatus(self, value):
         """Set if brush is activated or not
@@ -5800,12 +6038,25 @@ class BSInterpreter(QObject):
         :fill.status
         """
         self.__scriptBlockStack.setVariable(':fill.status', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            brush=self.__painter.brush()
+            if value:
+                brush.setStyle(Qt.SolidPattern)
+            else:
+                brush.setStyle(Qt.NoBrush)
+            self.__painter.setBrush(brush)
+
     def __setDrawOpacity(self, value):
         """Set global drawing opacity
 
         :draw.opacity
         """
         self.__scriptBlockStack.setVariable(':draw.opacity', value, BSVariableScope.CURRENT)
+        if self.__painter:
+            if isinstance(value, int):
+                self.__painter.setOpacity(value/255)
+            else:
+                self.__painter.setOpacity(value)
 
     def __setCanvasGridColor(self, value):
         """Set canvas grid color
@@ -5859,11 +6110,10 @@ class BSInterpreter(QObject):
         :canvas.grid.size.width
         :canvas.grid.size.main
         """
-        self.warning("to finalize: __setCanvasGridSize")
         self.__scriptBlockStack.setVariable(':canvas.grid.size.width', width, BSVariableScope.GLOBAL)
         self.__scriptBlockStack.setVariable(':canvas.grid.size.main', main, BSVariableScope.GLOBAL)
 
-        self.__renderedScene.setGridSize(width, main)
+        self.__renderedScene.setGridSize(BSConvertUnits.convertMeasure(width, self.__unitCanvas(unit), 'PX'), main)
 
     def __setCanvasRulersColor(self, value):
         """Set canvas rulers color
@@ -5916,9 +6166,8 @@ class BSInterpreter(QObject):
 
         :canvas.origin.size
         """
-        self.warning("to finalize: __setCanvasOriginSize")
         self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginSize(value)
+        self.__renderedScene.setOriginSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
 
     def __setCanvasOriginPosition(self, absissa, ordinate):
         """Set canvas origin position
@@ -5926,11 +6175,11 @@ class BSInterpreter(QObject):
         :canvas.origin.position.absissa
         :canvas.origin.position.ordinate
         """
-        self.warning("to finalize: __setCanvasOriginPosition")
         self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.GLOBAL)
         self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.GLOBAL)
         self.__renderedScene.setOriginPosition(BSInterpreter.__CONST_HALIGN[absissa], BSInterpreter.__CONST_VALIGN[ordinate])
         self.__updateGeometry()
+        self.__renderer.setGeometry(self.__currentDocumentGeometry)
 
     def __setCanvasPositionColor(self, value):
         """Set canvas position color
@@ -5959,9 +6208,8 @@ class BSInterpreter(QObject):
 
         :canvas.position.size
         """
-        self.warning("to finalize: __setCanvasPositionSize")
         self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionSize(value)
+        self.__renderedScene.setPositionSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
 
     def __setCanvasPositionFulfill(self, value):
         """Set canvas position fulfilled
@@ -5977,6 +6225,7 @@ class BSInterpreter(QObject):
         :canvas.position.axis
         """
         self.__scriptBlockStack.setVariable(':canvas.position.axis', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionAxis(value)
 
     def __setCanvasPositionModel(self, value):
         """Set canvas position model
@@ -5984,6 +6233,7 @@ class BSInterpreter(QObject):
         :canvas.position.model
         """
         self.__scriptBlockStack.setVariable(':canvas.position.model', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionModel(value)
 
     def __setCanvasBackgroundOpacity(self, value):
         """Set canvas background opacity
@@ -6143,6 +6393,425 @@ class BSInterpreter(QObject):
         self.warning("to finalize: __setDrawShapeStatus")
         self.__scriptBlockStack.setVariable(':draw.shape.status', value, BSVariableScope.CURRENT)
 
+    def __drawShapeLine(self, length, unit):
+        """Draw line"""
+        if self.__painter:
+            lengthPx=BSConvertUnits.convertMeasure(length, self.__unitCanvas(unit), 'PX')
+            self.__painter.drawLine(QPointF(0,0),QPointF(0,lengthPx))
+
+    def __drawShapeSquare(self, size, unit):
+        """Draw square"""
+        if self.__painter:
+            sizePx=BSConvertUnits.convertMeasure(size, self.__unitCanvas(unit), 'PX')
+            hSize=sizePx/2
+            self.__painter.drawRect(QRectF(-hSize,-hSize,sizePx,sizePx))
+
+    def __drawShapeRoundSquare(self, size, radius, unitSize=None, unitRadius=None):
+        """Draw round square"""
+        if self.__painter:
+            sizePx=BSConvertUnits.convertMeasure(size, self.__unitCanvas(unitSize), 'PX')
+            hSize=sizePx/2
+
+            if unitRadius=='RPCT':
+                self.__painter.drawRoundedRect(QRectF(-hSize,-hSize,sizePx,sizePx), radius, radius, Qt.RelativeSize)
+            else:
+                radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+                self.__painter.drawRoundedRect(QRectF(-hSize,-hSize,sizePx,sizePx), radiusPx, radiusPx, Qt.AbsoluteSize)
+
+    def __drawShapeRect(self, width, height, unit):
+        """Draw rectangle"""
+        if self.__painter:
+            widthPx=BSConvertUnits.convertMeasure(width, self.__unitCanvas(unit), 'PX')
+            heightPx=BSConvertUnits.convertMeasure(height, self.__unitCanvas(unit), 'PX')
+
+            lPos=widthPx/2
+            tPos=heightPx/2
+            self.__painter.drawRect(QRectF(-lPos,-tPos,widthPx,heightPx))
+
+    def __drawShapeRoundRect(self, width, height, radius, unitDimension, unitRadius):
+        """Draw rounded rectangle"""
+        if self.__painter:
+            widthPx=BSConvertUnits.convertMeasure(width, self.__unitCanvas(unitDimension), 'PX')
+            heightPx=BSConvertUnits.convertMeasure(height, self.__unitCanvas(unitDimension), 'PX')
+            lPos=widthPx/2
+            tPos=heightPx/2
+
+            if unitRadius=='RPCT':
+                self.__painter.drawRoundedRect(QRectF(-lPos,-tPos,widthPx,heightPx), radius, radius, Qt.RelativeSize)
+            else:
+                radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+                self.__painter.drawRoundedRect(QRectF(-lPos,-tPos,widthPx,heightPx), radiusPx, radiusPx, Qt.AbsoluteSize)
+
+    def __drawTurn(self, angle, unit=None, absolute=False):
+        """Do rotation
+
+        Given `angle` can be in DEGREE or RADIAN, according to given `unit` (or
+        if not provided, according to current canvas rotation unit)
+
+        If `absolute` is True, reset current rotation to absolute given angle
+
+        Note: positive angle rotation is counterclockwise
+        """
+        self.warning(f"to test: __drawTurn: {angle} {unit} {absolute} -- might be impacted by paths&vectors // need to update :angle")
+
+        angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unit), 'DEGREE')%360
+        self.__renderer.setRotation(angleDegree, absolute)
+
+    def __drawMove(self, ordinate, absissa, unit=None, absolute=False, penDown=False):
+        """Do translation
+
+        Given `forward` and `right` use given `unit` (or
+        if not provided, according to current canvas rotation unit)
+
+        If `absolute` is True, reset current translation to absolute given coordinate
+        """
+        self.warning(f"to test: __drawMove: {ordinate} {absissa} {unit} {absolute} -- might be impacted by paths&vectors // need to update :position.x + :position.y")
+
+        dx=BSConvertUnits.convertMeasure(absissa, self.__unitCanvas(unit), 'PX')
+        dy=BSConvertUnits.convertMeasure(ordinate, self.__unitCanvas(unit), 'PX')
+
+        if self.__painter and penDown:
+            point=QPoint()
+            t=self.__painter.transform()
+            p=self.__renderer.position()
+
+        self.__renderer.setTranslation(dx, dy, absolute)
+
+        if self.__painter and penDown:
+            if absolute:
+                # need to recalculate "from" position in new transformation world
+                self.__renderer.setRotation(-p['r'])
+                pt=self.__renderer.point(p['x'], p['y'])
+                pt2=self.__renderer.point(dx, dy)
+                # and draw line
+                self.__painter.drawLine(QPointF(0, 0), QPointF(pt.x()-pt2.x(), pt.y()-pt2.y()) )
+                self.__renderer.setRotation(p['r'])
+            else:
+                self.__painter.drawLine(0, 0, -dx, -dy)
+
+    def __drawShapeCircle(self, radius, unit):
+        """Draw circle"""
+        if self.__painter:
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unit), 'PX')
+            self.__painter.drawEllipse(QPointF(0, 0), radiusPx, radiusPx)
+
+    def __drawShapeEllipse(self, radiusAbsissa, radiusOrdinate, unit):
+        """Draw circle"""
+        if self.__painter:
+            radiusAbsissaPx=BSConvertUnits.convertMeasure(radiusAbsissa, self.__unitCanvas(unit), 'PX')
+            radiusOrdinatePx=BSConvertUnits.convertMeasure(radiusOrdinate, self.__unitCanvas(unit), 'PX')
+            self.__painter.drawEllipse(QPointF(0, 0), radiusAbsissaPx, radiusOrdinatePx)
+
+    def __drawShapeDot(self):
+        """Draw dot"""
+        if self.__painter:
+            self.__painter.drawPoint(QPointF(0, 0))
+
+    def __drawShapePixel(self):
+        """Draw one pixel"""
+        if self.__painter:
+            self.__painter.save()
+            self.__painter.setRenderHints(QPainter.Antialiasing, False)
+            pen=self.__painter.pen()
+            pen.setWidth(1)
+            self.__painter.setPen(pen)
+            self.__painter.drawPoint(QPoint(0, 0))
+            self.__painter.restore()
+
+    def __drawShapeImage(self, imageReference, width=None, height=None, unitW=None, unitH=None):
+        """Draw image designed by `imageReference` to current position
+
+        If image is not found in image library, does nothing
+
+        If `width`, `height` and `unit` are provided, scale image with given dimension otherwise
+        draw image with native dimension
+        """
+        image=self.__imagesLibrary.get(imageReference)
+
+        if image is None:
+            self.warning(f"Unable to find image *'{imageReference}'* from library")
+            return False
+
+        if self.__painter:
+            pixmap=image[BSImagesLibrary.KEY_PIXMAP]
+            position=image[BSImagesLibrary.KEY_POSITION]
+
+            scaleW=False
+            scaleH=False
+
+            if isinstance(width, (int, float)):
+                if unitW=='RPCT':
+                    width=round(pixmap.width()*width/100)
+                else:
+                    width=round(BSConvertUnits.convertMeasure(width, self.__unitCanvas(unitW), 'PX'))
+                scaleW=(width!=pixmap.width())
+            else:
+                width=pixmap.width()
+
+            if isinstance(height, (int, float)):
+                if unitH=='RPCT':
+                    height=round(pixmap.height()*height/100)
+                else:
+                    height=round(BSConvertUnits.convertMeasure(height, self.__unitCanvas(unitH), 'PX'))
+                scaleH=(height!=pixmap.height())
+            else:
+                height=pixmap.height()
+
+            if scaleW or scaleH:
+                # need to scale pixmap
+                if (self.__painter.renderHints()&QPainter.Antialiasing==QPainter.Antialiasing):
+                    transformMode=Qt.SmoothTransformation
+                else:
+                    transformMode=Qt.FastTransformation
+
+                if width==0 and height==0:
+                    # nothing to draw
+                    return False
+                elif width==0:
+                    # no width given, then use given height an keep aspect ratio
+                    pixmap=pixmap.scaledToHeight(height, transformMode)
+                    width=pixmap.width()
+                elif height==0:
+                    # no height given, then use given width an keep aspect ratio
+                    pixmap=pixmap.scaledToWidth(width, transformMode)
+                    height=pixmap.height()
+                else:
+                    # width and height provided: use them and ignore aspect ratio
+                    pixmap=pixmap.scaled(QSize(width, height), Qt.IgnoreAspectRatio, transformMode)
+
+            # calculate position
+            # - centered on image
+            # - take bounds in account
+            position=QPointF(-(width-position.x())/2, -(height-position.y())/2)
+
+            self.__painter.drawPixmap(position, pixmap)
+
+        return True
+
+    def __drawText(self, text):
+        """Draw given text using current text properties"""
+
+        if self.__painter:
+            # get current font
+            fontMetrics=self.__painter.fontMetrics()
+            #=QFontMetrics(font)
+
+            text=text.replace(r"\n", '\n')
+            textLines=text.split('\n')
+
+            nbChar=0
+            boundWidth=0
+            boundHeight=0
+            for textLine in textLines:
+                if len(textLine)>nbChar:
+                    nbChar=len(textLine)
+
+                # Calculate rect within the text will be drawn
+                calculatedBounds=QSizeF(fontMetrics.boundingRect(text).size())
+                if calculatedBounds.width()>boundWidth:
+                    boundWidth=calculatedBounds.width()
+                boundHeight+=calculatedBounds.height()
+
+            letterSpacing=self.__painter.font().letterSpacing()
+            letterSpacingType=self.__painter.font().letterSpacingType()
+            if letterSpacingType==QFont.AbsoluteSpacing and letterSpacing!=0:
+                boundWidth+=nbChar*letterSpacing
+            elif letterSpacingType==QFont.PercentageSpacing and letterSpacing!=1.0:
+                boundWidth*=letterSpacing
+
+            hAlign=self.__scriptBlockStack.variable(':text.alignment.horizontal', 'CENTER')
+            vAlign=self.__scriptBlockStack.variable(':text.alignment.vertical', 'MIDDLE')
+
+            dX=0
+            dY=0
+            flags=0
+
+            if hAlign=='CENTER':
+                dX=-boundWidth/2
+                flags|=Qt.AlignHCenter
+            elif hAlign=='RIGHT':
+                dX=-boundWidth
+                flags|=Qt.AlignRight
+            else:
+                flags|=Qt.AlignLeft
+
+            if vAlign=='MIDDLE':
+                dY=-boundHeight/2
+                flags|=Qt.AlignVCenter
+            elif vAlign=='BOTTOM':
+                dY=-boundHeight
+                flags|=Qt.AlignBottom
+            else:
+                flags|=Qt.AlignTop
+
+            # calculate boundRect & flags used for rendering
+            boundRect=QRectF(QPointF(dX, dY), QSizeF(boundWidth, boundHeight))
+            #boundRect.translate(dX, dY)
+
+            self.verbose(f"__drawText: '{text}' hAlign({hAlign}) vAlign({vAlign}) calculatedBounds({boundRect})")
+
+            self.__painter.save()
+            self.__painter.scale(1,-1)
+
+            color=self.__scriptBlockStack.current().variable(':text.color', QColor(0,0,0))
+            pen=self.__painter.pen()
+            pen.setColor(color)
+            self.__painter.setPen(pen)
+            self.__painter.drawText(boundRect, flags, text)
+
+            self.__painter.restore()
+
+    def __drawStar(self, branches, oRadius, iRadius, unitORadius=None, unitIRadius=None):
+        """Draw a star, with given number of `branches`
+
+        Outer radius is defined by `oRadius` + `unitORadius` (if provided)
+        Inner radius is defined by `iRadius` + `unitIRadius` (if provided)
+        """
+        if self.__painter:
+            angle=math.tau/branches   # 2 PI / branches
+
+            oRadiusPx=BSConvertUnits.convertMeasure(oRadius, self.__unitCanvas(unitORadius), 'PX')
+
+            if unitIRadius=='RPCT':
+                iRadiusPx=oRadiusPx*iRadius/100
+            else:
+                iRadiusPx=BSConvertUnits.convertMeasure(iRadius, self.__unitCanvas(unitIRadius), 'PX')
+
+            # calculate points
+            angleO=math.pi/2
+            angleI=angleO+angle/2
+            points=[]
+            for vertex in range(branches):
+                # outer vertex
+                points.append(QPointF(oRadiusPx*math.cos(angleO), oRadiusPx*math.sin(angleO)))
+
+                # inner vertex
+                points.append(QPointF(iRadiusPx*math.cos(angleI), iRadiusPx*math.sin(angleI)))
+
+                angleO+=angle
+                angleI+=angle
+
+            self.__painter.drawPolygon(*points)
+
+    def __drawClearCanvas(self):
+        """Clear current canvas content"""
+        if self.__painter:
+            self.__painter.save()
+            self.__painter.resetTransform()
+            self.__painter.setCompositionMode(QPainter.CompositionMode_Clear)
+            self.__painter.eraseRect(QRect(QPoint(0, 0), self.__renderer.geometry().size()))
+            self.__painter.restore()
+
+    def __drawFillCanvasColor(self, color):
+        """Fill current canvas content with given color"""
+        if self.__painter:
+            self.__painter.save()
+            self.__painter.resetTransform()
+            self.__painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+            self.__painter.fillRect(QRect(QPoint(0, 0), self.__renderer.geometry().size()), QBrush(color))
+            self.__painter.restore()
+
+    def __drawFillCanvasImage(self, imageReference, tiling, scale, offset, rotation):
+        """Fill current canvas content with given image"""
+        image=self.__imagesLibrary.get(imageReference)
+
+        if image is None:
+            self.warning(f"Unable to find image *'{imageReference}'* from library")
+            return False
+
+        if self.__painter:
+            pixmap=image[BSImagesLibrary.KEY_PIXMAP]
+            position=image[BSImagesLibrary.KEY_POSITION]
+
+            angle=0
+            oX=position.x()
+            oY=position.y()
+
+
+            if not scale is None:
+                # analyze scaling
+                scaleW=False
+                scaleH=False
+
+                # scale pixmap to defined dimension
+                width=scale[0]
+                height=scale[2]
+
+                unitW=scale[1]
+                unitH=scale[3]
+
+                if isinstance(width, (int, float)):
+                    if unitW=='RPCT':
+                        width=round(pixmap.width()*width/100)
+                    else:
+                        width=round(BSConvertUnits.convertMeasure(width, self.__unitCanvas(unitW), 'PX'))
+                    scaleW=(width!=pixmap.width())
+                else:
+                    width=pixmap.width()
+
+                if isinstance(height, (int, float)):
+                    if unitH=='RPCT':
+                        height=round(pixmap.height()*height/100)
+                    else:
+                        height=round(BSConvertUnits.convertMeasure(height, self.__unitCanvas(unitH), 'PX'))
+                    scaleH=(height!=pixmap.height())
+                else:
+                    height=pixmap.height()
+
+                if scaleW or scaleH:
+                    # need to scale pixmap
+                    if (self.__painter.renderHints()&QPainter.Antialiasing==QPainter.Antialiasing):
+                        transformMode=Qt.SmoothTransformation
+                    else:
+                        transformMode=Qt.FastTransformation
+
+                    if width==0 and height==0:
+                        # nothing to draw
+                        return False
+                    elif width==0:
+                        # no width given, then use given height an keep aspect ratio
+                        pixmap=pixmap.scaledToHeight(height, transformMode)
+                        width=pixmap.width()
+                    elif height==0:
+                        # no height given, then use given width an keep aspect ratio
+                        pixmap=pixmap.scaledToWidth(width, transformMode)
+                        height=pixmap.height()
+                    else:
+                        # width and height provided: use them and ignore aspect ratio
+                        pixmap=pixmap.scaled(QSize(width, height), Qt.IgnoreAspectRatio, transformMode)
+
+            if not rotation is None:
+                angle=BSConvertUnits.convertMeasure(rotation[0], self.__unitRotation(rotation[1]), 'DEGREE')
+
+            if not offset is None:
+                oX+=BSConvertUnits.convertMeasure(offset[0], self.__unitCanvas(offset[1]), 'PX')
+                oY+=BSConvertUnits.convertMeasure(offset[2], self.__unitCanvas(offset[3]), 'PX')
+
+            self.__painter.save()
+            self.__painter.resetTransform()
+            self.__painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+
+            if tiling:
+                brush=QBrush(pixmap)
+                transform=QTransform()
+                if angle:
+                    transform.rotate(angle)
+                if oX!=0 or oY!=0:
+                    transform.translate(oX, oY)
+
+                brush.setTransform(transform)
+                self.__painter.fillRect(QRect(QPoint(0, 0), self.__renderer.geometry().size()), brush)
+            else:
+                # calculate position
+                if oX!=0 or oY!=0:
+                    self.__painter.translate(QPointF(oX, oY))
+
+                if angle:
+                    self.__painter.rotate(angle)
+
+                self.__painter.drawPixmap(QPoint(0, 0), pixmap)
+
+            self.__painter.restore()
 
     # --------------------------------------------------------------------------
     # Public
@@ -6151,7 +6820,7 @@ class BSInterpreter(QObject):
         """Return current script content"""
         return self.__script
 
-    def setScript(self, script):
+    def setScript(self, script, sourceFileName=None):
         """Set current script content
 
         If text is different than current text, parse it
@@ -6164,6 +6833,8 @@ class BSInterpreter(QObject):
 
         self.valid("**Parse script** ")
         if script!=self.__script:
+            self.__scriptSourceFileName=sourceFileName
+
             startTime=time.time()
             self.__script=script
             self.__astRoot=self.__parser.parse(self.__script)
@@ -6236,12 +6907,9 @@ class BSInterpreter(QObject):
         """Return parser errors"""
         return self.__parser.errors()
 
-    def canvas(self):
-        """Return canvas content
-
-        Return result as a QPaintDevice or None if interpreted has never been executed
-        """
-        return self.__canvas
+    def renderer(self):
+        """Return renderer"""
+        return self.__renderer
 
     def running(self):
         """Return if interpreter is currently running a script"""
@@ -6252,6 +6920,7 @@ class BSInterpreter(QObject):
     def optionDebugMode(self):
         """Return if interpreter is in debug mode or not"""
         return self.__optionDebugMode
+
 
     def setOptionDebugMode(self, value):
         """Set if interpreter is in debug mode or not"""
@@ -6499,7 +7168,7 @@ class BSScriptBlockMacro:
         return self.__argumentsName
 
 
-class BSScriptBlockDefinedMacros:
+class BSDefinedMacros:
     """Reference all macros"""
 
     def __init__(self):
@@ -6534,6 +7203,65 @@ class BSScriptBlockDefinedMacros:
         return None
 
 
+class BSImagesLibrary:
+    """Reference all imported images"""
+    KEY_PIXMAP=0
+    KEY_POSITION=1
+
+    def __init__(self):
+        self.__images={}
+
+    def clear(self):
+        """Clear all macro definitions"""
+        self.__images={}
+
+    def alreadyDefined(self, resourceName):
+        """return True if an image has already been defined with given `resourceName`"""
+        return (resourceName in self.__images)
+
+    def add(self, resourceName, pixmap, position=None):
+        """Add an image definition
+
+        Given `pixmap` must be a QPixmap
+        Given `position` is a QPoint() that define image position; if None, default position is (0,0)
+        """
+        if position is None:
+            position=QPoint(0, 0)
+
+        if not isinstance(resourceName, str):
+            raise EInvalidType("Given `resourceName` must be <str>")
+        elif not isinstance(pixmap, QPixmap):
+            raise EInvalidType("Given `source` must be <QPixmap>")
+        elif not isinstance(position, QPoint):
+            raise EInvalidType("Given `position` must be <QPoint>")
+
+        self.__images[resourceName]={
+                BSImagesLibrary.KEY_PIXMAP: pixmap,
+                BSImagesLibrary.KEY_POSITION: position
+            }
+
+
+    def get(self, resourceName=None, key=None):
+        """Return image defined given `resourceName`
+
+        If image doesn't exist, return None
+
+        If `resourceName` is None, return a dictionary of all image library
+        If `resourceName` is valid, according to key, return
+            None: dictionary
+            KEY_PIXMAP: QPixmap
+            KEY_POSITION: QPoint
+        """
+        if resourceName is None:
+            return self.__images
+        elif resourceName in self.__images:
+            if key in (BSImagesLibrary.KEY_PIXMAP, BSImagesLibrary.KEY_POSITION):
+                return self.__images[resourceName][key]
+            else:
+                return self.__images[resourceName]
+        return None
+
+
 class BSConvertUnits:
     """Convert unit class provide simple methods to convert a unit to another one
     - Angle (Radian, Degree)
@@ -6555,25 +7283,25 @@ class BSConvertUnits:
         BSConvertUnits.__CONV_TABLE={
                 'PXMM':         25.4/documentResolution,
                 'PXINCH':       1/documentResolution,
-                'PXPCTW':       100/documentGeometry.width(),
-                'PXPCTH':       100/documentGeometry.height(),
+                'PXPCTW':       100/abs(documentGeometry.width()),
+                'PXPCTH':       100/abs(documentGeometry.height()),
 
                 'MMPX':         documentResolution/25.4,
                 'MMINCH':       1/25.4,
-                'MMPCTW':       (100*documentResolution)/(documentGeometry.width()*25.4),
-                'MMPCTH':       (100*documentResolution)/(documentGeometry.height()*25.4),
+                'MMPCTW':       (100*documentResolution)/(abs(documentGeometry.width())*25.4),
+                'MMPCTH':       (100*documentResolution)/(abs(documentGeometry.height())*25.4),
 
                 'INCHPX':       documentResolution,
                 'INCHMM':       25.4,
-                'INCHPCTW':     documentResolution*100/documentGeometry.width(),
-                'INCHPCTH':     documentResolution*100/documentGeometry.height(),
+                'INCHPCTW':     documentResolution*100/abs(documentGeometry.width()),
+                'INCHPCTH':     documentResolution*100/abs(documentGeometry.height()),
 
                 'PCTPXW':       documentGeometry.width()/100,
                 'PCTPXH':       documentGeometry.height()/100,
-                'PCTMMW':       0.254*documentGeometry.width()/documentResolution,
-                'PCTMMH':       0.254*documentGeometry.height()/documentResolution,
-                'PCTINCHW':     documentGeometry.width()/(100*documentResolution),
-                'PCTINCHH':     documentGeometry.height()/(100*documentResolution),
+                'PCTMMW':       0.254*abs(documentGeometry.width())/documentResolution,
+                'PCTMMH':       0.254*abs(documentGeometry.height())/documentResolution,
+                'PCTINCHW':     abs(documentGeometry.width())/(100*documentResolution),
+                'PCTINCHH':     abs(documentGeometry.height())/(100*documentResolution),
 
                 'DEGREERADIAN': math.pi/180,
                 'RADIANDEGREE': 180/math.pi
@@ -6591,7 +7319,7 @@ class BSConvertUnits:
     def convertMeasure(value, fromUnit, toUnit, refPct='W'):
         if fromUnit!=toUnit:
             key=fromUnit+toUnit
-            if refPct and refPct in 'WH':
+            if (fromUnit=='PCT' or toUnit=='PCT') and refPct and refPct in 'WH':
                 key+=refPct
             if key in BSConvertUnits.__CONV_TABLE:
                 return value*BSConvertUnits.__CONV_TABLE[key]
