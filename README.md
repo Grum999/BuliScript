@@ -18,9 +18,9 @@ A plugin for [Krita](https://krita.org).
 
 Like [Logo](https://en.wikipedia.org/wiki/Logo_(programming_language)) programming language, *Buli Script* is a scripting language that can be used to draw thing programmatically.
 
-But it differs from (Logo)[https://en.wikipedia.org/wiki/Logo_(programming_language)]:
+But it differs from [Logo](https://en.wikipedia.org/wiki/Logo_(programming_language)):
 - *Buli Script* provides a larger set of instructions, including some command that allows to drive [Krita](https://krita.org)
-- *Buli Script* language wants to be easier to use than (Logo)[https://en.wikipedia.org/wiki/Logo_(programming_language)]
+- *Buli Script* language wants to be easier to use than [Logo](https://en.wikipedia.org/wiki/Logo_(programming_language))
 
 
 ## Screenshots
