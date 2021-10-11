@@ -412,6 +412,33 @@ draw star 5 10 PCT 4 PCT
 draw star 5 10 PCT 8 RPCT
 
 
+draw polygon 5 10
+draw polygon 5 10 PX 
+draw polygon 5 10 PX 
+draw polygon 5 10 MM 
+draw polygon 5 10 INCH 
+draw polygon 5 10 PCT 
+draw polygon 5 10 PCT 
+
+
+draw pie 40 25 
+draw pie 40 PX 25 
+draw pie 40 25 DEGREE 
+draw pie 40 PX 25 DEGREE 
+draw pie 40 MM 0.1 RADIAN
+draw pie 40 INCH 25 DEGREE 
+draw pie 40 PCT 25 DEGREE 
+
+draw arc 40 25 
+draw arc 40 PX 25 
+draw arc 40 25 DEGREE 
+draw arc 40 PX 25 DEGREE 
+draw arc 40 MM 0.1 RADIAN
+draw arc 40 INCH 25 DEGREE 
+draw arc 40 PCT 25 DEGREE 
+
+
+
 # ------------------------------------------------------------------------------
 # draw misc
 # ------------------------------------------------------------------------------

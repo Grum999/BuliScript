@@ -931,7 +931,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
             # todo: add |left arc|right arc|bezier|spline
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:line|round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:line|round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star|polygon|pie|arc)\b",
                                                                     'Drawing/Shapes',
                                                                     [('draw line \x01<LENGTH> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
@@ -1242,6 +1242,88 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw star 8 40 MM 50 RPCT`**\n\n'
                                                                                 'Draw a 8 branches star of 40 millimeters outer width radius and 50% (of 40 MM) inner width whatever is default canvas unit')),
+                                                                     ('draw polygon \x01<EDGES> <RADIUS> [<R-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw a polygon]',
+                                                                                # description
+                                                                                'Draw a polygon for which:\n'
+                                                                                ' - Center is current position\n'
+                                                                                ' - Border use current pen definition\n'
+                                                                                ' - Area use current fill definition\n'
+                                                                                ' - Number of vertex is defined by given *<EDGES>*\n'
+                                                                                ' - Radius is defined by given *<RADIUS>*\n\n'
+                                                                                'Given *<EDGES>* is an integer number that define number of edges for polygon; must be greater or equal to **`3`**\n\n'
+                                                                                'Given *<RADIUS>* is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<R-UNIT>`** is omited\n'
+                                                                                ' - With given **`<R-UNIT>`** if provided\n\n'
+                                                                                'Given *<R-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw polygon 5 40`**\n\n'
+                                                                                'Draw a 5 edges polygon (a pentagon) of 40 pixels if default canvas unit is **`PX`**\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`draw polygon 8 40 MM`**\n\n'
+                                                                                'Draw a 8 edges polygon (an octogon) of 40 millimeters width radius whatever is default canvas unit')),
+                                                                     ('draw pie \x01<RADIUS> [<RADIUS-UNIT>] <ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw a pie]',
+                                                                                # description
+                                                                                'Draw a pie for which:\n'
+                                                                                ' - Center is current position\n'
+                                                                                ' - Border use current pen definition\n'
+                                                                                ' - Area use current fill definition\n'
+                                                                                ' - Pie radius is defined by given *<RADIUS>*\n'
+                                                                                ' - Pie angle is defined by given *<ANGLE>*\n\n'
+                                                                                'Given *<RADIUS>* is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<RADIUS-UNIT>`** is omited\n'
+                                                                                ' - With given **`<RADIUS-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<RADIUS-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for rotation; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw pie 40 30`**\n\n'
+                                                                                'Draw a pie of 40 pixels radius (if default canvas unit is **`PX`**) and 30 degree angle (if default rotation unit is **`DEGREE`**)')),
+                                                                     ('draw arc \x01<RADIUS> [<RADIUS-UNIT>] <ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw an arc]',
+                                                                                # description
+                                                                                'Draw an arc for which:\n'
+                                                                                ' - Center is current position\n'
+                                                                                ' - Border use current pen definition\n'
+                                                                                ' - Area use current fill definition\n'
+                                                                                ' - Arc radius is defined by given *<RADIUS>*\n'
+                                                                                ' - Arc angle is defined by given *<ANGLE>*\n\n'
+                                                                                'Given *<RADIUS>* is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<RADIUS-UNIT>`** is omited\n'
+                                                                                ' - With given **`<RADIUS-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<RADIUS-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for rotation; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw arc 40 30`**\n\n'
+                                                                                'Draw an arc of 40 pixels radius (if default canvas unit is **`PX`**) and 30 degree angle (if default rotation unit is **`DEGREE`**)')),
                                                                     ],
                                                                     'A'),
 
@@ -1338,7 +1420,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<ANGLE>* is a positive number expressed:\n'
                                                                                 ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
                                                                                 ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
-                                                                                'Given *<ANGLE-UNIT>* define unit to apply for width; if provided can be:\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for rotation; if provided can be:\n'
                                                                                 ' - **`RADIAN`**: use radians (0 to pi)\n'
                                                                                 ' - **`DEGREE`**: use degrees (0 to 360)')),
                                                                     ('with rotation right \x01<ANGLE> [<ANGLE-UNIT>]',
@@ -4780,6 +4862,9 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Shape_Scaled_Image',
                       'Action_Draw_Shape_Text',
                       'Action_Draw_Shape_Star',
+                      'Action_Draw_Shape_Polygon',
+                      'Action_Draw_Shape_Pie',
+                      'Action_Draw_Shape_Arc',
                       'Action_Draw_Misc_Clear_Canvas',
                       'Action_Draw_Misc_Fill_Canvas_From_Color',
                       'Action_Draw_Misc_Fill_Canvas_From_Image',
@@ -5344,6 +5429,38 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw star', False),
                 'Any_Expression',
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Polygon',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw polygon', False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Pie',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw pie', False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Arc',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw arc', False),
                 'Any_Expression',
                 'Any_Expression',
                 GROptional('Any_Expression'),

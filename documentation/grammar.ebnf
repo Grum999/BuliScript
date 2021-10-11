@@ -213,7 +213,10 @@ Action_Draw_Shape
                 ( 'image' Evaluate_String_Expression ) |
                 ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Unit_RM_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
                 ( 'text' Evaluate_String_Expression ) |
-                ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
+                ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
+                ( 'polygon' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'pie' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_R_Expression? ) |
+                ( 'arc' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_R_Expression? )
             ) |
             ('start' | 'stop' ) 'to' 'draw' 'shape'
 

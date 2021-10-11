@@ -202,6 +202,64 @@ define macro "test2h" as
         with offset (-50) (-50)
         with rotation left 15
 
+define macro "test2i" as
+    pen up
+    set pen color #ff00ff
+    set pen size 3 PX
+    draw polygon 5 100
+
+
+    set fill color #ff8800
+    set fill opacity 1.0
+    set fill rule EVEN
+
+    activate fill
+    move forward 100
+    turn left 72/4
+    set pen color #0088ff
+    set pen size 8 PX
+    set pen opacity 0.5
+    set fill color #ff0000
+    set fill opacity 0.5
+    draw polygon 8 50
+
+
+    move home
+    move forward -100
+    turn left -72/4
+    set pen color #0088ff
+    set pen size 20 PX
+    set pen opacity 1.0
+    set pen cap rOUNDCAP
+    set pen join ROUNDJOIN
+    set fill color #ff0000
+    set fill opacity 1.0
+    set draw opacity 1.0
+    draw polygon 6 50
+
+define macro "test2j" as
+    pen up
+    set pen color #ff00ff
+    set pen size 3 PX
+    draw pie 100 25
+    
+    turn left 60 
+    set fill color #ff8800
+    set fill opacity 1.0
+    activate fill
+    set pen color #0000ff
+    set pen size 1.5 PX
+    draw pie 120 45
+
+    turn to -45
+    set pen color #008800
+    set pen size 8 PX
+    draw arc 130 45
+
+    turn right 25
+    set pen color #888800
+    set pen size 8 PX
+    draw arc 120 30
 
 
 
@@ -383,7 +441,7 @@ print ":canvas.geometry.resolution" :canvas.geometry.resolution
 # -------------------------------------------
 set draw antialiasing ON
 set script execution verbose ON
-call macro "test3b" 60
+call macro "test2j" 
 
     
 print "Done"

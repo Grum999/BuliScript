@@ -576,6 +576,7 @@ class BSInterpreter(QObject):
         else:
             self.__renderedScene.setRenderedContent(None, None)
 
+
     # --------------------------------------------------------------------------
     # Script execution methods
     # --------------------------------------------------------------------------
@@ -912,6 +913,12 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawShapeText(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Star':
             return self.__executeActionDrawShapeStar(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Polygon':
+            return self.__executeActionDrawShapePolygon(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Pie':
+            return self.__executeActionDrawShapePie(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Arc':
+            return self.__executeActionDrawShapeArc(currentAst)
         elif currentAst.id() == 'Action_Draw_Misc_Clear_Canvas':
             return self.__executeActionDrawMiscClearCanvas(currentAst)
         elif currentAst.id() == 'Action_Draw_Misc_Fill_Canvas_From_Color':
@@ -3102,6 +3109,122 @@ class BSInterpreter(QObject):
         self.verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}", currentAst)
 
         self.__drawStar(branches, oRadius, iRadius, unitORadius, unitIRadius)
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapePolygon(self, currentAst):
+        """Draw polygon"""
+        fctLabel='Action ***draw polygon***'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3)
+
+        edges=self.__evaluate(currentAst.node(0))
+        radius=self.__evaluate(currentAst.node(1))
+        unitRadius=self.__evaluate(currentAst.node(2))
+
+        if unitRadius is None:
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+
+        self.__checkParamType(currentAst, fctLabel, 'EDGES', edges, int)
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'R-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.verbose(f"draw polygon {self.__strValue(edges)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
+
+        self.__drawPolygon(edges, radius, unitRadius)
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapePie(self, currentAst):
+        """Draw pie"""
+        fctLabel='Action ***draw pie***'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3, 4)
+
+        radius=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is angle
+            angle=p2
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # second parameter is a string, consider it's a radius unit
+                unitRadius=p2
+                angle=p3
+                unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+            else:
+                # second parameter is not a string, consider it's angle
+                angle=p2
+                unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitAngle=p3
+        elif len(currentAst.nodes())==4:
+            unitRadius=p2
+            angle=p3
+            unitAngle=p4
+
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius, str)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE', angle, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle in BSInterpreter.CONST_ROTATION_UNIT, f"rotation unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.verbose(f"draw pie {self.__strValue(radius)} {self.__strValue(unitRadius)} {self.__strValue(angle)} {self.__strValue(unitAngle)}", currentAst)
+
+        self.__drawPie(radius, angle, unitRadius, unitAngle)
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeArc(self, currentAst):
+        """Draw arc"""
+        fctLabel='Action ***draw arc***'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3, 4)
+
+        radius=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is angle
+            angle=p2
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # second parameter is a string, consider it's a radius unit
+                unitRadius=p2
+                angle=p3
+                unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+            else:
+                # second parameter is not a string, consider it's angle
+                angle=p2
+                unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitAngle=p3
+        elif len(currentAst.nodes())==4:
+            unitRadius=p2
+            angle=p3
+            unitAngle=p4
+
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius, str)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE', angle, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle in BSInterpreter.CONST_ROTATION_UNIT, f"rotation unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.verbose(f"draw arc {self.__strValue(radius)} {self.__strValue(unitRadius)} {self.__strValue(angle)} {self.__strValue(unitAngle)}", currentAst)
+
+        self.__drawArc(radius, angle, unitRadius, unitAngle)
 
         self.__delay()
         return None
@@ -6692,6 +6815,64 @@ class BSInterpreter(QObject):
                 angleI+=angle
 
             self.__painter.drawPolygon(*points)
+
+    def __drawPolygon(self, edges, radius, unitRadius=None):
+        """Draw a polygon, with given number of `edges`
+
+        Radius is defined by `radius` + `unitRadius` (if provided)
+        """
+        if self.__painter:
+            angle=math.tau/edges   # 2 PI / branches
+
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+
+            # calculate points
+            angleO=math.pi/2
+            points=[]
+            for vertex in range(edges):
+                points.append(QPointF(radiusPx*math.cos(angleO), radiusPx*math.sin(angleO)))
+
+                angleO+=angle
+
+            self.__painter.drawPolygon(*points)
+
+    def __drawPie(self, radius, angle, unitRadius=None, unitAngle=None):
+        """Draw a pie
+
+        Radius is defined by `radius` + `unitRadius` (if provided)
+        Angle is defined by `angle` + `unitAngle` (if provided)
+        """
+        if self.__painter:
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+            angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unitAngle), 'DEGREE')
+
+            rectangle=QRect(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
+
+            # According to the documentation: "The startAngle and spanAngle must be specified in 1/16th of a degree, i.e. a full circle equals 5760 (16 * 360)"
+            # what!??? X_X
+            startAngle=-90*16
+            spanAngle=round(-angleDegree*16)
+
+            self.__painter.drawPie(rectangle, startAngle, spanAngle)
+
+    def __drawArc(self, radius, angle, unitRadius=None, unitAngle=None):
+        """Draw an arc
+
+        Radius is defined by `radius` + `unitRadius` (if provided)
+        Angle is defined by `angle` + `unitAngle` (if provided)
+        """
+        if self.__painter:
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+            angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unitAngle), 'DEGREE')
+
+            rectangle=QRect(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
+
+            # According to the documentation: "The startAngle and spanAngle must be specified in 1/16th of a degree, i.e. a full circle equals 5760 (16 * 360)"
+            # what!??? X_X
+            startAngle=-90*16
+            spanAngle=round(-angleDegree*16)
+
+            self.__painter.drawArc(rectangle, startAngle, spanAngle)
 
     def __drawClearCanvas(self):
         """Clear current canvas content"""
