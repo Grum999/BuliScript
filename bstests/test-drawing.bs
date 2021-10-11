@@ -1,0 +1,389 @@
+# -------------------------------------------
+# initialise canvas
+# -------------------------------------------
+import buliscript file "test.bs"
+import file into image library from "/home/grum/Temporaire/TempKrita/testFormat/testPng/z03n2c08.png" as "test file"
+
+import layer into image library from current as "test layer"  
+import layer into image library from id "{00000000-0000-0000-0000-000000000000}" as  "test layer id"
+import layer into image library from name "layer2" as  "test layer by name"
+import layer into image library from name "/group1/group2/layer3" as "test layer by path+name"
+import canvas into image library as "test canvas"
+import document into image library as "test document"
+
+
+define macro "subTest" as
+    set pen opacity 0.8
+    set pen color #15682a
+    set pen size 25 PX
+    set pen join MITTER
+    set pen style DOT
+    draw square 450
+    
+define macro "test1" as 
+    draw square 100
+
+    set pen color #0000ff
+    draw square 125
+
+    set pen opacity 0.25
+    draw square 150
+
+    set draw antialiasing ON
+    set pen size 10
+    draw square 180
+
+    set pen join ROUNDJOIN
+    draw square 210
+
+    set pen opacity 1.0
+    set pen color #ff00ff
+    set pen size 0.15 INCH
+    set pen join BEVEL
+    draw square 75 PCT
+
+    call macro "subTest"
+
+    set unit canvas PX
+    set pen size 3 PX
+    set pen style DASHDOT
+    draw square 3
+    
+define macro "test2" as 
+    draw square 100
+    
+    set pen color #0000ff
+    draw round square 150 PX 20 PX
+
+    set pen color #ff00ff
+    draw round square 200 PX 10 PCT
+    
+    set pen color #ff0000
+    draw round square 250 PX 10 RPCT
+
+
+define macro "test2b" as 
+    set pen size 1 PX
+    draw rect 100 50
+    
+    set pen color #0000ff
+    draw round rect 150 100 PX 20 PX
+
+    set pen color #ff00ff
+    draw round rect 200 150 PX 10 PCT
+    
+    set pen color #ff0000
+    draw round rect 250 200 PX 10 RPCT
+
+
+define macro "test2c" as 
+    draw circle 50
+    
+    set pen color #0000ff
+    draw ellipse 100 50 PX 
+
+    activate fill
+    set fill color #ff0000
+    set fill opacity 0.15
+
+    set pen color #ff00ff
+    draw ellipse 150 100 PX 
+    
+    deactivate fill    
+    
+    set pen color #ff0000
+    draw ellipse 200 150 PX 
+
+
+define macro "test2d" as 
+    pen up
+    set pen color #00ffff
+    set pen size 40 px
+    set pen cap ROUNDCAP
+    draw dot 
+    
+    set pen color #0000ff
+    move forward 50
+    set pen size 1 MM
+    draw dot 
+    
+    set pen color #ff00ff
+    move forward 10
+    draw pixel 
+    move forward 2
+    set pen color #ff0000
+    draw pixel 
+    
+    move home
+    move right 20
+    
+
+    set pen size 20 px
+    set pen cap SQUARE
+    set pen color #0000ff
+    set draw blending mode BITWISE_S_OR_ND
+    draw dot 
+
+define macro "test2e" as
+    pen up
+    draw image "test file"
+    
+    move forward 50
+    turn left 45
+    draw scaled image "test file" 200 200 RPCT 
+
+    set draw opacity 0.5
+    move forward 50
+    draw scaled image "test file" 10 PX 150 PX
+
+    move forward 50
+    turn left 45
+    draw image "test file"
+
+define macro "test2f" as
+    pen up
+    set pen color #ff00ff
+    set text horizontal alignment CENTER
+    set text vertical alignment MIDDLE
+    draw text "Testing text!\nA text with a second line...\n(And a third one!)"
+
+    move forward 50
+    set text color #ff0000
+    set text bold ON
+    set text italic ON
+    set text font "Sans"
+    set text letter spacing 100 PCT
+    set text opacity 0.25
+    set text horizontal alignment CENTER
+    set text vertical alignment BOTTOM
+    set text size 40 PX
+    draw text "Testing text!"
+    
+define macro "test2g" as
+    pen up
+    set pen color #ff00ff
+    set pen size 3 PX
+    draw star 5 100 PX 35 PX
+
+
+    set fill color #ff8800
+    set fill opacity 1.0
+    set fill rule EVEN
+
+    activate fill
+    move forward 100
+    turn left 72/4
+    set pen color #0088ff
+    set pen size 8 PX
+    set pen opacity 0.5
+    set fill color #ff0000
+    set fill opacity 0.5
+    draw star 5 50 35 RPCT
+
+
+    move home
+    move forward -100
+    turn left -72/4
+    set pen color #0088ff
+    set pen size 8 PX
+    set pen opacity 1.0
+    set fill color #ff0000
+    set fill opacity 1.0
+    set draw opacity 0.5
+    draw star 5 50 35 RPCT
+
+
+define macro "test2h" as 
+    fill canvas from color #88ff0000
+    fill canvas from image "test layer"
+    fill canvas from image "test file"
+        with tiling
+        with scale 150 150
+        with offset (-50) (-50)
+        with rotation left 15
+
+
+
+
+
+
+define macro "test3" as 
+    pen up
+    set pen cap FLAT
+
+    set pen color #0080ff    
+    set pen size 6 PX
+    draw line 75
+    turn to -90
+    draw line 75
+    
+    turn to 0
+    turn left 15
+
+    set pen color #0000ff    
+    set pen size 10 PX
+    draw line 100
+
+    set pen color #ff0000
+    set pen size 5 PX
+    draw rect 200 100
+    
+    turn right 90
+    set pen color #ff00ff
+    set pen size 2.5 PX
+    draw line 200
+    
+    set pen cap FLAT
+    turn to 0
+    set pen color #3eaa00
+    set pen size 1 PX
+    draw line 125
+    move forward 125
+    
+    turn left 45 
+    draw line 50
+    move forward 50
+
+    turn right 90 
+    draw line 50
+    move forward 50
+    
+    turn right 45 
+    draw line 50
+    move forward 50
+
+    turn right 45 
+    draw line 50
+    move forward 50
+    
+    turn to 0
+    move forward 10
+    move backward 20
+    move left 10
+    move right 20
+    turn left 15
+    move to 50 50
+    move home 
+    turn left 15
+    draw line 150
+
+
+define macro "test3b" with parameters :nb as
+    set pen color #0000ff    
+    set pen size 1.5 PX
+    set variable :widthInc = 2*:canvas.geometry.width/:nb
+    set variable :color = color.hsl(0.0, 1.0, 1.0)
+    repeat :nb times
+        set pen color :color
+        print :repeat.currentAngle :repeat.incAngle :repeat.currentIteration
+        turn left :repeat.incAngle
+        #draw line (:widthInc * :repeat.currentIteration)
+        draw square (:widthInc * :repeat.currentIteration)
+        set variable :color = color.hsl(math.round(:repeat.currentAngle), 255, 128)
+
+
+define macro "test4" as 
+    pen up
+    set pen cap FLAT
+
+    set pen color #0080ff    
+    set pen size 6 PX
+    draw line 75
+    turn to -90
+    draw line 75
+    
+    turn to 0
+    set pen color #c9259b    
+    set pen size 2 PX
+    
+    pen down 
+    move forward 150
+    turn left 90 
+    move forward 50
+    turn right 25
+    move forward 25 
+     
+    turn right 90
+    move backward 100
+    move left 50
+    move backward 50
+    move right 50
+    set variable :x=-50 
+    set variable :y=-100     
+    move to :x (-50)
+
+define macro "test4b" as 
+    pen up
+    set pen cap FLAT
+
+    set pen color #0080ff    
+    set pen size 6 PX
+    draw line 75
+    turn to -90
+    draw line 75
+    
+    turn to 0
+    set pen color #c9259b    
+    set pen size 8 PX
+    set pen cap ROUNDCAP
+    
+    pen down
+    set variable :nb=5
+    set variable :l=100
+    repeat :nb times 
+        move forward :l
+        turn right :repeat.incAngle
+
+
+
+set script execution verbose ON 
+
+set view grid color #888888 #303030
+set view grid style SOLID DOT
+set view grid size 10 5
+set view grid opacity 0.25
+show view grid
+
+set view origin color #d51ba7
+set view origin style SOLID
+set view origin size 45
+set view origin opacity 0.5
+
+set draw origin CENTER TOP
+set draw origin RIGHT TOP
+set draw origin RIGHT MIDDLE
+set draw origin CENTER MIDDLE
+#set draw origin LEFT BOTTOM
+show view origin
+
+set view position color #229922
+set view position size 8 PX
+set view position opacity 1.0
+set view position fulfilled ON
+show view position
+
+set view background from color #ffffff
+set view background opacity 1.0
+hide view background
+
+set view rulers color #808080 #303030
+show view rulers
+
+
+print ":canvas.geometry.width" :canvas.geometry.width
+print ":canvas.geometry.height" :canvas.geometry.height
+print ":canvas.geometry.left" :canvas.geometry.left
+print ":canvas.geometry.right" :canvas.geometry.right
+print ":canvas.geometry.top" :canvas.geometry.top
+print ":canvas.geometry.bottom" :canvas.geometry.bottom
+print ":canvas.geometry.resolution" :canvas.geometry.resolution
+
+# -------------------------------------------
+# drawing tests
+# -------------------------------------------
+set draw antialiasing ON
+set script execution verbose ON
+call macro "test3b" 60
+
+    
+print "Done"

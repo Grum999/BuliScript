@@ -1,0 +1,185 @@
+set variable :listInt = [1, 2, 3, 4, 5]
+set variable :listStr = ['A', 'B', 'C']
+set variable :listBool= [ON, OFF]
+set variable :listLst = [[1, 2], [2, 3], [3, 4]]
+
+
+print "** Integer ***"
+
+print "2*x " 2 * :listInt 
+print "x*2 " :listInt * 2
+
+print "2/x " 2 / :listInt 
+print "x/2 " :listInt / 2
+
+print "2//x" 2 // :listInt 
+print "x//2" :listInt // 2
+
+print "2%x " 2 % :listInt 
+print "x%2 " :listInt % 2
+
+print "2+x " 2 + :listInt 
+print "x+2 " :listInt + 2
+
+print "'!'+x " ('!' + :listInt )
+print "x+'!' " :listInt + '!'
+
+print "2-x " 2 - :listInt 
+print "x-2 " :listInt - 2
+
+print "2>x " 2 > :listInt 
+print "x>2 " :listInt > 2
+
+print "2>=x" 2 >= :listInt 
+print "x>=2" :listInt >= 2
+
+print "2<x " 2 < :listInt 
+print "x<2 " :listInt < 2
+
+print "2<=x" 2 <= :listInt 
+print "x<=2" :listInt <= 2
+
+print "2=x " 2 = :listInt 
+print "x=2 " :listInt = 2
+
+print "2<>x" 2 <> :listInt 
+print "x<>2" :listInt <> 2
+
+print "2 and x" 2 and :listInt 
+print "x and 2" :listInt and 2
+
+print "2 or x" 2 or:listInt 
+print "x or 2" :listInt or 2
+
+print "2 xor x" 2 xor:listInt 
+print "x xor 2" :listInt xor 2
+
+# ------------------------------------------
+print "** String ***"
+
+print "2*x " 2 * :listStr 
+print "x*2 " :listStr * 2
+
+print "2+x " 2 + :listStr 
+print "x+2 " :listStr + 2
+
+print "'!'+x " ('!' + :listStr)
+print "x+'!' " :listStr + '!'
+
+print "'B'>x " 'B' > :listStr 
+print "x>'B' " :listStr > 'B'
+
+print "'B'>=x" 'B' >= :listStr 
+print "x>='B'" :listStr >= 'B'
+
+print "'B'<x " 'B' < :listStr 
+print "x<'B' " :listStr < 'B'
+
+print "'B'<=x" 'B' <= :listStr 
+print "x<='B'" :listStr <= 'B'
+
+print "'B'=x " 'B' = :listStr 
+print "x='B' " :listStr = 'B'
+
+print "'B'<>x" 'B' <> :listStr 
+print "x<>'B'" :listStr <> 'B'
+
+# -----------------------------------------------
+print "** Bool ***"
+
+print "ON>x " ON > :listBool 
+print "x>ON " :listBool > ON
+
+print "ON>=x" ON >= :listBool 
+print "x>=ON" :listBool >= ON
+
+print "ON<x " ON < :listBool 
+print "x<ON " :listBool < ON
+
+print "ON<=x" ON <= :listBool 
+print "x<=ON" :listBool <= ON
+
+print "ON=x " ON = :listBool 
+print "x=ON " :listBool = ON
+
+print "ON<>x" ON <> :listBool 
+print "x<>ON" :listBool <> ON
+
+print "ON and x" ON and :listBool 
+print "x and ON" :listBool and ON
+
+print "ON or x" ON or:listBool 
+print "x or ON" :listBool or ON
+
+print "ON xor x" ON xor:listBool 
+print "x xor ON" :listBool xor ON
+
+
+
+# -----------------------------------------------
+print "** List ***"
+
+print "2*x " 2 * :listLst 
+print "x*2 " :listLst * 2
+
+print "2/x " 2 / :listLst 
+print "x/2 " :listLst / 2
+
+print "2//x" 2 // :listLst 
+print "x//2" :listLst // 2
+
+print "2%x " 2 % :listLst 
+print "x%2 " :listLst % 2
+
+print "2+x " 2 + :listLst 
+print "x+2 " :listLst + 2
+
+print "'!'+x " ('!' + :listLst )
+print "x+'!' " :listLst + '!'
+
+print "2-x " 2 - :listLst 
+print "x-2 " :listLst - 2
+
+print "2>x " 2 > :listLst 
+print "x>2 " :listLst > 2
+
+print "2>=x" 2 >= :listLst 
+print "x>=2" :listLst >= 2
+
+print "2<x " 2 < :listLst 
+print "x<2 " :listLst < 2
+
+print "2<=x" 2 <= :listLst 
+print "x<=2" :listLst <= 2
+
+print "2=x " 2 = :listLst 
+print "x=2 " :listLst = 2
+
+print "2<>x" 2 <> :listLst 
+print "x<>2" :listLst <> 2
+
+print "2 and x" 2 and :listLst 
+print "x and 2" :listLst and 2
+
+print "2 or x" 2 or:listLst 
+print "x or 2" :listLst or 2
+
+print "2 xor x" 2 xor:listLst 
+print "x xor 2" :listLst xor 2
+
+
+
+print :math.pi 
+print :math.e 
+print :math.phi
+print "random seed=" :script.randomize.seed "random=" math.random() math.random()
+set script randomize seed "maou"
+print "random seed=" :script.randomize.seed "random=" math.random() math.random()
+
+
+print :listLst [3]
+print :listLst[2]
+print :listLst[2][1]
+print :listLst[-1][-1]
+
+

@@ -1,0 +1,89 @@
+set variable :test1 = 2 + 3 * 4 - 1 / 2 - 1
+set variable :test2 = 2 + (3 * 4) - (1 / 2) - 1
+set variable :test3 = 2 + 3 * 4 > 4
+set variable :test4 = 3 * 4 + 2 > 4
+set variable :test5 = 1 / 2 * 3
+set variable :test6 = 1 / (2 * 3)
+set variable :test7 = 2 + 3 * 4 / 5 - 1 / 2 - 1
+set variable :test8 = 2 + (3 * 4) / 5 - (1 / 2) - 1
+set variable :test9 = 4 * 3 + 1 + 2 + 3 * 4 - (3 - 1) / 2
+set variable :test10= 4 * 3 + 1 + 2 + 3 * 4 / 5 - (3 - 1) / 2
+set variable :test11= 1 / 2 - 1 * 2
+set variable :test12= 1 / 2 / 3 / 4 / 5 * 1 * 2 * 3 * 4
+set variable :test13= 1 / 2 * 3 / 4 * 5 / 6 * 7
+set variable :test14= 1 + 2 / 3 / 4 - 5 + 6 / 7 * 8 - 9
+set variable :test15= 4 * 4 / 2 > 2 * 3 and 3 < 4
+set variable :test16= 4 * 4 / 2 < 2 * 3 or 3 > 4 
+set variable :test17= -1
+set variable :test18= 5 + -1 
+set variable :test19= 5 * -1 
+set variable :test20= -4 * 3 
+set variable :test21= 4 * -3 
+set variable :test22= -4 * -3 
+set variable :test23= --1  
+set variable :test24= -(3 * (-4 + 2))
+set variable :test25= math.cos(0)
+set variable :test26= math.cos(3.14/2)
+set variable :test27= -math.cos(3.14/2)
+set variable :test28 = 2 in [1,2,3,4]
+set variable :test29 = 5 in [1,2,3,4]
+
+print :test1 (:test1=12.5) "=12.5"
+print :test2 (:test2=12.5) "=12.5"
+
+print :test3 (:test3=ON) "=ON"
+print :test4 (:test4=ON) "=ON"
+
+print :test5 (:test5=1.5) "=0.5*3=1.5" 
+print :test6 (:test6=1/6) "=0.16666666666666666"
+
+print :test7 (:test7=2.9) "=2.9" 
+print :test8 (:test8=2.9) "=2.9"
+
+print :test9 (:test9=26) "=26" 
+print :test10 (:test10=16.4) "=16.4" 
+
+
+print :test11 (:test11=-1.5) "=-1.5" 
+print :test12 (:test12=0.2) "=0.2" 
+print :test13 (:test13=2.1875) "=2.1875" 
+print :test14 (:test14=-5.976190476190476) "=-5.976190476190476" 
+
+print :test15 (:test15=ON) "=ON" 
+print :test16 (:test16=OFF) "=OFF" 
+
+print :test17 (:test17=-1) "=-1" 
+print :test18 (:test18=4) "=4" 
+print :test19 (:test19=-5) "=-5" 
+print :test20 (:test20=-12) "=-12" 
+print :test21 (:test21=-12) "=-12" 
+print :test22 (:test22=12) "=12" 
+print :test23 (:test23=1) "=1" 
+print :test24 (:test24=6) "=6" 
+
+print :test25 (:test25=1.0) "=1.0" 
+print :test26 (:test26=0.0007963267107332633) "=0.0007963267107332633" 
+print :test27 (:test27=-0.0007963267107332633) "=-0.0007963267107332633" 
+
+print :test28 (:test28=ON) "=ON" 
+print :test29 (:test25=OFF) "=OFF" 
+print :test444 :test79 
+
+set variable :test0 = :test9 + :test10
+
+
+
+
+print "*-" + "-*"
+print 4 * "-"
+print "+" * 4
+
+print "y=" + 4
+print "c=" + #ff2566
+
+print 4.25 + "x" 
+print #88776655 + "=>?" 
+
+print :truc
+
+
