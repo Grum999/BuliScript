@@ -1802,11 +1802,11 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice)\s+input\b", #|(?:single|multiple)\s+choice
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice|font)\s+input\b", #|(?:single|multiple)\s+choice
                                                                     'User interface/Window',
                                                                     [('open dialog for string input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog string]',
+                                                                                'Action [Display an input dialog for string entry]',
                                                                                 # description
                                                                                 'Ask user for input a string value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1820,7 +1820,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for a string value and store result into variable `:value`')),
                                                                     ('open dialog for integer input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog integer]',
+                                                                                'Action [Display an input dialog for integer entry]',
                                                                                 # description
                                                                                 'Ask user for input an integer value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1836,7 +1836,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for an integer value and store result into variable `:value`')),
                                                                     ('open dialog for decimal input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog decimal]',
+                                                                                'Action [Display an input dialog for decimal entry]',
                                                                                 # description
                                                                                 'Ask user for input an decimal value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1852,7 +1852,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for a decimal value and store result into variable `:value`')),
                                                                     ('open dialog for color input \x01<:variable>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog color]',
+                                                                                'Action [Display an input dialog color entry]',
                                                                                 # description
                                                                                 'Ask user for input a color value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1866,7 +1866,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for a color value and store result into variable `:value`')),
                                                                     ('open dialog for boolean input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog boolean]',
+                                                                                'Action [Display an input dialog boolean entry]',
                                                                                 # description
                                                                                 'Ask user to provide a YES or NO answer\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1911,6 +1911,20 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`open dialog for choice input :value`**\n'
                                                                                 '**`     with combobox choices ["Red", "Green", "Blue"]`**\n\n'
                                                                                 'Will open a dialog box to ask user to select one value from provided choices, and store index of selected choice into `:value`')),
+                                                                    ('open dialog for font input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog for font entry]',
+                                                                                # description
+                                                                                'Ask user for to choose a font\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which font name is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for font input :value`**\n\n'
+                                                                                'Will open a dialog box to ask user to choose a font and store result into variable `:value`')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+message\b",
@@ -2484,7 +2498,7 @@ class BSLanguageDef(LanguageDef):
                                                                        r"|(?:fill(?:\s+canvas(?:\s+from)?)?)"
                                                                        r"|(?:pen|move|turn|push|pop|activate|deactivate)"
                                                                        r"|(?:(?:show|hide)(?:\s+(?:view))?)"
-                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|(?:single|multiple)(?:\s+choice)?))?)?)?)"
+                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|font|(?:single|multiple)(?:\s+choice)?))?)?)?)"
                                                                        r"|(?:with(?:\s+(?:rotation|minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
@@ -4912,8 +4926,8 @@ class BSLanguageDef(LanguageDef):
                       'Action_UIDialog_Color_Input',
                       'Action_UIDialog_String_Input',
                       'Action_UIDialog_Single_Choice_Input',
-                      'Action_UIDialog_Multiple_Choice_Input'
-
+                      'Action_UIDialog_Multiple_Choice_Input',
+                      'Action_UIDialog_Font_Input'
                 )
             )
 
@@ -5889,6 +5903,17 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for string input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
+        GrammarRule('Action_UIDialog_Font_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for font input', False),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',

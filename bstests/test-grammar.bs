@@ -582,15 +582,19 @@ if :testUiDialog then
         with title "yop!"
 
     open dialog for boolean input :bool
+    print "Boolean entry" :bool
     open dialog for boolean input :bool
         with message "test - bool input"
         with title "yop!"
+    print "Boolean entry" :bool
 
 
     open dialog for integer input :numInt
+    print "Integer entry" :numInt
     open dialog for integer input :numInt
         with message "test - int input"
         with title "yop!"
+    print "Integer entry" :numInt
 
 
     open dialog for integer input :numInt
@@ -603,26 +607,32 @@ if :testUiDialog then
 
 
     open dialog for decimal input :numDec
+    print "Decimal entry" :numDec
     open dialog for decimal input :numDec
         with message "test"
         with title "yop!"
         with minimum value -10.0
         with maximum value 10.0
         with default value math.random(-10.0, 10.0)
+    print "Decimal entry" :numDec
 
 
     open dialog for color input :color
+    print "Color entry" :color
     open dialog for color input :color
         with message "test"
         with title "yop!"
         with default value #cc99dd
+    print "Color entry" :color
 
 
     open dialog for string input :text
+    print "String entry" :text
     open dialog for string input :text
         with message "test"
         with title "yop!"
         with default value string.lower("TEST default value")
+    print "String entry" :text
 
 
     open dialog for single choice input :result
@@ -632,7 +642,7 @@ if :testUiDialog then
                             "Item B",
                             "Item C"]
         with default index 1 
-    print :result    
+    print "Choice entry" :result
     
     open dialog for single choice input :result
         with message "test"
@@ -641,7 +651,7 @@ if :testUiDialog then
                                 "Item B",
                                 "Item C"]
         with default index 2 
-    print :result    
+    print "Choice entry" :result
 
     open dialog for multiple choice input :result
         with message "test"
@@ -653,9 +663,16 @@ if :testUiDialog then
                     "Item E"]
         with default index [0, 2] 
         with minimum choices 3
-    print :result    
+    print "Choices entries" :result
 
 
+    open dialog for font input :text
+    print "Font entry" :text
+    open dialog for font input :text
+        with message "test"
+        with title "yop!"
+        with default value "Monospace"
+    print "Font entry" :text
 
 
 

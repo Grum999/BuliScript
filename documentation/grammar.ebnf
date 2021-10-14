@@ -326,7 +326,14 @@ Action_UIDialog
                             'with' ( 'default' 'index' (List_Expression|Evaluate_Number_Expression) ) |
                                    ( 'minimum' 'choices' Evaluate_Number_Expression)
                         )*
-                    )
+                    ) |
+                    /* FONT NAME INPUT */
+                    (
+                        'font' 'input' Variable
+                        (
+                            'with' ( 'default' 'value' Evaluate_String_Expression )
+                        )?
+                    ) |
                 )
             )
             (

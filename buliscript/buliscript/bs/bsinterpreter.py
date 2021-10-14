@@ -82,7 +82,8 @@ from buliscript.pktk.widgets.wiodialog import (
         WDialogComboBoxChoiceInput,
         WDialogRadioButtonChoiceInput,
         WDialogCheckBoxChoiceInput,
-        WDialogColorInput
+        WDialogColorInput,
+        WDialogFontInput
     )
 
 from buliscript.pktk.pktk import (
@@ -1015,6 +1016,8 @@ class BSInterpreter(QObject):
             return self.__executeActionUIDialogSingleChoiceInput(currentAst)
         elif currentAst.id() == 'Action_UIDialog_Multiple_Choice_Input':
             return self.__executeActionUIDialogMultipleChoiceInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Font_Input':
+            return self.__executeActionUIDialogFontInput(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -4092,6 +4095,44 @@ class BSInterpreter(QObject):
         #self.__delay()
         return None
 
+    def __executeActionUIDialogFontInput(self, currentAst):
+        """Open dialog for font input"""
+        fctLabel='Action ***open dialog for font input***'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=''
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, str)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+        scriptBlock.setVariable(variableName, WDialogFontInput.display(title, message, defaultValue=defaultValue, optionFilter=True), BSVariableScope.CURRENT)
+
+        #self.__delay()
+        return None
+
     def __executeActionUIDialogIntegerInput(self, currentAst):
         """Open dialog for integer input"""
         fctLabel='Action ***open dialog for integer input***'
@@ -6063,8 +6104,11 @@ class BSInterpreter(QObject):
         """
         self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
         if self.__painter:
+            size=BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX')
+            if size<=0:
+                return
             font=self.__painter.font()
-            font.setPixelSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
+            font.setPixelSize(size)
             self.__painter.setFont(font)
 
     def __setTextBold(self, value):
