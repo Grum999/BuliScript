@@ -85,6 +85,8 @@ from buliscript.pktk.widgets.wiodialog import (
         WDialogColorInput,
         WDialogFontInput
     )
+from buliscript.pktk.widgets.wefiledialog import WEFileDialog
+
 
 from buliscript.pktk.pktk import (
         EInvalidType,
@@ -1018,6 +1020,8 @@ class BSInterpreter(QObject):
             return self.__executeActionUIDialogMultipleChoiceInput(currentAst)
         elif currentAst.id() == 'Action_UIDialog_Font_Input':
             return self.__executeActionUIDialogFontInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_FileName_Input':
+            return self.__executeActionUIDialogFileNameInput(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -4129,6 +4133,50 @@ class BSInterpreter(QObject):
 
         scriptBlock=self.__scriptBlockStack.current()
         scriptBlock.setVariable(variableName, WDialogFontInput.display(title, message, defaultValue=defaultValue, optionFilter=True), BSVariableScope.CURRENT)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogFileNameInput(self, currentAst):
+        """Open dialog for file name input"""
+        fctLabel='Action ***open dialog for file name input***'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=''
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, str)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+
+        fileDialog=WEFileDialog(title, defaultValue, i18n("All images (*.png *.jpg *.jpeg);;Portable Network Graphics (*.png);;JPEG Image (*.jpg *.jpeg)"), message)
+        fileDialog.setFileMode(WEFileDialog.ExistingFile)
+        if fileDialog.exec() == WEFileDialog.Accepted:
+            scriptBlock.setVariable(variableName, fileDialog.file(), BSVariableScope.CURRENT)
+        else:
+            scriptBlock.setVariable(variableName, None, BSVariableScope.CURRENT)
 
         #self.__delay()
         return None

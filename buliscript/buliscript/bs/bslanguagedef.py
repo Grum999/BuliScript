@@ -1802,7 +1802,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice|font)\s+input\b", #|(?:single|multiple)\s+choice
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice|font|file\s+name)\s+input\b", #|(?:single|multiple)\s+choice
                                                                     'User interface/Window',
                                                                     [('open dialog for string input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
@@ -1925,6 +1925,22 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`open dialog for font input :value`**\n\n'
                                                                                 'Will open a dialog box to ask user to choose a font and store result into variable `:value`')),
+                                                                    ('open dialog for file name input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog for file name entry]',
+                                                                                # description
+                                                                                'Ask user for to choose for a file\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which file name is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`\n'
+                                                                                '- `with extensions`\n'
+                                                                                '- `with import into image library as`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for file name input :value`**\n\n'
+                                                                                'Will open a dialog box to ask user to choose for a file and store result into variable `:value`')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+message\b",
@@ -2498,7 +2514,7 @@ class BSLanguageDef(LanguageDef):
                                                                        r"|(?:fill(?:\s+canvas(?:\s+from)?)?)"
                                                                        r"|(?:pen|move|turn|push|pop|activate|deactivate)"
                                                                        r"|(?:(?:show|hide)(?:\s+(?:view))?)"
-                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|font|(?:single|multiple)(?:\s+choice)?))?)?)?)"
+                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|font|file\sname|file|(?:single|multiple)(?:\s+choice)?))?)?)?)"
                                                                        r"|(?:with(?:\s+(?:rotation|minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
@@ -4927,7 +4943,8 @@ class BSLanguageDef(LanguageDef):
                       'Action_UIDialog_String_Input',
                       'Action_UIDialog_Single_Choice_Input',
                       'Action_UIDialog_Multiple_Choice_Input',
-                      'Action_UIDialog_Font_Input'
+                      'Action_UIDialog_Font_Input',
+                      'Action_UIDialog_FileName_Input'
                 )
             )
 
@@ -5914,6 +5931,17 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for font input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
+        GrammarRule('Action_UIDialog_FileName_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for file name input', False),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',

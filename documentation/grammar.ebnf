@@ -334,6 +334,13 @@ Action_UIDialog
                             'with' ( 'default' 'value' Evaluate_String_Expression )
                         )?
                     ) |
+                    /* FILE NAME INPUT */
+                    (
+                        'file' 'name' 'input' Variable
+                        (
+                            'with' ( 'default' 'value' Evaluate_String_Expression )
+                        )?
+                    )
                 )
             )
             (
