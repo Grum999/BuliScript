@@ -1,0 +1,46 @@
+set script execution verbose ON 
+
+set view grid color #888888 #303030
+set view grid style SOLID DOT
+set view grid size 10 5
+set view grid opacity 0.25
+show view grid
+
+
+set view origin color #d51ba7
+set view origin style SOLID
+set view origin size 45
+set view origin opacity 0.5
+#set draw origin RIGHT TOP
+set draw origin CENTER MIDDLE
+#set draw origin LEFT BOTTOM
+show view origin
+
+
+set view position color #229922
+set view position size 25
+set view position opacity 1.0
+set view position fulfilled ON
+set view position axis ON
+set view position model UPWARD
+show view position
+
+
+set view background from color #ffffff
+set view background opacity 1.0
+show view background
+
+set view rulers color #808080 #303030
+show view rulers
+
+
+print ":canvas.geometry.width" :canvas.geometry.width
+print ":canvas.geometry.height" :canvas.geometry.height
+print ":canvas.geometry.left" :canvas.geometry.left
+print ":canvas.geometry.right" :canvas.geometry.right
+print ":canvas.geometry.top" :canvas.geometry.top
+print ":canvas.geometry.bottom" :canvas.geometry.bottom
+print ":canvas.geometry.resolution" :canvas.geometry.resolution
+
+turn left 15
+

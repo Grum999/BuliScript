@@ -61,13 +61,11 @@ class BSLanguageDef(LanguageDef):
         ACTION_SET_FILL = ('setFill', 'A <SET FILL> action')
         ACTION_SET_TEXT = ('setText', 'A <SET TEXT> action')
         ACTION_SET_DRAW = ('setDraw', 'A <SET DRAW> action')
-        ACTION_SET_CANVAS_GRID = ('setCanvasGrid', 'A <SET CANVAS GRID> action')
-        ACTION_SET_CANVAS_RULERS = ('setCanvasRuler', 'A <SET CANVAS RULER> action')
-        ACTION_SET_CANVAS_ORIGIN = ('setCanvasOrigin', 'A <SET CANVAS ORIGIN> action')
-        ACTION_SET_CANVAS_POSITION = ('setCanvasPosition', 'A <SET CANVAS POSITION> action')
-        ACTION_SET_CANVAS_BACKGROUND = ('setCanvasBackground', 'A <SET CANVAS POSITION> action')
-        ACTION_SET_LAYER = ('setLayer', 'A <SET LAYER> action')
-        ACTION_SET_SELECTION = ('setSelection', 'A <SET SELECTION> action')
+        ACTION_SET_VIEW_GRID = ('setViewGrid', 'A <SET VIEW GRID> action')
+        ACTION_SET_VIEW_RULERS = ('setViewRuler', 'A <SET VIEW RULER> action')
+        ACTION_SET_VIEW_ORIGIN = ('setViewOrigin', 'A <SET VIEW ORIGIN> action')
+        ACTION_SET_VIEW_POSITION = ('setViewPosition', 'A <SET VIEW POSITION> action')
+        ACTION_SET_VIEW_BACKGROUND = ('setViewBackground', 'A <SET VIEW POSITION> action')
         ACTION_SET_SCRIPT = ('setExecution', 'A <SET EXECUTION> action')
 
         ACTION_DRAW_SHAPE = ('drawShape', 'A <DRAW shape> action')
@@ -78,7 +76,7 @@ class BSLanguageDef(LanguageDef):
         ACTION_DRAW_TURN = ('drawTurn', 'A <TURN> action')
         ACTION_DRAW_OPTION = ('drawOption', 'A <DRAW> option')
 
-        ACTION_CANVAS = ('canvas', 'A <CANVAS> action')
+        ACTION_VIEW = ('view', 'A <VIEW> action')
 
         ACTION_STATE = ('state', 'A <STATE> action')
 
@@ -494,7 +492,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode|opacity)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_DRAW, r"^\x20*\bset\s+draw\s+(?:antialiasing|blending\s+mode|opacity|origin)\b",
                                                                     'Settings/Draw',
                                                                     [('set draw antialiasing \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
@@ -568,159 +566,8 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`set global opacity 128`**\n'
                                                                                 '**`set global opacity 0.5`**\n\n'
-                                                                                'Will both define a global opacity of 50%'))
-                                                                    ],
-                                                                    'A'),
-
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, r"^\x20*\bset\s+canvas\s+grid\s+(?:color|style|opacity|size)\b",
-                                                                    'Settings/Canvas/Grid',
-                                                                    [('set canvas grid color \x01<COLOR> [<BGCOLOR>]',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas grid colors]',
-                                                                                # description
-                                                                                '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
-                                                                                'The *<BGCOLOR>* define background color outside drawing area and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid color #880000FF`**\n\n'
-                                                                                'Will set a blue grid with 50% opacity')),
-                                                                     ('set canvas grid style \x01<STYLE-MAIN> [<STYLE-SECONDARY>]',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas grid style]',
-                                                                                # description
-                                                                                '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set stroke style for canvas grid\n\n'
-                                                                                'Given *<STYLE-MAIN>* and *<STYLE-SECONDARY>* can be:\n'
-                                                                                ' - **`SOLID`**\n'
-                                                                                ' - **`DASH`**\n'
-                                                                                ' - **`DOT`**\n'
-                                                                                ' - **`DASHDOT`**\n'
-                                                                                ' - **`NONE`**\n\n'
-                                                                                'When *<STYLE-SECONDARY>* is omitted, given *<STYLE-MAIN>* is applied to both grid lines',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid style DOT`**\n\n'
-                                                                                'Will set a dotted line style to render canvas grid')),
-                                                                     ('set canvas grid opacity \x01<OPACITY>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas grid opacity]',
-                                                                                # description
-                                                                                '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas grid opacity\n\n'
-                                                                                'Given *<OPACITY>* can be:\n'
-                                                                                ' - **`int`**: a number; integer values from 0 to 255\n'
-                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
-                                                                                'Opacity can also be set from **`set canvas grid color`** action',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid opacity 128`**\n'
-                                                                                '**`set canvas grid opacity 0.5`**\n\n'
-                                                                                'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas grid size \x01<WIDTH> [<MAIN>] [<UNIT>]',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas grid size]',
-                                                                                # description
-                                                                                '*Canvas grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas grid size\n\n'
-                                                                                'Given *<WIDTH>* is a positive number that define grid size, expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<MAIN>*, if provided, is a positive integer greater than zero that define frequency of main grid line\n\n'
-                                                                                'Given *<UNIT>* if provided is applied to <WIDTH> and can be:\n'
-                                                                                ' - **`PX`**: use pixels\n'
-                                                                                ' - **`PCT`**: use percentage of document width/height\n'
-                                                                                ' - **`MM`**: use millimeters\n'
-                                                                                ' - **`INCH`**: use inches',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid size 50 PX`**\n\n'
-                                                                                'Will define a grid for which line is drawn every 50 pixels\n\n'
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid size 10 5 MM`**\n\n'
-                                                                                'Will define a main grid for which line is drawn every 10 millimeters and a main grid line drawn every 5 grid line')),
-                                                                    ],
-                                                                    'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, r"^\x20*\bset\s+canvas\s+rulers\s+(?:color)\b",
-                                                                    'Settings/Canvas/Rulers',
-                                                                    [('set canvas rulers color \x01<COLOR> [<BGCOLOR>]',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas rulers colors]',
-                                                                                # description
-                                                                                '*Canvas rulers is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set color for canvas rulers\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
-                                                                                'The *<BGCOLOR>* define background color and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas rulers color #0000FF #FFFFFF`**\n\n'
-                                                                                'Will set a blue ruler on white background'))
-                                                                    ],
-                                                                    'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, r"^\x20*\bset\s+canvas\s+origin\s+(?:color|style|opacity|size|position)\b",
-                                                                    'Settings/Canvas/Origin',
-                                                                    [('set canvas origin color \x01<COLOR>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas origin color]',
-                                                                                # description
-                                                                                '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set color for canvas grid\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid color #880000FF`**\n\n'
-                                                                                'Will set a blue origin with 50% opacity')),
-                                                                     ('set canvas origin style \x01<STYLE>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas origin style]',
-                                                                                # description
-                                                                                '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set stroke style for canvas origin\n\n'
-                                                                                'Given *<STYLE>* can be:\n'
-                                                                                ' - **`SOLID`**\n'
-                                                                                ' - **`DASH`**\n'
-                                                                                ' - **`DOT`**\n'
-                                                                                ' - **`DASHDOT`**\n'
-                                                                                ' - **`NONE`**',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas origin style SOLID`**\n\n'
-                                                                                'Will set a solid line style to render canvas origin')),
-                                                                     ('set canvas origin opacity \x01<OPACITY>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas origin opacity]',
-                                                                                # description
-                                                                                '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas origin opacity\n\n'
-                                                                                'Given *<OPACITY>* can be:\n'
-                                                                                ' - **`int`**: a number; integer values from 0 to 255\n'
-                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
-                                                                                'Opacity can also be set from **`set canvas origin color`** action',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas grid opacity 128`**\n'
-                                                                                '**`set canvas grid opacity 0.5`**\n\n'
-                                                                                'Will both define a canvas grid opacity of 50%')),
-                                                                     ('set canvas origin size \x01<SIZE> [<UNIT>]',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas origin size]',
-                                                                                # description
-                                                                                '*Canvas origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas origin size\n\n'
-                                                                                'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
-                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
-                                                                                ' - With given **`UNIT`** if provided\n\n'
-                                                                                'Given *<UNIT>*, if provided can be:\n'
-                                                                                ' - **`PX`**: use pixels\n'
-                                                                                ' - **`PCT`**: use percentage of document width/height\n'
-                                                                                ' - **`MM`**: use millimeters\n'
-                                                                                ' - **`INCH`**: use inches',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set canvas origin size 40 PX`**\n\n'
-                                                                                'Will define an origin size of 40 pixels')),
-                                                                     ('set canvas origin position \x01<ABSISSA> <ORDINATE>',
+                                                                                'Will both define a global opacity of 50%')),
+                                                                     ('set draw origin \x01<ABSISSA> <ORDINATE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Define canvas origin position]',
                                                                                 # description
@@ -735,44 +582,147 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`BOTTOM`**: use bottom canvas side for ordinate origin',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas origin size 40 PX`**\n\n'
-                                                                                'Will define an origin size of 40 pixels')),
+                                                                                '**`set draw origin CENTER MIDDLE`**\n\n'
+                                                                                'Will define origin of canvas centered to document')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, r"^\x20*\bset\s+canvas\s+position\s+(?:color|opacity|size|fulfilled|axis|model)\b",
-                                                                    'Settings/Canvas/Position',
-                                                                    [('set canvas position color \x01<COLOR>',
+
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, r"^\x20*\bset\s+view\s+grid\s+(?:color|style|opacity|size)\b",
+                                                                    'Settings/View/Grid',
+                                                                    [('set view grid color \x01<COLOR> [<BGCOLOR>]',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas position color]',
+                                                                                'Action [Define view grid colors]',
                                                                                 # description
-                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set color for canvas position\n\n'
-                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                '*View grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set color for view grid\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
+                                                                                'The *<BGCOLOR>* define background color outside drawing area and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas grid color #880000FF`**\n\n'
-                                                                                'Will set a blue position with 50% opacity')),
-                                                                     ('set canvas position opacity \x01<OPACITY>',
+                                                                                '**`set view grid color #880000FF`**\n\n'
+                                                                                'Will set a blue grid with 50% opacity')),
+                                                                     ('set view grid style \x01<STYLE-MAIN> [<STYLE-SECONDARY>]',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas position opacity]',
+                                                                                'Action [Define view grid style]',
                                                                                 # description
-                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas position opacity\n\n'
+                                                                                '*View grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set stroke style for view grid\n\n'
+                                                                                'Given *<STYLE-MAIN>* and *<STYLE-SECONDARY>* can be:\n'
+                                                                                ' - **`SOLID`**\n'
+                                                                                ' - **`DASH`**\n'
+                                                                                ' - **`DOT`**\n'
+                                                                                ' - **`DASHDOT`**\n'
+                                                                                ' - **`NONE`**\n\n'
+                                                                                'When *<STYLE-SECONDARY>* is omitted, given *<STYLE-MAIN>* is applied to both grid lines',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view grid style DOT`**\n\n'
+                                                                                'Will set a dotted line style to render view grid')),
+                                                                     ('set view grid opacity \x01<OPACITY>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view grid opacity]',
+                                                                                # description
+                                                                                '*View grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view grid opacity\n\n'
                                                                                 'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
-                                                                                'Opacity can also be set from **`set canvas position color`** action',
+                                                                                'Opacity can also be set from **`set view grid color`** action',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position opacity 128`**\n'
-                                                                                '**`set canvas position opacity 0.5`**\n\n'
-                                                                                'Will both define a canvas position opacity of 50%')),
-                                                                     ('set canvas position size \x01<SIZE> [<UNIT>]',
+                                                                                '**`set view grid opacity 128`**\n'
+                                                                                '**`set view grid opacity 0.5`**\n\n'
+                                                                                'Will both define a view grid opacity of 50%')),
+                                                                     ('set view grid size \x01<WIDTH> [<MAIN>] [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas position size]',
+                                                                                'Action [Define view grid size]',
                                                                                 # description
-                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas position size\n\n'
+                                                                                '*View grid is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view grid size\n\n'
+                                                                                'Given *<WIDTH>* is a positive number that define grid size, expressed:\n'
+                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
+                                                                                ' - With given **`UNIT`** if provided\n\n'
+                                                                                'Given *<MAIN>*, if provided, is a positive integer greater than zero that define frequency of main grid line\n\n'
+                                                                                'Given *<UNIT>* if provided is applied to <WIDTH> and can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view grid size 50 PX`**\n\n'
+                                                                                'Will define a grid for which line is drawn every 50 pixels\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`set view grid size 10 5 MM`**\n\n'
+                                                                                'Will define a main grid for which line is drawn every 10 millimeters and a main grid line drawn every 5 grid line')),
+                                                                    ],
+                                                                    'A'),
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_VIEW_RULERS, r"^\x20*\bset\s+view\s+rulers\s+(?:color)\b",
+                                                                    'Settings/View/Rulers',
+                                                                    [('set view rulers color \x01<COLOR> [<BGCOLOR>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view rulers colors]',
+                                                                                # description
+                                                                                '*View rulers is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set color for view rulers\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color\n'
+                                                                                'The *<BGCOLOR>* define background color and if provided, can be a color code **`#RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view rulers color #0000FF #FFFFFF`**\n\n'
+                                                                                'Will set a blue ruler on white background'))
+                                                                    ],
+                                                                    'A'),
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, r"^\x20*\bset\s+view\s+origin\s+(?:color|style|opacity|size)\b",
+                                                                    'Settings/View/Origin',
+                                                                    [('set view origin color \x01<COLOR>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view origin color]',
+                                                                                # description
+                                                                                '*View origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set color for view grid\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view grid color #880000FF`**\n\n'
+                                                                                'Will set a blue origin with 50% opacity')),
+                                                                     ('set view origin style \x01<STYLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view origin style]',
+                                                                                # description
+                                                                                '*View origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set stroke style for view origin\n\n'
+                                                                                'Given *<STYLE>* can be:\n'
+                                                                                ' - **`SOLID`**\n'
+                                                                                ' - **`DASH`**\n'
+                                                                                ' - **`DOT`**\n'
+                                                                                ' - **`DASHDOT`**\n'
+                                                                                ' - **`NONE`**',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view origin style SOLID`**\n\n'
+                                                                                'Will set a solid line style to render view origin')),
+                                                                     ('set view origin opacity \x01<OPACITY>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view origin opacity]',
+                                                                                # description
+                                                                                '*View origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view origin opacity\n\n'
+                                                                                'Given *<OPACITY>* can be:\n'
+                                                                                ' - **`int`**: a number; integer values from 0 to 255\n'
+                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
+                                                                                'Opacity can also be set from **`set view origin color`** action',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view grid opacity 128`**\n'
+                                                                                '**`set view grid opacity 0.5`**\n\n'
+                                                                                'Will both define a view grid opacity of 50%')),
+                                                                     ('set view origin size \x01<SIZE> [<UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view origin size]',
+                                                                                # description
+                                                                                '*View origin is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view origin size\n\n'
                                                                                 'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
                                                                                 ' - With default canvas unit, if **`UNIT`** is omited\n'
                                                                                 ' - With given **`UNIT`** if provided\n\n'
@@ -783,234 +733,169 @@ class BSLanguageDef(LanguageDef):
                                                                                 ' - **`INCH`**: use inches',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position size 20 PX`**\n\n'
-                                                                                'Will define an position size of 20 pixels')),
-                                                                     ('set canvas position fulfilled \x01<SWITCH>',
+                                                                                '**`set view origin size 40 PX`**\n\n'
+                                                                                'Will define an origin size of 40 pixels')),
+                                                                    ],
+                                                                    'A'),
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, r"^\x20*\bset\s+view\s+position\s+(?:color|opacity|size|fulfilled|axis|model)\b",
+                                                                    'Settings/View/Position',
+                                                                    [('set view position color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas position fulfill]',
+                                                                                'Action [Define view position color]',
                                                                                 # description
-                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas position empty or fulfill\n\n'
+                                                                                '*View position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set color for view position\n\n'
+                                                                                'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view grid color #880000FF`**\n\n'
+                                                                                'Will set a blue position with 50% opacity')),
+                                                                     ('set view position opacity \x01<OPACITY>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view position opacity]',
+                                                                                # description
+                                                                                '*View position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view position opacity\n\n'
+                                                                                'Given *<OPACITY>* can be:\n'
+                                                                                ' - **`int`**: a number; integer values from 0 to 255\n'
+                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n'
+                                                                                'Opacity can also be set from **`set view position color`** action',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view position opacity 128`**\n'
+                                                                                '**`set view position opacity 0.5`**\n\n'
+                                                                                'Will both define a view position opacity of 50%')),
+                                                                     ('set view position size \x01<SIZE> [<UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view position size]',
+                                                                                # description
+                                                                                '*View position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view position size\n\n'
+                                                                                'Given *<SIZE>* is a positive number that define origin line size, expressed:\n'
+                                                                                ' - With default canvas unit, if **`UNIT`** is omited\n'
+                                                                                ' - With given **`UNIT`** if provided\n\n'
+                                                                                'Given *<UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`set view position size 20 PX`**\n\n'
+                                                                                'Will define an position size of 20 pixels')),
+                                                                     ('set view position fulfilled \x01<SWITCH>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Define view position fulfill]',
+                                                                                # description
+                                                                                '*View position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view position empty or fulfill\n\n'
                                                                                 'Given *<SWITCH>* can be:\n'
                                                                                 ' - **`ON`**: draw position as fulfilled shape\n'
                                                                                 ' - **`OFF`**: draw position as empty shape',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position size 20 PX`**\n\n'
+                                                                                '**`set view position size 20 PX`**\n\n'
                                                                                 'Will define an position size of 20 pixels')),
-                                                                     ('set canvas position axis \x01<SWITCH>',
+                                                                     ('set view position axis \x01<SWITCH>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas position axis]',
+                                                                                'Action [Define view position axis]',
                                                                                 # description
-                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas position axis visible or not\n\n'
+                                                                                '*View position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view position axis visible or not\n\n'
                                                                                 'Given *<SWITCH>* can be:\n'
                                                                                 ' - **`ON`**: draw position axis\n'
                                                                                 ' - **`OFF`**: do not draw position axis',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position axis ON`**\n\n'
+                                                                                '**`set view position axis ON`**\n\n'
                                                                                 'Will define a position axis as visible')),
-                                                                     ('set canvas position model \x01<MODEL>',
+                                                                     ('set view position model \x01<MODEL>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas position model]',
+                                                                                'Action [Define view position model]',
                                                                                 # description
-                                                                                '*Canvas position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas position model\n\n'
+                                                                                '*View position is dynamically drawn over canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view position model\n\n'
                                                                                 'Given *<MODEL>* can be:\n'
                                                                                 ' - **`BASIC`**: basic position model, a simple triangle\n'
                                                                                 ' - **`ARROWHEAD`**: a position model as arrow head shape\n'
                                                                                 ' - **`UPWARD`**: a position model as upward arrow',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas position model BASIC`**\n\n'
-                                                                                'Will define a basic model to render position on canvas')),
+                                                                                '**`set view position model BASIC`**\n\n'
+                                                                                'Will define a basic model to render position on view')),
                                                                     ],
                                                                     'A'),
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, r"^\x20*\bset\s+canvas\s+background\s+(?:opacity|from\s+(?:document|color|layer\s+(?:name|active|id)))\b",
-                                                                    'Settings/Canvas/Background',
-                                                                    [('set canvas background opacity \x01<OPACITY>',
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, r"^\x20*\bset\s+view\s+background\s+(?:opacity|from\s+(?:document|color|layer\s+(?:name|active|id)))\b",
+                                                                    'Settings/View/Background',
+                                                                    [('set view background opacity \x01<OPACITY>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas background opacity]',
+                                                                                'Action [Define view background opacity]',
                                                                                 # description
-                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas background opacity\n\n'
+                                                                                '*View background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view background opacity\n\n'
                                                                                 'Given *<OPACITY>* can be:\n'
                                                                                 ' - **`int`**: a number; integer values from 0 to 255\n'
                                                                                 ' - **`dec`**: a number; decimal values from 0.0 to 1.0\n\n',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas background opacity 128`**\n'
-                                                                                '**`set canvas background opacity 0.5`**\n\n'
-                                                                                'Will both define a canvas background opacity of 50%')),
-                                                                     ('set canvas background from color \x01<COLOR>',
+                                                                                '**`set view background opacity 128`**\n'
+                                                                                '**`set view background opacity 0.5`**\n\n'
+                                                                                'Will both define a view background opacity of 50%')),
+                                                                     ('set view background from color \x01<COLOR>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas background content from color]',
+                                                                                'Action [Define view background content from color]',
                                                                                 # description
-                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas background from a given color\n\n'
+                                                                                '*View background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view background from a given color\n\n'
                                                                                 'Given *<COLOR>* can be a color code **`#[AA]RRGGBB`** or an expression returning a color',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas background from color #FFFFFF`**\n\n'
-                                                                                'Will define a white canvas background')),
-                                                                     ('set canvas background from document',
+                                                                                '**`set view background from color #FFFFFF`**\n\n'
+                                                                                'Will define a white view background')),
+                                                                     ('set view background from document',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas background content from document]',
+                                                                                'Action [Define view background content from document]',
                                                                                 # description
-                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas background from current document projection',
+                                                                                '*View background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view background from current document projection',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas background from document`**\n\n'
-                                                                                'Will define current document projection as canvas background')),
-                                                                     ('set canvas background from layer active',
+                                                                                '**`set view background from document`**\n\n'
+                                                                                'Will define current document projection as view background')),
+                                                                     ('set view background from layer active',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas background content from active layer]',
+                                                                                'Action [Define view background content from active layer]',
                                                                                 # description
-                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas background from current layer',
+                                                                                '*View background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view background from current layer',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas background from layer active`**\n\n'
-                                                                                'Will define current layer content as canvas background')),
-                                                                     ('set canvas background from layer name \x01<NAME>',
+                                                                                '**`set view background from layer active`**\n\n'
+                                                                                'Will define current layer content as view background')),
+                                                                     ('set view background from layer name \x01<NAME>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas background content from defined layer]',
+                                                                                'Action [Define view background content from defined layer]',
                                                                                 # description
-                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas background from layer designed by given name\n\n'
+                                                                                '*View background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view background from layer designed by given name\n\n'
                                                                                 'Given *<NAME>* can be a **`string`** or an expression returning a **`string`**\n'
                                                                                 'The first layer for which name match given reference is used; if no layer is found, active layer will be used',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas background from layer name "test"`**\n\n'
-                                                                                'Will define layer `"test"` content as canvas background')),
-                                                                     ('set canvas background from layer id \x01<ID>',
+                                                                                '**`set view background from layer name "test"`**\n\n'
+                                                                                'Will define layer `"test"` content as view background')),
+                                                                     ('set view background from layer id \x01<ID>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Define canvas background content from defined layer]',
+                                                                                'Action [Define view background content from defined layer]',
                                                                                 # description
-                                                                                '*Canvas background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
-                                                                                'Set canvas background from layer designed by given ID\n\n'
+                                                                                '*View background is dynamically drawn under canvas, and is not rendered on final document*\n\n'
+                                                                                'Set view background from layer designed by given ID\n\n'
                                                                                 'Given *<ID>* can be a **`string`** or an expression returning a **`string`**\n'
                                                                                 'If no layer is found, active layer will be used',
                                                                                 # example
                                                                                 'Following instruction:\n'
-                                                                                '**`set canvas background from layer id "{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}"`**\n\n'
-                                                                                'Will define layer `{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}` content as canvas background')),
-
-                                                                    ],
-                                                                    'A'),
-
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_LAYER, r"^\x20*\bset\s+layer\s+(?:opacity|name|visible|inherit\s+alpha|alpha\s+lock|blending\s+mode|color\s+label)\b",
-                                                                    'Settings/Layer',
-                                                                    [('set layer opacity \x01<VALUE>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: opacity]',
-                                                                                # description
-                                                                                'Set current layer opacity\n\n'
-                                                                                'Given *<VALUE>* can be:\n'
-                                                                                ' - **`int`**: a number; integer values from 0 to 100\n'
-                                                                                ' - **`dec`**: a number; decimal values from 0.0 to 1.0',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer opacity 50`**\n'
-                                                                                '**`set layer opacity 0.5`**\n\n'
-                                                                                'Will both define current layer opacity of 50%')),
-                                                                     ('set layer name \x01<TEXT>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: name]',
-                                                                                # description
-                                                                                'Set current layer name\n\n'
-                                                                                'Given *<TEXT>* is a string that will define layer name',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer name "Testing layer"`**\n\n'
-                                                                                'Will define current layer name as *"Testing layer"*')),
-                                                                     ('set layer visible \x01<SWITCH>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: visibility]',
-                                                                                # description
-                                                                                'Set current layer visibility\n\n'
-                                                                                'Given *<SWITCH>* can be:\n'
-                                                                                ' - **`ON`**: layer is visible\n'
-                                                                                ' - **`OFF`**: layer is not visible',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer visibility OFF`**\n\n'
-                                                                                'Will define current layer as not visible')),
-                                                                     ('set layer alpha lock \x01<SWITCH>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: alpha lock]',
-                                                                                # description
-                                                                                'Set alpha lock for current layer\n\n'
-                                                                                'Given *<SWITCH>* can be:\n'
-                                                                                ' - **`ON`**: alpha is locked\n'
-                                                                                ' - **`OFF`**: alpha is not locked',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer alpha lock ON`**\n\n'
-                                                                                'Will define alpha lock active for current layer')),
-                                                                     ('set layer inherit alpha \x01<SWITCH>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: inherit alpha]',
-                                                                                # description
-                                                                                'Set inherit alpha for current layer\n\n'
-                                                                                'Given *<SWITCH>* can be:\n'
-                                                                                ' - **`ON`**: inherit alpha is active\n'
-                                                                                ' - **`OFF`**: inherit alpha is not active',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer inherit alpha ON`**\n\n'
-                                                                                'Will define inherit alpha active for current layer')),
-                                                                     ('set layer blending mode \x01<BLENDING_MODE>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: blending mode]',
-                                                                                # description
-                                                                                'Set inherit alpha for current layer\n\n'
-                                                                                'Given *<BLENDING_MODE>* can be:\n'
-                                                                                ' - ',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer blending mode XXXXX`**\n\n'
-                                                                                'Will define blending mode XXXXX for current layer')),
-                                                                     ('set layer color label \x01<COLOR_LABEL>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s layer property: color label]',
-                                                                                # description
-                                                                                'Set inherit alpha for current layer\n\n'
-                                                                                'Given *<COLOR_LABEL>* can be:\n'
-                                                                                ' - **`NONE`**\n'
-                                                                                ' - **`BLUE`**\n'
-                                                                                ' - **`GREEN`**\n'
-                                                                                ' - **`YELLOW`**\n'
-                                                                                ' - **`ORANGE`**\n'
-                                                                                ' - **`BROWN`**\n'
-                                                                                ' - **`RED`**\n'
-                                                                                ' - **`PURPLE`**\n'
-                                                                                ' - **`GREY`**',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set layer color label GREEN`**\n\n'
-                                                                                'Will define a green color label for current layer')),
-                                                                    ],
-                                                                    'A'),
-
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_SET_SELECTION, r"^\x20*\bset\s+selection\s+(?:mode)\b",
-                                                                    'Settings/Selection',
-                                                                    [('set selection mode \x01<MODE>',
-                                                                            TokenizerRule.formatDescription(
-                                                                                'Action [Define *Krita*\'s selection mode]',
-                                                                                # description
-                                                                                'Set selection mode\n\n'
-                                                                                'Given *<MODE>* can be:\n'
-                                                                                ' - **`REPLACE`**: replace current selection with new one\n'
-                                                                                ' - **`ADD`**: add new selection to current selection\n'
-                                                                                ' - **`SUBSTRACT`**: substract selection from current selection',
-                                                                                # example
-                                                                                'Following instruction:\n'
-                                                                                '**`set selection mode ADD`**\n\n'
-                                                                                'Will define current selection mode to add new selections to current selection')),
+                                                                                '**`set view background from layer id "{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}"`**\n\n'
+                                                                                'Will define layer `{4aa143f9-b8ae-42ee-9d39-9d71c51fa3cb}` content as view background')),
                                                                     ],
                                                                     'A'),
 
@@ -1046,7 +931,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
             # todo: add |left arc|right arc|bezier|spline
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:line|round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, r"^\x20*\bdraw\s+(?:line|round\s+square|square|round\s+rect|rect|circle|ellipse|dot|pixel|scaled\s+image|image|text|star|polygon|pie|arc)\b",
                                                                     'Drawing/Shapes',
                                                                     [('draw line \x01<LENGTH> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
@@ -1092,7 +977,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw square 40 MM`**\n\n'
                                                                                 'Draw a square of 40 millimeters side width whatever is default canvas unit')),
-                                                                    ('draw round square \x01<WIDTH> [<W-UNIT>] <RADIUS> [<R-UNIT>]',
+                                                                     ('draw round square \x01<WIDTH> [<W-UNIT>] <RADIUS> [<R-UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a rounded square]',
                                                                                 # description
@@ -1126,7 +1011,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw square 40 MM 5 PX`**\n\n'
                                                                                 'Draw a square of 40 millimeters side width with corners radius of 5 pixels whatever is default canvas unit')),
-                                                                    ('draw rect \x01<WIDTH> <HEIGHT> [<UNIT>]',
+                                                                     ('draw rect \x01<WIDTH> <HEIGHT> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a rectangle]',
                                                                                 # description
@@ -1154,7 +1039,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw rect 40 20 MM`**\n\n'
                                                                                 'Draw a square of 40 millimeters and 20 millimeters height whatever is default canvas unit')),
-                                                                    ('draw round rect \x01<WIDTH> <HEIGHT> [<S-UNIT>] <RADIUS> [<R-UNIT>]',
+                                                                     ('draw round rect \x01<WIDTH> <HEIGHT> [<S-UNIT>] <RADIUS> [<R-UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a rounded rectangle]',
                                                                                 # description
@@ -1192,7 +1077,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw round rect 40 20 MM 5 PX`**\n\n'
                                                                                 'Draw a square of 40 millimeters and 20 millimeters height with corners radius of 5 pixels whatever is default canvas unit')),
-                                                                    ('draw circle \x01<RADIUS> [<UNIT>]',
+                                                                     ('draw circle \x01<RADIUS> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a circle]',
                                                                                 # description
@@ -1216,7 +1101,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw circle 40 MM`**\n\n'
                                                                                 'Draw a circle of 40 millimeters radius whatever is default canvas unit')),
-                                                                    ('draw ellipse \x01<H-RADIUS> <V-RADIUS> [<UNIT>]',
+                                                                     ('draw ellipse \x01<H-RADIUS> <V-RADIUS> [<UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw an ellipse]',
                                                                                 # description
@@ -1244,7 +1129,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw ellipse 40 20 MM`**\n\n'
                                                                                 'Draw an ellipse of 40 millimeters horizontal radius and 20 millimeters vertical radius whatever is default canvas unit')),
-                                                                    ('draw dot',
+                                                                     ('draw dot',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a dot]',
                                                                                 # description
@@ -1255,7 +1140,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw dot`**\n\n'
                                                                                 'Draw dot using current pen color/size definition**')),
-                                                                    ('draw pixel',
+                                                                     ('draw pixel',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a pixel]',
                                                                                 # description
@@ -1266,7 +1151,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw dot`**\n\n'
                                                                                 'Draw dot using current pen color/size definition**')),
-                                                                    ('draw image \x01<IMAGE>',
+                                                                     ('draw image \x01<IMAGE>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw an image (using native dimension)]',
                                                                                 # description
@@ -1279,7 +1164,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw image "testing image"`**\n\n'
                                                                                 'Draw image referenced in image library by id "testing image" to current position**')),
-                                                                    ('draw scaled image \x01<IMAGE> <WIDTH> [<UNIT-WIDTH>] <HEIGHT> [<UNIT-HEIGHT>]',
+                                                                     ('draw scaled image \x01<IMAGE> <WIDTH> [<UNIT-WIDTH>] <HEIGHT> [<UNIT-HEIGHT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw an image (using given dimensions)]',
                                                                                 # description
@@ -1307,7 +1192,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw image "testing image" 100 150 PX`**\n\n'
                                                                                 'Draw image referenced by id "testing image" to current position, scaled at 100 pixels width and 150 pixels height**')),
-                                                                    ('draw text \x01<TEXT>',
+                                                                     ('draw text \x01<TEXT>',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a text]',
                                                                                 # description
@@ -1321,7 +1206,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw text "Hello!"`**\n\n'
                                                                                 'Draw text "Hello!" to current position using current font definition**')),
-                                                                    ('draw star \x01<BRANCHES> <O-RADIUS> [<OR-UNIT>] <I-RADIUS> [<IR-UNIT>]',
+                                                                     ('draw star \x01<BRANCHES> <O-RADIUS> [<OR-UNIT>] <I-RADIUS> [<IR-UNIT>]',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Draw a star]',
                                                                                 # description
@@ -1357,6 +1242,88 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Following instruction:\n'
                                                                                 '**`draw star 8 40 MM 50 RPCT`**\n\n'
                                                                                 'Draw a 8 branches star of 40 millimeters outer width radius and 50% (of 40 MM) inner width whatever is default canvas unit')),
+                                                                     ('draw polygon \x01<EDGES> <RADIUS> [<R-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw a polygon]',
+                                                                                # description
+                                                                                'Draw a polygon for which:\n'
+                                                                                ' - Center is current position\n'
+                                                                                ' - Border use current pen definition\n'
+                                                                                ' - Area use current fill definition\n'
+                                                                                ' - Number of vertex is defined by given *<EDGES>*\n'
+                                                                                ' - Radius is defined by given *<RADIUS>*\n\n'
+                                                                                'Given *<EDGES>* is an integer number that define number of edges for polygon; must be greater or equal to **`3`**\n\n'
+                                                                                'Given *<RADIUS>* is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<R-UNIT>`** is omited\n'
+                                                                                ' - With given **`<R-UNIT>`** if provided\n\n'
+                                                                                'Given *<R-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw polygon 5 40`**\n\n'
+                                                                                'Draw a 5 edges polygon (a pentagon) of 40 pixels if default canvas unit is **`PX`**\n\n'
+                                                                                'Following instruction:\n'
+                                                                                '**`draw polygon 8 40 MM`**\n\n'
+                                                                                'Draw a 8 edges polygon (an octogon) of 40 millimeters width radius whatever is default canvas unit')),
+                                                                     ('draw pie \x01<RADIUS> [<RADIUS-UNIT>] <ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw a pie]',
+                                                                                # description
+                                                                                'Draw a pie for which:\n'
+                                                                                ' - Center is current position\n'
+                                                                                ' - Border use current pen definition\n'
+                                                                                ' - Area use current fill definition\n'
+                                                                                ' - Pie radius is defined by given *<RADIUS>*\n'
+                                                                                ' - Pie angle is defined by given *<ANGLE>*\n\n'
+                                                                                'Given *<RADIUS>* is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<RADIUS-UNIT>`** is omited\n'
+                                                                                ' - With given **`<RADIUS-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<RADIUS-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for rotation; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw pie 40 30`**\n\n'
+                                                                                'Draw a pie of 40 pixels radius (if default canvas unit is **`PX`**) and 30 degree angle (if default rotation unit is **`DEGREE`**)')),
+                                                                     ('draw arc \x01<RADIUS> [<RADIUS-UNIT>] <ANGLE> [<ANGLE-UNIT>]',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Draw an arc]',
+                                                                                # description
+                                                                                'Draw an arc for which:\n'
+                                                                                ' - Center is current position\n'
+                                                                                ' - Border use current pen definition\n'
+                                                                                ' - Area use current fill definition\n'
+                                                                                ' - Arc radius is defined by given *<RADIUS>*\n'
+                                                                                ' - Arc angle is defined by given *<ANGLE>*\n\n'
+                                                                                'Given *<RADIUS>* is a positive number expressed:\n'
+                                                                                ' - With default canvas unit, if **`<RADIUS-UNIT>`** is omited\n'
+                                                                                ' - With given **`<RADIUS-UNIT>`** if provided\n\n'
+                                                                                'Given *<ANGLE>* is a positive number expressed:\n'
+                                                                                ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
+                                                                                ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
+                                                                                'Given *<RADIUS-UNIT>*, if provided can be:\n'
+                                                                                ' - **`PX`**: use pixels\n'
+                                                                                ' - **`PCT`**: use percentage of document width/height\n'
+                                                                                ' - **`MM`**: use millimeters\n'
+                                                                                ' - **`INCH`**: use inches\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for rotation; if provided can be:\n'
+                                                                                ' - **`RADIAN`**: use radians (0 to pi)\n'
+                                                                                ' - **`DEGREE`**: use degrees (0 to 360)',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`draw arc 40 30`**\n\n'
+                                                                                'Draw an arc of 40 pixels radius (if default canvas unit is **`PX`**) and 30 degree angle (if default rotation unit is **`DEGREE`**)')),
                                                                     ],
                                                                     'A'),
 
@@ -1405,7 +1372,7 @@ class BSLanguageDef(LanguageDef):
                                                                     'A'),
 
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, r"\x20*\bwith(?:\s+(?:offset|scale|tiling|rotation\s+(?:left|right)))\b",
-                                                                    'Drawing/Miscellaneous/Options',
+                                                                    'Drawing/Miscellaneous/Fill options',
                                                                     [('with tiling',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Action [Fill canvas from image option]',
@@ -1453,7 +1420,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Given *<ANGLE>* is a positive number expressed:\n'
                                                                                 ' - With default rotation unit, if **`<ANGLE-UNIT>`** is omited\n'
                                                                                 ' - With given **`<ANGLE-UNIT>`** if provided\n\n'
-                                                                                'Given *<ANGLE-UNIT>* define unit to apply for width; if provided can be:\n'
+                                                                                'Given *<ANGLE-UNIT>* define unit to apply for rotation; if provided can be:\n'
                                                                                 ' - **`RADIAN`**: use radians (0 to pi)\n'
                                                                                 ' - **`DEGREE`**: use degrees (0 to 360)')),
                                                                     ('with rotation right \x01<ANGLE> [<ANGLE-UNIT>]',
@@ -1775,71 +1742,71 @@ class BSLanguageDef(LanguageDef):
 
 
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_CANVAS, r"^\x20*\b(?:show|hide)\s+canvas\s+(?:grid|origin|position|background|rulers)\b",
-                                                                    'Canvas',
-                                                                    [('show canvas grid',
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_VIEW, r"^\x20*\b(?:show|hide)\s+view\s+(?:grid|origin|position|background|rulers)\b",
+                                                                    'View',
+                                                                    [('show view grid',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set canvas grid visible]',
+                                                                                'Action [Set grid visible in view]',
                                                                                 # description
                                                                                 'Render grid over canvas\n'
                                                                                 'Grid is drawn over canvas and is not rendered on final drawing')),
-                                                                    ('show canvas origin',
+                                                                    ('show view origin',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set canvas origin visible]',
+                                                                                'Action [Set origin visible in view]',
                                                                                 # description
                                                                                 'Render origin over canvas\n'
                                                                                 'Origin is drawn over canvas and is not rendered on final drawing')),
-                                                                    ('show canvas position',
+                                                                    ('show view position',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set pen position/direction visible]',
+                                                                                'Action [Set pen position/direction visible in view]',
                                                                                 # description
                                                                                 'Render pen position over canvas\n'
                                                                                 'Pen position/direction is drawn over canvas and is not rendered on final drawing')),
-                                                                    ('show canvas background',
+                                                                    ('show view background',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set background visible]',
+                                                                                'Action [Set background visible in view]',
                                                                                 # description
                                                                                 'Render background under canvas\n'
                                                                                 'Background (made from current document projection) is drawn under canvas and is not rendered on final drawing')),
-                                                                    ('show canvas rulers',
+                                                                    ('show view rulers',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set canvas rulers visible]',
+                                                                                'Action [Set rulers visible in view]',
                                                                                 # description
                                                                                 'Render rulers over canvas\n'
                                                                                 'Rulers are drawn over canvas and are not rendered on final drawing')),
-                                                                    ('hide canvas grid',
+                                                                    ('hide view grid',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set canvas grid invisible]',
+                                                                                'Action [Set grid not visible in view]',
                                                                                 # description
-                                                                                'Do not render grid')),
-                                                                    ('hide canvas origin',
+                                                                                'Do not render grid in view')),
+                                                                    ('hide view origin',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set canvas origin invisible]',
+                                                                                'Action [Set origin not visible in view]',
                                                                                 # description
-                                                                                'Do not render origin')),
-                                                                    ('hide canvas position',
+                                                                                'Do not render origin in view')),
+                                                                    ('hide view position',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set pen position/direction invisible]',
+                                                                                'Action [Set pen position/direction not visible in view]',
                                                                                 # description
-                                                                                'Do not render position/direction')),
-                                                                    ('hide canvas background',
+                                                                                'Do not render position/direction in view')),
+                                                                    ('hide view background',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set background invisible]',
+                                                                                'Action [Set background not visible in view]',
                                                                                 # description
-                                                                                'Do not render background')),
-                                                                    ('hide canvas rulers',
+                                                                                'Do not render background in view')),
+                                                                    ('hide view rulers',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Set canvas rulers invisible]',
+                                                                                'Action [Set rulers not visible in view]',
                                                                                 # description
-                                                                                'Do not render rulers'))
+                                                                                'Do not render rulers in view'))
                                                                     ],
                                                                     'A'),
 
-            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice)\s+input\b", #|(?:single|multiple)\s+choice
+            TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+(?:string|integer|decimal|color|boolean|single\s+choice|multiple\s+choice|font|file\s+name)\s+input\b", #|(?:single|multiple)\s+choice
                                                                     'User interface/Window',
                                                                     [('open dialog for string input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog string]',
+                                                                                'Action [Display an input dialog for string entry]',
                                                                                 # description
                                                                                 'Ask user for input a string value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1853,7 +1820,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for a string value and store result into variable `:value`')),
                                                                     ('open dialog for integer input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog integer]',
+                                                                                'Action [Display an input dialog for integer entry]',
                                                                                 # description
                                                                                 'Ask user for input an integer value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1869,7 +1836,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for an integer value and store result into variable `:value`')),
                                                                     ('open dialog for decimal input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog decimal]',
+                                                                                'Action [Display an input dialog for decimal entry]',
                                                                                 # description
                                                                                 'Ask user for input an decimal value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1885,7 +1852,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for a decimal value and store result into variable `:value`')),
                                                                     ('open dialog for color input \x01<:variable>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog color]',
+                                                                                'Action [Display an input dialog color entry]',
                                                                                 # description
                                                                                 'Ask user for input a color value\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1899,7 +1866,7 @@ class BSLanguageDef(LanguageDef):
                                                                                 'Will open a dialog box to ask user for a color value and store result into variable `:value`')),
                                                                     ('open dialog for boolean input \x01<:USER-VARIABLE>',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Action [Display an input dialog boolean]',
+                                                                                'Action [Display an input dialog boolean entry]',
                                                                                 # description
                                                                                 'Ask user to provide a YES or NO answer\n\n'
                                                                                 'Given *<:USER-VARIABLE>* define variable in which input data is stored\n\n'
@@ -1944,6 +1911,36 @@ class BSLanguageDef(LanguageDef):
                                                                                 '**`open dialog for choice input :value`**\n'
                                                                                 '**`     with combobox choices ["Red", "Green", "Blue"]`**\n\n'
                                                                                 'Will open a dialog box to ask user to select one value from provided choices, and store index of selected choice into `:value`')),
+                                                                    ('open dialog for font input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog for font entry]',
+                                                                                # description
+                                                                                'Ask user for to choose a font\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which font name is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for font input :value`**\n\n'
+                                                                                'Will open a dialog box to ask user to choose a font and store result into variable `:value`')),
+                                                                    ('open dialog for file name input \x01<:USER-VARIABLE>',
+                                                                            TokenizerRule.formatDescription(
+                                                                                'Action [Display an input dialog for file name entry]',
+                                                                                # description
+                                                                                'Ask user for to choose for a file\n\n'
+                                                                                'Given *<:USER-VARIABLE>* define variable in which file name is stored\n\n'
+                                                                                'Following options can be set:\n'
+                                                                                '- `with title`\n'
+                                                                                '- `with message`\n'
+                                                                                '- `with default value`\n'
+                                                                                '- `with extensions`\n'
+                                                                                '- `with import into image library as`',
+                                                                                # example
+                                                                                'Following instruction:\n'
+                                                                                '**`open dialog for file name input :value`**\n\n'
+                                                                                'Will open a dialog box to ask user to choose for a file and store result into variable `:value`')),
                                                                     ],
                                                                     'A'),
             TokenizerRule(BSLanguageDef.ITokenType.ACTION_UIDIALOG, r"^\x20*\bopen\s+dialog\s+for\s+message\b",
@@ -2510,19 +2507,17 @@ class BSLanguageDef(LanguageDef):
                                                                        r"(?:set(?:\s+(?:"
                                                                             "unit|pen|fill|text\s+letter|text\s+horizontal|text\s+vertical|text|draw|"
                                                                             "script\s+execution|script\s+randomize|script|"
-                                                                            "canvas\s+background\s+from\s+layer|canvas\s+background\s+from|canvas\s+background|canvas\s+origin|canvas\s+grid|canvas\s+position|canvas\s+rulers|canvas\s+)))"
+                                                                            "view\s+background\s+from\s+layer|view\s+background\s+from|view\s+background|view\s+origin|view\s+grid|view\s+position|view\s+rulers|view)))"
                                                                        r"|(?:draw(:?\s+(?:round|scaled))?)"
                                                                        r"|(?:(?:start|stop)(?:\s+to(\s+draw)?)?)"
                                                                        r"|(?:clear)"
                                                                        r"|(?:fill(?:\s+canvas(?:\s+from)?)?)"
                                                                        r"|(?:pen|move|turn|push|pop|activate|deactivate)"
-                                                                       r"|(?:(?:show|hide)(?:\s+(?:canvas))?)"
-                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|(?:single|multiple)(?:\s+choice)?))?)?)?)"
+                                                                       r"|(?:(?:show|hide)(?:\s+(?:view))?)"
+                                                                       r"|(?:open(?:\s+dialog(?:\s+for(?:\s+(?:string|integer|decimal|color|boolean|font|file\sname|file|(?:single|multiple)(?:\s+choice)?))?)?)?)"
                                                                        r"|(?:with(?:\s+(?:rotation|minimum|maximum|default|(?:combobox|radio(\s+button)?)))?)"
                                                                        r")\b"
                                                                        ),
-                                                                       # (?:single|multiple) (?:\s+(?:choice)?)?
-                                                                       # (?:combobox|radio)(?:\s+(?:button)?)?
 
             TokenizerRule(BSLanguageDef.ITokenType.FLOW_UNCOMPLETE, r"^\x20*\b(?:"
                                                                        r"|(?:stop|call|define|for(?:\s+(?:each(?:\s+(?:item))?))?)"
@@ -3562,7 +3557,7 @@ class BSLanguageDef(LanguageDef):
 
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_NONE, r"\bNONE\b",
-                                                                    'Constants/Layer/Color label|Constants/Pen/Style|Constants/Canvas/Grid/Style|Constants/Canvas/Origin/Style',
+                                                                    'Constants/Layer/Color label|Constants/Pen/Style|Constants/View/Grid/Style|Constants/View/Origin/Style',
                                                                     [('NONE',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Constant [None value]',
@@ -3639,7 +3634,7 @@ class BSLanguageDef(LanguageDef):
                                                                     onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_PENSTYLE, r"\b(?:SOLID|DASHDOT|DASH|DOT)\b",
-                                                                    'Constants/Pen/Style|Constants/Canvas/Grid/Style|Constants/Canvas/Origin/Style',
+                                                                    'Constants/Pen/Style|Constants/View/Grid/Style|Constants/View/Origin/Style',
                                                                     [('SOLID',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Constant [Style: solid stroke]',
@@ -3996,7 +3991,7 @@ class BSLanguageDef(LanguageDef):
                                                                     onInitValue=self.__initTokenUpper),
 
             TokenizerRule(BSLanguageDef.ITokenType.CONSTANT_POSITIONMODEL, r"\b(?:BASIC|ARROWHEAD|UPWARD)\b",
-                                                                    'Constants/Canvas/Position',['BASIC','ARROWHEAD','UPWARD'],
+                                                                    'Constants/View/Position',['BASIC','ARROWHEAD','UPWARD'],
                                                                     'c',
                                                                     onInitValue=self.__initTokenUpper),
 
@@ -4043,9 +4038,9 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bangle\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\brotation.angle\b",
                                                                     'Variables/Rotation',
-                                                                    [(':angle',
+                                                                    [(':rotation.angle',
                                                                             TokenizerRule.formatDescription(
                                                                                 'Reserved variable [Current pen direction/rotation: angle]',
                                                                                 # description
@@ -4137,7 +4132,7 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape\.status)\b",
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bdraw\.(?:antialiasing|blendingmode|shape\.status|origin\.(?:absissa|ordinate))\b",
                                                                     'Variables/Draw',
                                                                     [(':draw.antialiasing',
                                                                             TokenizerRule.formatDescription(
@@ -4157,6 +4152,19 @@ class BSLanguageDef(LanguageDef):
                                                                                 # description
                                                                                 'Current shape mode active or not\n'
                                                                                 'Returned as boolean value (ACTIVE=ON, INACTIVE=OFF)')),
+                                                                     (':draw.origin.absissa',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas origin absissa]',
+                                                                                 # description
+                                                                                 'Current canvas origin absissa\n'
+                                                                                 'Returned as a string')),
+                                                                     (':draw.origin.ordinate',
+                                                                             TokenizerRule.formatDescription(
+                                                                                 'Reserved variable [Current canvas origin ordinate]',
+                                                                                 # description
+                                                                                 'Current canvas origin ordinate\n'
+                                                                                 'Returned as a string')),
+
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
@@ -4226,167 +4234,155 @@ class BSLanguageDef(LanguageDef):
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
 
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.grid\.(?:visibility|color|bgColor|size\.main|size\.width|style|opacity)\b",
-                                                                    'Variables/Canvas/Grid',
-                                                                    [(':canvas.grid.color',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bview\.grid\.(?:visibility|color|bgColor|size\.main|size\.width|style|opacity)\b",
+                                                                    'Variables/View/Grid',
+                                                                    [(':view.grid.color',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current canvas grid color]',
+                                                                                'Reserved variable [Current view grid color]',
                                                                                 # description
-                                                                                'Current canvas grid color\n'
+                                                                                'Current view grid color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.grid.bgColor',
+                                                                     (':view.grid.bgColor',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current canvas grid background color]',
+                                                                                'Reserved variable [Current view grid background color]',
                                                                                 # description
-                                                                                'Current canvas grid background color\n'
+                                                                                'Current view grid background color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.grid.visibility',
+                                                                     (':view.grid.visibility',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid visibility]',
+                                                                                 'Reserved variable [Current view grid visibility]',
                                                                                  # description
-                                                                                 'Current canvas grid visibility\n'
+                                                                                 'Current view grid visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.grid.size.main',
+                                                                     (':view.grid.size.main',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas main grid frequency]',
+                                                                                 'Reserved variable [Current view main grid frequency]',
                                                                                  # description
-                                                                                 'Current canvas main grid frequency\n'
+                                                                                 'Current view main grid frequency\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.grid.size.width',
+                                                                     (':view.grid.size.width',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid size]',
+                                                                                 'Reserved variable [Current view grid size]',
                                                                                  # description
-                                                                                 'Current canvas grid size\n'
+                                                                                 'Current view grid size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.grid.style.main',
+                                                                     (':view.grid.style.main',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid style (main grid)]',
+                                                                                 'Reserved variable [Current view grid style (main grid)]',
                                                                                  # description
-                                                                                 'Current canvas grid style (main grid)')),
-                                                                     (':canvas.grid.style.secondary',
+                                                                                 'Current view grid style (main grid)')),
+                                                                     (':view.grid.style.secondary',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid style (secondary grid)]',
+                                                                                 'Reserved variable [Current view grid style (secondary grid)]',
                                                                                  # description
-                                                                                 'Current canvas grid style (secondary grid)')),
-                                                                     (':canvas.grid.opacity',
+                                                                                 'Current view grid style (secondary grid)')),
+                                                                     (':view.grid.opacity',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas grid opacity]',
+                                                                                 'Reserved variable [Current view grid opacity]',
                                                                                  # description
-                                                                                 'Current canvas grid opacity\n'
+                                                                                 'Current view grid opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.origin\.(?:visibility|color|size|style|opacity|position\.(?:absissa|ordinate))\b",
-                                                                    'Variables/Canvas/Origin',
-                                                                    [(':canvas.origin.color',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bview\.origin\.(?:visibility|color|size|style|opacity)\b",
+                                                                    'Variables/View/Origin',
+                                                                    [(':view.origin.color',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current canvas origin color]',
+                                                                                'Reserved variable [Current view origin color]',
                                                                                 # description
-                                                                                'Current canvas origin color\n'
+                                                                                'Current view origin color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.origin.visibility',
+                                                                     (':view.origin.visibility',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas origin visibility]',
+                                                                                 'Reserved variable [Current view origin visibility]',
                                                                                  # description
-                                                                                 'Current canvas origin visibility\n'
+                                                                                 'Current view origin visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.origin.size',
+                                                                     (':view.origin.size',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas origin size]',
+                                                                                 'Reserved variable [Current view origin size]',
                                                                                  # description
                                                                                  'Current origin size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.origin.style',
+                                                                     (':view.origin.style',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas origin style]',
+                                                                                 'Reserved variable [Current view origin style]',
                                                                                  # description
-                                                                                 'Current canvas origin style')),
-                                                                     (':canvas.origin.opacity',
+                                                                                 'Current view origin style')),
+                                                                     (':view.origin.opacity',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas origin opacity]',
+                                                                                 'Reserved variable [Current view origin opacity]',
                                                                                  # description
-                                                                                 'Current canvas origin opacity\n'
+                                                                                 'Current view origin opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
-                                                                     (':canvas.origin.position.absissa',
-                                                                             TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas origin absissa]',
-                                                                                 # description
-                                                                                 'Current canvas origin absissa\n'
-                                                                                 'Returned as a string')),
-                                                                     (':canvas.origin.position.ordinate',
-                                                                             TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas origin ordinate]',
-                                                                                 # description
-                                                                                 'Current canvas origin ordinate\n'
-                                                                                 'Returned as a string')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.position\.(?:visibility|color|size|opacity|fulfill)\b",
-                                                                    'Variables/Canvas/Position',
-                                                                    [(':canvas.position.color',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bview\.position\.(?:visibility|color|size|opacity|fulfill)\b",
+                                                                    'Variables/View/Position',
+                                                                    [(':view.position.color',
                                                                             TokenizerRule.formatDescription(
-                                                                                'Reserved variable [Current canvas position/direction color]',
+                                                                                'Reserved variable [Current view position/direction color]',
                                                                                 # description
-                                                                                'Current canvas position color\n'
+                                                                                'Current view position color\n'
                                                                                 'Returned as color value')),
-                                                                     (':canvas.position.visibility',
+                                                                     (':view.position.visibility',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas position/direction visibility]',
+                                                                                 'Reserved variable [Current view position/direction visibility]',
                                                                                  # description
-                                                                                 'Current canvas position visibility\n'
+                                                                                 'Current view position visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.position.size',
+                                                                     (':view.position.size',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas position/direction size]',
+                                                                                 'Reserved variable [Current view position/direction size]',
                                                                                  # description
                                                                                  'Current position size\n'
                                                                                  'Returned in current unit')),
-                                                                     (':canvas.position.opacity',
+                                                                     (':view.position.opacity',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas position/direction opacity]',
+                                                                                 'Reserved variable [Current view position/direction opacity]',
                                                                                  # description
-                                                                                 'Current canvas position opacity\n'
+                                                                                 'Current view position opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
-                                                                     (':canvas.position.fulfill',
+                                                                     (':view.position.fulfill',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas position/direction fulfill status]',
+                                                                                 'Reserved variable [Current view position/direction fulfill status]',
                                                                                  # description
-                                                                                 'Current canvas position fulfill status (is empty or fulfilled)\n'
+                                                                                 'Current view position fulfill status (is empty or fulfilled)\n'
                                                                                  'Returned as boolean value')),
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.background\.(?:visibility|opacity|source\.type|source\.value)\b",
-                                                                    'Variables/Canvas/Background',
-                                                                    [(':canvas.background.visibility',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bview\.background\.(?:visibility|opacity|source\.type|source\.value)\b",
+                                                                    'Variables/View/Background',
+                                                                    [(':view.background.visibility',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas background visibility]',
+                                                                                 'Reserved variable [Current view background visibility]',
                                                                                  # description
-                                                                                 'Current canvas background visibility\n'
+                                                                                 'Current view background visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.background.opacity',
+                                                                     (':view.background.opacity',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas background opacity]',
+                                                                                 'Reserved variable [Current view background opacity]',
                                                                                  # description
-                                                                                 'Current canvas background opacity\n'
+                                                                                 'Current view background opacity\n'
                                                                                  'Returned as a decimal value between 0.0 and 1.0')),
-                                                                     (':canvas.background.source.type',
+                                                                     (':view.background.source.type',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas background source]',
+                                                                                 'Reserved variable [Current view background source]',
                                                                                  # description
-                                                                                 'Current canvas background source is string value for which value can be\n:'
+                                                                                 'Current view background source is string value for which value can be\n:'
                                                                                  '- **`color`**: a color\n'
                                                                                  '- **`document`**: current document projection\n'
                                                                                  '- **`layer active`**: current active layer\n'
                                                                                  '- **`layer name`**: layer designed by name\n'
                                                                                  '- **`layer id`**: layer designed by Id')),
-                                                                     (':canvas.background.source.value',
+                                                                     (':view.background.source.value',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas background value linked to source]',
+                                                                                 'Reserved variable [Current view background value linked to source]',
                                                                                  # description
-                                                                                 'Current canvas background source is a value linked to source type and can be\n:'
+                                                                                 'Current view background source is a value linked to source type and can be\n:'
                                                                                  '- **`color`**: a color\n'
                                                                                  '- **`document`**: current document file name\n'
                                                                                  '- **`layer active`**: current active layer name\n'
@@ -4395,25 +4391,25 @@ class BSLanguageDef(LanguageDef):
                                                                     ],
                                                                     'v',
                                                                     onInitValue=self.__initTokenLower),
-            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bcanvas\.rulers\.(?:visibility|color|bgColor)\b",
-                                                                    'Variables/Canvas/Rulers',
-                                                                    [(':canvas.rulers.visibility',
+            TokenizerRule(BSLanguageDef.ITokenType.VARIABLE_RESERVED, r":\bview\.rulers\.(?:visibility|color|bgColor)\b",
+                                                                    'Variables/View/Rulers',
+                                                                    [(':view.rulers.visibility',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas rulers visibility]',
+                                                                                 'Reserved variable [Current view rulers visibility]',
                                                                                  # description
-                                                                                 'Current canvas rulers visibility\n'
+                                                                                 'Current view rulers visibility\n'
                                                                                  'Returned as boolean value')),
-                                                                     (':canvas.rulers.color',
+                                                                     (':view.rulers.color',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas rulers color]',
+                                                                                 'Reserved variable [Current view rulers color]',
                                                                                  # description
-                                                                                 'Current canvas rulers color\n'
+                                                                                 'Current view rulers color\n'
                                                                                  'Returned as color value')),
-                                                                     (':canvas.rulers.bgColor',
+                                                                     (':view.rulers.bgColor',
                                                                              TokenizerRule.formatDescription(
-                                                                                 'Reserved variable [Current canvas rulers background color]',
+                                                                                 'Reserved variable [Current view rulers background color]',
                                                                                  # description
-                                                                                 'Current canvas rulers background color\n'
+                                                                                 'Current view rulers background color\n'
                                                                                  'Returned as color value'))
                                                                     ],
                                                                     'v',
@@ -4622,13 +4618,11 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_FILL, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_TEXT, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_DRAW, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_RULERS, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#e5dd82', True, False),
@@ -4638,7 +4632,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_DRAW_MOVE, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_TURN, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_STATE, '#e5dd82', True, False),
-            (BSLanguageDef.ITokenType.ACTION_CANVAS, '#e5dd82', True, False),
+            (BSLanguageDef.ITokenType.ACTION_VIEW, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_UICONSOLE, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_UIDIALOG, '#e5dd82', True, False),
             (BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, '#e5dd82', True, False),
@@ -4719,13 +4713,11 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_SET_FILL, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_TEXT, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_DRAW, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_LAYER, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_SET_SELECTION, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_RULERS, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_SET_SCRIPT, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_OPTION, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_MISC, '#c278da', True, False),
@@ -4735,7 +4727,7 @@ class BSLanguageDef(LanguageDef):
             (BSLanguageDef.ITokenType.ACTION_DRAW_MOVE, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_DRAW_TURN, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_STATE, '#c278da', True, False),
-            (BSLanguageDef.ITokenType.ACTION_CANVAS, '#c278da', True, False),
+            (BSLanguageDef.ITokenType.ACTION_VIEW, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_UICONSOLE, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_UIDIALOG, '#c278da', True, False),
             (BSLanguageDef.ITokenType.ACTION_UIDIALOG_OPTION, '#c278da', True, False),
@@ -4863,28 +4855,28 @@ class BSLanguageDef(LanguageDef):
                       'Action_Set_Draw_Antialiasing',
                       'Action_Set_Draw_Blending',
                       'Action_Set_Draw_Opacity',
-                      'Action_Set_Canvas_Grid_Color',
-                      'Action_Set_Canvas_Grid_Style',
-                      'Action_Set_Canvas_Grid_Size',
-                      'Action_Set_Canvas_Grid_Opacity',
-                      'Action_Set_Canvas_Rulers_Color',
-                      'Action_Set_Canvas_Origin_Color',
-                      'Action_Set_Canvas_Origin_Style',
-                      'Action_Set_Canvas_Origin_Size',
-                      'Action_Set_Canvas_Origin_Opacity',
-                      'Action_Set_Canvas_Origin_Position',
-                      'Action_Set_Canvas_Position_Color',
-                      'Action_Set_Canvas_Position_Size',
-                      'Action_Set_Canvas_Position_Opacity',
-                      'Action_Set_Canvas_Position_Fulfill',
-                      'Action_Set_Canvas_Position_Axis',
-                      'Action_Set_Canvas_Position_Model',
-                      'Action_Set_Canvas_Background_Opacity',
-                      'Action_Set_Canvas_Background_From_Document',
-                      'Action_Set_Canvas_Background_From_Layer_Name',
-                      'Action_Set_Canvas_Background_From_Layer_Id',
-                      'Action_Set_Canvas_Background_From_Layer_Active',
-                      'Action_Set_Canvas_Background_From_Color',
+                      'Action_Set_Draw_Origin',
+                      'Action_Set_View_Grid_Color',
+                      'Action_Set_View_Grid_Style',
+                      'Action_Set_View_Grid_Size',
+                      'Action_Set_View_Grid_Opacity',
+                      'Action_Set_View_Rulers_Color',
+                      'Action_Set_View_Origin_Color',
+                      'Action_Set_View_Origin_Style',
+                      'Action_Set_View_Origin_Size',
+                      'Action_Set_View_Origin_Opacity',
+                      'Action_Set_View_Position_Color',
+                      'Action_Set_View_Position_Size',
+                      'Action_Set_View_Position_Opacity',
+                      'Action_Set_View_Position_Fulfill',
+                      'Action_Set_View_Position_Axis',
+                      'Action_Set_View_Position_Model',
+                      'Action_Set_View_Background_Opacity',
+                      'Action_Set_View_Background_From_Document',
+                      'Action_Set_View_Background_From_Layer_Name',
+                      'Action_Set_View_Background_From_Layer_Id',
+                      'Action_Set_View_Background_From_Layer_Active',
+                      'Action_Set_View_Background_From_Color',
                       'Action_Set_Script_Execution_Verbose',
                       'Action_Set_Script_Randomize_Seed',
                       'Action_Draw_Shape_Line',
@@ -4900,6 +4892,9 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Shape_Scaled_Image',
                       'Action_Draw_Shape_Text',
                       'Action_Draw_Shape_Star',
+                      'Action_Draw_Shape_Polygon',
+                      'Action_Draw_Shape_Pie',
+                      'Action_Draw_Shape_Arc',
                       'Action_Draw_Misc_Clear_Canvas',
                       'Action_Draw_Misc_Fill_Canvas_From_Color',
                       'Action_Draw_Misc_Fill_Canvas_From_Image',
@@ -4920,16 +4915,16 @@ class BSLanguageDef(LanguageDef):
                       'Action_Draw_Turn_To',
                       'Action_State_Push',
                       'Action_State_Pop',
-                      'Action_Canvas_Show_Grid',
-                      'Action_Canvas_Hide_Grid',
-                      'Action_Canvas_Show_Origin',
-                      'Action_Canvas_Hide_Origin',
-                      'Action_Canvas_Show_Position',
-                      'Action_Canvas_Hide_Position',
-                      'Action_Canvas_Show_Background',
-                      'Action_Canvas_Hide_Background',
-                      'Action_Canvas_Show_Rulers',
-                      'Action_Canvas_Hide_Rulers',
+                      'Action_View_Show_Grid',
+                      'Action_View_Hide_Grid',
+                      'Action_View_Show_Origin',
+                      'Action_View_Hide_Origin',
+                      'Action_View_Show_Position',
+                      'Action_View_Hide_Position',
+                      'Action_View_Show_Background',
+                      'Action_View_Hide_Background',
+                      'Action_View_Show_Rulers',
+                      'Action_View_Hide_Rulers',
                       'Action_UIConsole_Print',
                       'Action_UIConsole_Print_Formatted',
                       'Action_UIConsole_Print_Error',
@@ -4947,8 +4942,9 @@ class BSLanguageDef(LanguageDef):
                       'Action_UIDialog_Color_Input',
                       'Action_UIDialog_String_Input',
                       'Action_UIDialog_Single_Choice_Input',
-                      'Action_UIDialog_Multiple_Choice_Input'
-
+                      'Action_UIDialog_Multiple_Choice_Input',
+                      'Action_UIDialog_Font_Input',
+                      'Action_UIDialog_FileName_Input'
                 )
             )
 
@@ -5147,186 +5143,186 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Grid_Color',
+        GrammarRule('Action_Set_Draw_Origin',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid color', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_DRAW, 'set draw origin', False),
+                'Any_Expression',
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_View_Grid_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, 'set view grid color', False),
                 'Any_Expression',
                 GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Grid_Style',
+        GrammarRule('Action_Set_View_Grid_Style',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid style', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, 'set view grid style', False),
                 'Any_Expression',
                 GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Grid_Size',
+        GrammarRule('Action_Set_View_Grid_Size',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid size', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, 'set view grid size', False),
                 'Any_Expression',
                 GROptional('Any_Expression'),
                 GROptional('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Grid_Opacity',
+        GrammarRule('Action_Set_View_Grid_Opacity',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_GRID, 'set canvas grid opacity', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_GRID, 'set view grid opacity', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Rulers_Color',
+        GrammarRule('Action_Set_View_Rulers_Color',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_RULERS, 'set canvas rulers color', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_RULERS, 'set view rulers color', False),
                 'Any_Expression',
                 GROptional('Any_Expression')
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Origin_Color',
+        GrammarRule('Action_Set_View_Origin_Color',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin color', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, 'set view origin color', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Origin_Style',
+        GrammarRule('Action_Set_View_Origin_Style',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin style', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, 'set view origin style', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Origin_Size',
+        GrammarRule('Action_Set_View_Origin_Size',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin size', False),
-                'Any_Expression',
-                GROptional('Any_Expression'),
-                GROptional('Any_Expression'),
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
-        GrammarRule('Action_Set_Canvas_Origin_Position',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin position', False),
-                'Any_Expression',
-                'Any_Expression',
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
-        GrammarRule('Action_Set_Canvas_Origin_Opacity',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_ORIGIN, 'set canvas origin opacity', False),
-                'Any_Expression',
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
-        GrammarRule('Action_Set_Canvas_Position_Color',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position color', False),
-                'Any_Expression',
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
-        GrammarRule('Action_Set_Canvas_Position_Size',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position size', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, 'set view origin size', False),
                 'Any_Expression',
                 GROptional('Any_Expression'),
                 GROptional('Any_Expression'),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Position_Opacity',
+        GrammarRule('Action_Set_View_Origin_Opacity',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position opacity', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_ORIGIN, 'set view origin opacity', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Position_Fulfill',
+        GrammarRule('Action_Set_View_Position_Color',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position fulfilled', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, 'set view position color', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Position_Axis',
+        GrammarRule('Action_Set_View_Position_Size',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position axis', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, 'set view position size', False),
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_View_Position_Opacity',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, 'set view position opacity', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Position_Model',
+        GrammarRule('Action_Set_View_Position_Fulfill',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_POSITION, 'set canvas position model', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, 'set view position fulfilled', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Background_Opacity',
+        GrammarRule('Action_Set_View_Position_Axis',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background opacity', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, 'set view position axis', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Background_From_Document',
+        GrammarRule('Action_Set_View_Position_Model',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from document', False),
-                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
-            )
-
-        GrammarRule('Action_Set_Canvas_Background_From_Layer_Name',
-                GrammarRule.OPTION_AST,
-                # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer name', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_POSITION, 'set view position model', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Background_From_Layer_Id',
+        GrammarRule('Action_Set_View_Background_Opacity',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer id', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, 'set view background opacity', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Background_From_Layer_Active',
+        GrammarRule('Action_Set_View_Background_From_Document',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from layer active', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, 'set view background from document', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Set_Canvas_Background_From_Color',
+        GrammarRule('Action_Set_View_Background_From_Layer_Name',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_SET_CANVAS_BACKGROUND, 'set canvas background from color', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, 'set view background from layer name', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_View_Background_From_Layer_Id',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, 'set view background from layer id', False),
+                'Any_Expression',
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_View_Background_From_Layer_Active',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, 'set view background from layer active', False),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Set_View_Background_From_Color',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_SET_VIEW_BACKGROUND, 'set view background from color', False),
                 'Any_Expression',
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
@@ -5464,6 +5460,38 @@ class BSLanguageDef(LanguageDef):
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw star', False),
                 'Any_Expression',
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Polygon',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw polygon', False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Pie',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw pie', False),
+                'Any_Expression',
+                'Any_Expression',
+                GROptional('Any_Expression'),
+                GROptional('Any_Expression'),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
+            )
+
+        GrammarRule('Action_Draw_Shape_Arc',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_DRAW_SHAPE, 'draw arc', False),
                 'Any_Expression',
                 'Any_Expression',
                 GROptional('Any_Expression'),
@@ -5682,73 +5710,73 @@ class BSLanguageDef(LanguageDef):
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Show_Grid',
+        GrammarRule('Action_View_Show_Grid',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas grid', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'show view grid', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Hide_Grid',
+        GrammarRule('Action_View_Hide_Grid',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas grid', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'hide view grid', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Show_Origin',
+        GrammarRule('Action_View_Show_Origin',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas origin', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'show view origin', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Hide_Origin',
+        GrammarRule('Action_View_Hide_Origin',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas origin', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'hide view origin', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Show_Position',
+        GrammarRule('Action_View_Show_Position',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas position', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'show view position', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Hide_Position',
+        GrammarRule('Action_View_Hide_Position',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas position', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'hide view position', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Show_Background',
+        GrammarRule('Action_View_Show_Background',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas background', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'show view background', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Hide_Background',
+        GrammarRule('Action_View_Hide_Background',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas background', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'hide view background', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Show_Rulers',
+        GrammarRule('Action_View_Show_Rulers',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'show canvas rulers', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'show view rulers', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
-        GrammarRule('Action_Canvas_Hide_Rulers',
+        GrammarRule('Action_View_Hide_Rulers',
                 GrammarRule.OPTION_AST,
                 # --
-                GRToken(BSLanguageDef.ITokenType.ACTION_CANVAS, 'hide canvas rulers', False),
+                GRToken(BSLanguageDef.ITokenType.ACTION_VIEW, 'hide view rulers', False),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False)
             )
 
@@ -5892,6 +5920,28 @@ class BSLanguageDef(LanguageDef):
                 GrammarRule.OPTION_AST,
                 # --
                 GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for string input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
+        GrammarRule('Action_UIDialog_Font_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for font input', False),
+                GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
+                #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
+                GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',
+                            'Action_UIDialog_Option_With_Title',
+                            'Action_UIDialog_Option_With_Message')
+            )
+
+        GrammarRule('Action_UIDialog_FileName_Input',
+                GrammarRule.OPTION_AST,
+                # --
+                GRToken(BSLanguageDef.ITokenType.ACTION_UIDIALOG, 'open dialog for file name input', False),
                 GRToken(BSLanguageDef.ITokenType.VARIABLE_USER),
                 #GRToken(BSLanguageDef.ITokenType.NEWLINE, False),
                 GRNoneOrMore('Action_UIDialog_Option_With_Default_Value',

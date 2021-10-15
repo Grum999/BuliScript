@@ -226,6 +226,8 @@ class WDialogStrInput(WDialogMessage):
         self._leInput=QLineEdit(self)
         self._leInput.setText(defaultValue)
         self._leInput.setFocus()
+        self._leInput.setClearButtonEnabled(True)
+        self._leInput.findChild(QToolButton).setIcon(QIcon(":/pktk/images/normal/edit_text_clear"))
         self._layout.insertWidget(self._layout.count()-1, self._leInput)
 
         self.__regEx=regEx
@@ -811,6 +813,198 @@ class WDialogColorInput(WDialogMessage):
             inputLabel=str(inputLabel)
 
         dlgBox=WDialogColorInput(title, message, inputLabel, defaultValue, options, minSize, None)
+
+        returned = dlgBox.exec()
+
+        if returned == QDialog.Accepted:
+            return dlgBox.value()
+        else:
+            return None
+
+
+class WDialogFontInput(WDialogMessage):
+    """A simple input dialog box to display a formatted message and ask user for
+    a choice from a font list, with "Ok" / "Cancel" buttons
+    """
+
+    def __init__(self, title, message, inputLabel='', defaultValue='', optionFilter=False, optionWritingSytem=False, parent=None, minSize=None):
+        super(WDialogFontInput, self).__init__(title, message, parent, minSize)
+
+        self._dButtonBox.setStandardButtons(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
+        self.__btnOk = self._dButtonBox.button(QDialogButtonBox.Ok)
+        self.__btnOk.setEnabled(False)
+
+        self.__init=True
+        self.__selectedFont=defaultValue
+        self.__invertFilter=False
+
+        self.__database=QFontDatabase()
+        self.__tvInput=QTreeView(self)
+        self.__tvInput.setAllColumnsShowFocus(True)
+        self.__tvInput.setRootIsDecorated(False)
+        self.__tvInput.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.__tvInput.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.__tvInput.selectionChanged=self.__fontSelectionChanged
+        self.__tvInput.setMinimumWidth(900)
+
+        self.__lblCount=QLabel(self)
+        font=self.__lblCount.font()
+        font.setPointSize(8)
+        self.__lblCount.setFont(font)
+
+        self.__lblText=QLabel(self)
+        font=self.__lblText.font()
+        font.setPixelSize(64)
+        self.__lblText.setFont(font)
+        self.__lblText.setMinimumHeight(72)
+        self.__lblText.setMaximumHeight(72)
+
+        self.__fontTreeModel=QStandardItemModel(self.__tvInput)
+        self.__fontTreeModel.setColumnCount(2)
+        self.__proxyModel=QSortFilterProxyModel()
+        self.__proxyModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.__proxyModel.setSourceModel(self.__fontTreeModel)
+        self.__proxyModel.setFilterKeyColumn(0)
+        self.__originalFilterAcceptsRow=self.__proxyModel.filterAcceptsRow
+        self.__proxyModel.filterAcceptsRow=self.__filterAcceptsRow
+        self.__tvInput.setModel(self.__proxyModel)
+
+
+        if inputLabel!='':
+            self._lbInput=QLabel(self)
+            self._lbInput.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum))
+            self._lbInput.setText(inputLabel)
+            self._layout.insertWidget(self._layout.count()-1, self._lbInput)
+
+        if optionWritingSytem or optionFilter:
+            wContainer=QWidget(self)
+            fLayout=QFormLayout(wContainer)
+            fLayout.setContentsMargins(0,0,0,0)
+            wContainer.setLayout(fLayout)
+
+            if optionWritingSytem:
+                self._cbWritingSystem=QComboBox(wContainer)
+                self._cbWritingSystem.addItem(self.__database.writingSystemName(QFontDatabase.Any), QFontDatabase.Any)
+                for writingSystem in self.__database.writingSystems():
+                    self._cbWritingSystem.addItem(self.__database.writingSystemName(writingSystem), writingSystem)
+                self._cbWritingSystem.currentIndexChanged.connect(self.__updateList)
+                fLayout.addRow(i18n("Writing system"), self._cbWritingSystem)
+
+            if optionFilter:
+                self._leFilterName=QLineEdit(wContainer)
+                self._leFilterName.setClearButtonEnabled(True)
+                self._leFilterName.findChild(QToolButton).setIcon(QIcon(":/pktk/images/normal/edit_text_clear"))
+                self._leFilterName.setToolTip(i18n('Filter fonts\nStart filter with "re:" for regular expression filter or "re!:" for inverted regular expression filter'))
+                self._leFilterName.textEdited.connect(self.__updateFilter)
+                fLayout.addRow(i18n("Filter name"), self._leFilterName)
+
+            self._layout.insertWidget(self._layout.count()-1, wContainer)
+
+        self._layout.insertWidget(self._layout.count()-1, self.__tvInput)
+        self._layout.insertWidget(self._layout.count()-1, self.__lblCount)
+        self._layout.insertWidget(self._layout.count()-1, self.__lblText)
+        self.__init=False
+        self.__updateList(QFontDatabase.Any)
+
+    def __updateList(self, writingSystem):
+        """Build font list according to designed writingSystem"""
+        self.__init=True
+        defaultSelected=None
+        self.__fontTreeModel.clear()
+        self.__fontTreeModel.setHorizontalHeaderLabels([i18n("Font name"), i18n("Example")])
+        for family in self.__database.families(writingSystem):
+            familyItem=QStandardItem(family)
+            fntSize=familyItem.font().pointSize()
+
+            font=self.__database.font(family, "", fntSize)
+            fontItem=QStandardItem(family)
+            fontItem.setFont(font)
+
+            self.__fontTreeModel.appendRow([familyItem, fontItem])
+
+            if defaultSelected is None and self.__selectedFont==family:
+                defaultSelected=familyItem
+
+        self.__tvInput.resizeColumnToContents(0)
+        self.__updateCount()
+        self.__init=False
+
+        if defaultSelected:
+            index=self.__proxyModel.mapFromSource(defaultSelected.index())
+            self.__tvInput.setCurrentIndex(index)
+
+    def __updateFilter(self, filter):
+        """Filter value has been changed, apply to proxyfilter"""
+        if reFilter:=re.search('^re:(.*)', filter):
+            self.__invertFilter=False
+            self.__proxyModel.setFilterRegExp(reFilter.groups()[0])
+        elif reFilter:=re.search('^re!:(.*)', filter):
+            self.__invertFilter=True
+            self.__proxyModel.setFilterRegExp(reFilter.groups()[0])
+        else:
+            self.__invertFilter=False
+            self.__proxyModel.setFilterWildcard(filter)
+        self.__updateCount()
+
+    def __updateCount(self):
+        """Update number of font label"""
+        self.__lblCount.setText(f'Font: <i>{self.__proxyModel.rowCount()}</i>')
+
+    def __fontSelectionChanged(self, selected, unselected):
+        """Selection has changed in treeview"""
+        if self.__init:
+            return
+        if not selected is None and len(selected.indexes())>0:
+            self.__selectedFont=selected.indexes()[0].data()
+            self.__btnOk.setEnabled(True)
+
+            font=self.__lblText.font()
+            font.setFamily(self.__selectedFont)
+            self.__lblText.setFont(font)
+            self.__lblText.setText(self.__selectedFont)
+        else:
+            self.__btnOk.setEnabled(False)
+            self.__selectedFont=None
+            self.__lblText.setText('')
+
+    def __filterAcceptsRow(self, sourceRow, sourceParent):
+        """Provides a way to invert filter"""
+
+        returned=self.__originalFilterAcceptsRow(sourceRow, sourceParent)
+        if self.__invertFilter:
+            return not returned
+        return returned
+
+    def value(self):
+        """Return value"""
+        return self.__selectedFont
+
+    @staticmethod
+    def display(title, message=None, inputLabel=None, defaultValue='', optionFilter=False, optionWritingSytem=False, parent=None, minSize=None):
+        """Open dialog box
+
+        title:              dialog box title
+        message:            an optional message to display
+        inputLabel:         an optional label positionned above input
+        defaultValue:       default font name to select in list
+        optionFilter:       add a filter in UI
+        optionWritingSytem: add a combobox in UI (to select writing system perimeter)
+
+        return a name
+        return None value if button "Cancel"
+        """
+        if not isinstance(defaultValue, str):
+            return None
+
+        if message is None:
+            message=''
+
+        if inputLabel is None:
+            inputLabel=''
+        elif not isinstance(inputLabel, str):
+            inputLabel=str(inputLabel)
+
+        dlgBox=WDialogFontInput(title, message, inputLabel, defaultValue, optionFilter, optionWritingSytem, minSize, None)
 
         returned = dlgBox.exec()
 

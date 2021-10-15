@@ -82,8 +82,11 @@ from buliscript.pktk.widgets.wiodialog import (
         WDialogComboBoxChoiceInput,
         WDialogRadioButtonChoiceInput,
         WDialogCheckBoxChoiceInput,
-        WDialogColorInput
+        WDialogColorInput,
+        WDialogFontInput
     )
+from buliscript.pktk.widgets.wefiledialog import WEFileDialog
+
 
 from buliscript.pktk.pktk import (
         EInvalidType,
@@ -298,44 +301,42 @@ class BSInterpreter(QObject):
         self.__optionDelay=0
 
         # default background properties for canvas
-        self.__optionDefaulCanvasBackgroundFrom=BSInterpreter.OPTION_BACKGROUND_FROM_ACTIVE_LAYER
-        self.__optionDefaulCanvasBackgroundFromColor=QColor(Qt.white)
-        self.__optionDefaulCanvasBackgroundVisibility=True
-        self.__optionDefaulCanvasBackgroundOpacity=1.0
+        self.__optionDefaulViewBackgroundFrom=BSInterpreter.OPTION_BACKGROUND_FROM_ACTIVE_LAYER
+        self.__optionDefaulViewBackgroundFromColor=QColor(Qt.white)
+        self.__optionDefaulViewBackgroundVisibility=True
+        self.__optionDefaulViewBackgroundOpacity=1.0
 
         # default grid properties for canvas
-        self.__optionDefaulCanvasGridVisibility=True
-        self.__optionDefaulCanvasGridColor=QColor("#808080")
-        self.__optionDefaulCanvasGridBgColor=QColor("#303030")
-        self.__optionDefaulCanvasGridStyleMain='SOLID'
-        self.__optionDefaulCanvasGridStyleSecondary='DOT'
-        self.__optionDefaulCanvasGridOpacity=0.25
-        self.__optionDefaulCanvasGridSizeWidth=10
-        self.__optionDefaulCanvasGridSizeMain=5
-        self.__optionDefaulCanvasGridSizeUnit='PX'
+        self.__optionDefaulViewGridVisibility=True
+        self.__optionDefaulViewGridColor=QColor("#808080")
+        self.__optionDefaulViewGridBgColor=QColor("#303030")
+        self.__optionDefaulViewGridStyleMain='SOLID'
+        self.__optionDefaulViewGridStyleSecondary='DOT'
+        self.__optionDefaulViewGridOpacity=0.25
+        self.__optionDefaulViewGridSizeWidth=10
+        self.__optionDefaulViewGridSizeMain=5
+        self.__optionDefaulViewGridSizeUnit='PX'
 
         # default rulers properties for canvas
-        self.__optionDefaulCanvasRulersVisibility=True
-        self.__optionDefaulCanvasRulersColor=QColor('#808080')
-        self.__optionDefaulCanvasRulersBgColor=QColor('#303030')
+        self.__optionDefaulViewRulersVisibility=True
+        self.__optionDefaulViewRulersColor=QColor('#808080')
+        self.__optionDefaulViewRulersBgColor=QColor('#303030')
 
         # default origin properties for canvas
-        self.__optionDefaulCanvasOriginVisibility=True
-        self.__optionDefaulCanvasOriginColor=QColor("#d51ba7")
-        self.__optionDefaulCanvasOriginStyle='SOLID'
-        self.__optionDefaulCanvasOriginOpacity=1.0
-        self.__optionDefaulCanvasOriginSize=45
-        self.__optionDefaulCanvasOriginPositionAbsissa='CENTER'
-        self.__optionDefaulCanvasOriginPositionOrdinate='MIDDLE'
+        self.__optionDefaulViewOriginVisibility=True
+        self.__optionDefaulViewOriginColor=QColor("#d51ba7")
+        self.__optionDefaulViewOriginStyle='SOLID'
+        self.__optionDefaulViewOriginOpacity=1.0
+        self.__optionDefaulViewOriginSize=45
 
         # default position properties for canvas
-        self.__optionDefaulCanvasPositionVisibility=True
-        self.__optionDefaulCanvasPositionColor=QColor('#229922')
-        self.__optionDefaulCanvasPositionOpacity=1.0
-        self.__optionDefaulCanvasPositionSize=25.0
-        self.__optionDefaulCanvasPositionFulfill=True
-        self.__optionDefaulCanvasPositionAxis=False
-        self.__optionDefaulCanvasPositionModel='BASIC'
+        self.__optionDefaulViewPositionVisibility=True
+        self.__optionDefaulViewPositionColor=QColor('#229922')
+        self.__optionDefaulViewPositionOpacity=1.0
+        self.__optionDefaulViewPositionSize=25.0
+        self.__optionDefaulViewPositionFulfill=True
+        self.__optionDefaulViewPositionAxis=False
+        self.__optionDefaulViewPositionModel='BASIC'
 
         # define rendered scene, on which grid, origin, ... are drawn
         self.__renderedScene=renderedScene
@@ -578,6 +579,7 @@ class BSInterpreter(QObject):
         else:
             self.__renderedScene.setRenderedContent(None, None)
 
+
     # --------------------------------------------------------------------------
     # Script execution methods
     # --------------------------------------------------------------------------
@@ -610,41 +612,40 @@ class BSInterpreter(QObject):
 
         if reset:
             # -- canvas configuration                                               # --- Option to implement ---
-            self.__setCanvasGridVisible(self.__optionDefaulCanvasGridVisibility)
-            self.__setCanvasGridColor(self.__optionDefaulCanvasGridColor)
-            self.__setCanvasGridBgColor(self.__optionDefaulCanvasGridBgColor)
-            self.__setCanvasGridStyleMain(self.__optionDefaulCanvasGridStyleMain)
-            self.__setCanvasGridStyleSecondary(self.__optionDefaulCanvasGridStyleSecondary)
-            self.__setCanvasGridOpacity(self.__optionDefaulCanvasGridOpacity)
-            self.__setCanvasGridSize(self.__optionDefaulCanvasGridSizeWidth, self.__optionDefaulCanvasGridSizeMain, self.__optionDefaulCanvasGridSizeUnit)
+            self.__setViewGridVisible(self.__optionDefaulViewGridVisibility)
+            self.__setViewGridColor(self.__optionDefaulViewGridColor)
+            self.__setViewGridBgColor(self.__optionDefaulViewGridBgColor)
+            self.__setViewGridStyleMain(self.__optionDefaulViewGridStyleMain)
+            self.__setViewGridStyleSecondary(self.__optionDefaulViewGridStyleSecondary)
+            self.__setViewGridOpacity(self.__optionDefaulViewGridOpacity)
+            self.__setViewGridSize(self.__optionDefaulViewGridSizeWidth, self.__optionDefaulViewGridSizeMain, self.__optionDefaulViewGridSizeUnit)
 
-            self.__setCanvasRulersVisible(self.__optionDefaulCanvasRulersVisibility)
-            self.__setCanvasRulersColor(self.__optionDefaulCanvasRulersColor)
-            self.__setCanvasRulersBgColor(self.__optionDefaulCanvasRulersBgColor)
+            self.__setViewRulersVisible(self.__optionDefaulViewRulersVisibility)
+            self.__setViewRulersColor(self.__optionDefaulViewRulersColor)
+            self.__setViewRulersBgColor(self.__optionDefaulViewRulersBgColor)
 
-            self.__setCanvasOriginVisible(self.__optionDefaulCanvasOriginVisibility)
-            self.__setCanvasOriginColor(self.__optionDefaulCanvasOriginColor)
-            self.__setCanvasOriginStyle(self.__optionDefaulCanvasOriginStyle)
-            self.__setCanvasOriginOpacity(self.__optionDefaulCanvasOriginOpacity)
-            self.__setCanvasOriginSize(self.__optionDefaulCanvasOriginSize)
-            self.__setCanvasOriginPosition(self.__optionDefaulCanvasOriginPositionAbsissa, self.__optionDefaulCanvasOriginPositionOrdinate)
+            self.__setViewOriginVisible(self.__optionDefaulViewOriginVisibility)
+            self.__setViewOriginColor(self.__optionDefaulViewOriginColor)
+            self.__setViewOriginStyle(self.__optionDefaulViewOriginStyle)
+            self.__setViewOriginOpacity(self.__optionDefaulViewOriginOpacity)
+            self.__setViewOriginSize(self.__optionDefaulViewOriginSize)
 
-            self.__setCanvasPositionVisible(self.__optionDefaulCanvasPositionVisibility)
-            self.__setCanvasPositionColor(self.__optionDefaulCanvasPositionColor)
-            self.__setCanvasPositionOpacity(self.__optionDefaulCanvasPositionOpacity)
-            self.__setCanvasPositionSize(self.__optionDefaulCanvasPositionSize)
-            self.__setCanvasPositionFulfill(self.__optionDefaulCanvasPositionFulfill)
-            self.__setCanvasPositionAxis(self.__optionDefaulCanvasPositionAxis)
-            self.__setCanvasPositionModel(self.__optionDefaulCanvasPositionModel)
+            self.__setViewPositionVisible(self.__optionDefaulViewPositionVisibility)
+            self.__setViewPositionColor(self.__optionDefaulViewPositionColor)
+            self.__setViewPositionOpacity(self.__optionDefaulViewPositionOpacity)
+            self.__setViewPositionSize(self.__optionDefaulViewPositionSize)
+            self.__setViewPositionFulfill(self.__optionDefaulViewPositionFulfill)
+            self.__setViewPositionAxis(self.__optionDefaulViewPositionAxis)
+            self.__setViewPositionModel(self.__optionDefaulViewPositionModel)
 
-            self.__setCanvasBackgroundVisible(self.__optionDefaulCanvasBackgroundVisibility)
-            self.__setCanvasBackgroundOpacity(self.__optionDefaulCanvasBackgroundOpacity)
-            if self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_ACTIVE_LAYER:
-                self.__setCanvasBackgroundFromLayerActive()
-            elif self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_DOCUMENT:
-                self.__setCanvasBackgroundFromDocument()
-            elif self.__optionDefaulCanvasBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_COLOR:
-                self.__setCanvasBackgroundFromColor(self.__optionDefaulCanvasBackgroundFromColor)
+            self.__setViewBackgroundVisible(self.__optionDefaulViewBackgroundVisibility)
+            self.__setViewBackgroundOpacity(self.__optionDefaulViewBackgroundOpacity)
+            if self.__optionDefaulViewBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_ACTIVE_LAYER:
+                self.__setViewBackgroundFromLayerActive()
+            elif self.__optionDefaulViewBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_DOCUMENT:
+                self.__setViewBackgroundFromDocument()
+            elif self.__optionDefaulViewBackgroundFrom==BSInterpreter.OPTION_BACKGROUND_FROM_COLOR:
+                self.__setViewBackgroundFromColor(self.__optionDefaulViewBackgroundFromColor)
 
             # -- misc initialisation
             self.__setExecutionVerbose(self.__optionVerboseMode)
@@ -707,6 +708,7 @@ class BSInterpreter(QObject):
             self.__setDrawBlending('NORMAL')
             self.__setDrawShapeStatus(False)
             self.__setDrawFillStatus(False)
+            self.__setDrawOrigin('CENTER', 'MIDDLE')
 
         self.valid(f"**Start script execution**# #w#[##lw#*{time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}*##w#]")
         if self.__astRoot.id()==ASTSpecialItemType.ROOT:
@@ -840,50 +842,50 @@ class BSInterpreter(QObject):
             return self.__executeActionSetDrawBlending(currentAst)
         elif currentAst.id() == 'Action_Set_Draw_Opacity':
             return self.__executeActionSetDrawOpacity(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Grid_Color':
-            return self.__executeActionSetCanvasGridColor(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Grid_Style':
-            return self.__executeActionSetCanvasGridStyle(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Grid_Opacity':
-            return self.__executeActionSetCanvasGridOpacity(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Grid_Size':
-            return self.__executeActionSetCanvasGridSize(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Rulers_Color':
-            return self.__executeActionSetCanvasRulersColor(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Origin_Color':
-            return self.__executeActionSetCanvasOriginColor(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Origin_Style':
-            return self.__executeActionSetCanvasOriginStyle(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Origin_Opacity':
-            return self.__executeActionSetCanvasOriginOpacity(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Origin_Size':
-            return self.__executeActionSetCanvasOriginSize(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Origin_Position':
-            return self.__executeActionSetCanvasOriginPosition(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Position_Color':
-            return self.__executeActionSetCanvasPositionColor(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Position_Opacity':
-            return self.__executeActionSetCanvasPositionOpacity(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Position_Size':
-            return self.__executeActionSetCanvasPositionSize(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Position_Fulfill':
-            return self.__executeActionSetCanvasPositionFulfill(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Position_Axis':
-            return self.__executeActionSetCanvasPositionAxis(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Position_Model':
-            return self.__executeActionSetCanvasPositionModel(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Background_Opacity':
-            return self.__executeActionSetCanvasBackgroundOpacity(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Color':
-            return self.__executeActionSetCanvasBackgroundFromColor(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Document':
-            return self.__executeActionSetCanvasBackgroundFromDocument(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Layer_Id':
-            return self.__executeActionSetCanvasBackgroundFromLayerId(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Layer_Name':
-            return self.__executeActionSetCanvasBackgroundFromLayerName(currentAst)
-        elif currentAst.id() == 'Action_Set_Canvas_Background_From_Layer_Active':
-            return self.__executeActionSetCanvasBackgroundFromLayerActive(currentAst)
+        elif currentAst.id() == 'Action_Set_Draw_Origin':
+            return self.__executeActionSetDrawOrigin(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Grid_Color':
+            return self.__executeActionSetViewGridColor(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Grid_Style':
+            return self.__executeActionSetViewGridStyle(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Grid_Opacity':
+            return self.__executeActionSetViewGridOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Grid_Size':
+            return self.__executeActionSetViewGridSize(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Rulers_Color':
+            return self.__executeActionSetViewRulersColor(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Origin_Color':
+            return self.__executeActionSetViewOriginColor(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Origin_Style':
+            return self.__executeActionSetViewOriginStyle(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Origin_Opacity':
+            return self.__executeActionSetViewOriginOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Origin_Size':
+            return self.__executeActionSetViewOriginSize(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Position_Color':
+            return self.__executeActionSetViewPositionColor(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Position_Opacity':
+            return self.__executeActionSetViewPositionOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Position_Size':
+            return self.__executeActionSetViewPositionSize(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Position_Fulfill':
+            return self.__executeActionSetViewPositionFulfill(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Position_Axis':
+            return self.__executeActionSetViewPositionAxis(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Position_Model':
+            return self.__executeActionSetViewPositionModel(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Background_Opacity':
+            return self.__executeActionSetViewBackgroundOpacity(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Background_From_Color':
+            return self.__executeActionSetViewBackgroundFromColor(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Background_From_Document':
+            return self.__executeActionSetViewBackgroundFromDocument(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Background_From_Layer_Id':
+            return self.__executeActionSetViewBackgroundFromLayerId(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Background_From_Layer_Name':
+            return self.__executeActionSetViewBackgroundFromLayerName(currentAst)
+        elif currentAst.id() == 'Action_Set_View_Background_From_Layer_Active':
+            return self.__executeActionSetViewBackgroundFromLayerActive(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Execution_Verbose':
             return self.__executeActionSetExecutionVerbose(currentAst)
         elif currentAst.id() == 'Action_Set_Script_Randomize_Seed':
@@ -914,6 +916,12 @@ class BSInterpreter(QObject):
             return self.__executeActionDrawShapeText(currentAst)
         elif currentAst.id() == 'Action_Draw_Shape_Star':
             return self.__executeActionDrawShapeStar(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Polygon':
+            return self.__executeActionDrawShapePolygon(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Pie':
+            return self.__executeActionDrawShapePie(currentAst)
+        elif currentAst.id() == 'Action_Draw_Shape_Arc':
+            return self.__executeActionDrawShapeArc(currentAst)
         elif currentAst.id() == 'Action_Draw_Misc_Clear_Canvas':
             return self.__executeActionDrawMiscClearCanvas(currentAst)
         elif currentAst.id() == 'Action_Draw_Misc_Fill_Canvas_From_Color':
@@ -954,26 +962,26 @@ class BSInterpreter(QObject):
             return self.__executeActionStatePush(currentAst)
         elif currentAst.id() == 'Action_State_Pop':
             return self.__executeActionStatePop(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Show_Grid':
-            return self.__executeActionCanvasShowGrid(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Show_Origin':
-            return self.__executeActionCanvasShowOrigin(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Show_Position':
-            return self.__executeActionCanvasShowPosition(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Show_Background':
-            return self.__executeActionCanvasShowBackground(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Show_Rulers':
-            return self.__executeActionCanvasShowRulers(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Hide_Grid':
-            return self.__executeActionCanvasHideGrid(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Hide_Origin':
-            return self.__executeActionCanvasHideOrigin(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Hide_Position':
-            return self.__executeActionCanvasHidePosition(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Hide_Background':
-            return self.__executeActionCanvasHideBackground(currentAst)
-        elif currentAst.id() == 'Action_Canvas_Hide_Rulers':
-            return self.__executeActionCanvasHideRulers(currentAst)
+        elif currentAst.id() == 'Action_View_Show_Grid':
+            return self.__executeActionViewShowGrid(currentAst)
+        elif currentAst.id() == 'Action_View_Show_Origin':
+            return self.__executeActionViewShowOrigin(currentAst)
+        elif currentAst.id() == 'Action_View_Show_Position':
+            return self.__executeActionViewShowPosition(currentAst)
+        elif currentAst.id() == 'Action_View_Show_Background':
+            return self.__executeActionViewShowBackground(currentAst)
+        elif currentAst.id() == 'Action_View_Show_Rulers':
+            return self.__executeActionViewShowRulers(currentAst)
+        elif currentAst.id() == 'Action_View_Hide_Grid':
+            return self.__executeActionViewHideGrid(currentAst)
+        elif currentAst.id() == 'Action_View_Hide_Origin':
+            return self.__executeActionViewHideOrigin(currentAst)
+        elif currentAst.id() == 'Action_View_Hide_Position':
+            return self.__executeActionViewHidePosition(currentAst)
+        elif currentAst.id() == 'Action_View_Hide_Background':
+            return self.__executeActionViewHideBackground(currentAst)
+        elif currentAst.id() == 'Action_View_Hide_Rulers':
+            return self.__executeActionViewHideRulers(currentAst)
         elif currentAst.id() == 'Action_UIConsole_Print':
             return self.__executeActionUIConsolePrint(currentAst)
         elif currentAst.id() == 'Action_UIConsole_Print_Formatted':
@@ -1010,6 +1018,10 @@ class BSInterpreter(QObject):
             return self.__executeActionUIDialogSingleChoiceInput(currentAst)
         elif currentAst.id() == 'Action_UIDialog_Multiple_Choice_Input':
             return self.__executeActionUIDialogMultipleChoiceInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_Font_Input':
+            return self.__executeActionUIDialogFontInput(currentAst)
+        elif currentAst.id() == 'Action_UIDialog_FileName_Input':
+            return self.__executeActionUIDialogFileNameInput(currentAst)
 
         # ----------------------------------------------------------------------
         # Function & Evaluation
@@ -2126,13 +2138,35 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
-    def __executeActionSetCanvasGridColor(self, currentAst):
+    def __executeActionSetDrawOrigin(self, currentAst):
+        """Set canvas origin position
+
+        :draw.origin.absissa
+        :draw.origin.ordinate
+        """
+        fctLabel='Action ***set draw origin***'
+        self.__checkParamNumber(currentAst, fctLabel, 2)
+
+        absissa=self.__evaluate(currentAst.node(0))
+        ordinate=self.__evaluate(currentAst.node(1))
+
+        self.__checkParamDomain(currentAst, fctLabel, 'ABSISSA', absissa in BSInterpreter.CONST_HALIGN, f"absissa position value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ORDINATE', ordinate in BSInterpreter.CONST_VALIGN, f"ordinate position value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
+
+        self.verbose(f"set draw origin {self.__strValue(absissa)} {self.__strValue(ordinate)}{self.__formatStoreResult(':draw.origin.absissa', ':draw.origin.ordinate')}", currentAst)
+
+        self.__setDrawOrigin(absissa, ordinate)
+
+        self.__delay()
+        return None
+
+    def __executeActionSetViewGridColor(self, currentAst):
         """Set canvas grid color
 
-        :canvas.grid.color
-        :canvas.grid.bgColor
+        :view.grid.color
+        :view.grid.bgColor
         """
-        fctLabel='Action ***set canvas grid color***'
+        fctLabel='Action ***set view grid color***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
         value=self.__evaluate(currentAst.node(0))
         valueBg=self.__evaluate(currentAst.node(1))
@@ -2142,47 +2176,50 @@ class BSInterpreter(QObject):
             self.__checkParamType(currentAst, fctLabel, 'BGCOLOR', valueBg, QColor)
 
         if not valueBg is None:
-            self.verbose(f"set canvas grid color {self.__strValue(value)} {self.__strValue(valueBg)}{self.__formatStoreResult(':canvas.grid.color', ':canvas.grid.bgColor')}", currentAst)
+            self.verbose(f"set view grid color {self.__strValue(value)} {self.__strValue(valueBg)}{self.__formatStoreResult(':view.grid.color', ':view.grid.bgColor')}", currentAst)
         else:
-            self.verbose(f"set canvas grid color {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
+            self.verbose(f"set view grid color {self.__strValue(value)}{self.__formatStoreResult(':view.grid.color')}", currentAst)
 
-        self.__setCanvasGridColor(value)
+        self.__setViewGridColor(value)
 
         if not valueBg is None:
-            self.__setCanvasGridBgColor(valueBg)
+            self.__setViewGridBgColor(valueBg)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasGridStyle(self, currentAst):
+    def __executeActionSetViewGridStyle(self, currentAst):
         """Set canvas grid style
 
-        :canvas.grid.style.main
-        :canvas.grid.style.secondary
+        :view.grid.style.main
+        :view.grid.style.secondary
         """
-        fctLabel='Action ***set canvas grid style***'
+        fctLabel='Action ***set view grid style***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         main=self.__evaluate(currentAst.node(0))
         secondary=self.__evaluate(currentAst.node(1))
 
+        if secondary is None:
+            secondary=self.__scriptBlockStack.current().variable(':view.grid.style.secondary', 'DOT')
+
         self.__checkParamDomain(currentAst, fctLabel, 'STYLE-MAIN', main in BSInterpreter.CONST_PEN_STYLE, f"style value for main grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
         self.__checkParamDomain(currentAst, fctLabel, 'STYLE-SECONDARY', secondary in BSInterpreter.CONST_PEN_STYLE, f"style value for secondary grid can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.verbose(f"set canvas grid style {self.__strValue(main)} {self.__strValue(secondary)}{self.__formatStoreResult(':canvas.grid.style.main', ':canvas.grid.style.secondary')}", currentAst)
+        self.verbose(f"set view grid style {self.__strValue(main)} {self.__strValue(secondary)}{self.__formatStoreResult(':view.grid.style.main', ':view.grid.style.secondary')}", currentAst)
 
-        self.__setCanvasGridStyleMain(main)
-        self.__setCanvasGridStyleSecondary(secondary)
+        self.__setViewGridStyleMain(main)
+        self.__setViewGridStyleSecondary(secondary)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasGridOpacity(self, currentAst):
+    def __executeActionSetViewGridOpacity(self, currentAst):
         """Set canvas grid opacity
 
-        :canvas.grid.color
+        :view.grid.color
         """
-        fctLabel='Action ***set canvas grid opacity***'
+        fctLabel='Action ***set view grid opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
@@ -2196,20 +2233,20 @@ class BSInterpreter(QObject):
             if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.verbose(f"set canvas grid opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.grid.color')}", currentAst)
+        self.verbose(f"set view grid opacity {self.__strValue(value)}{self.__formatStoreResult(':view.grid.color')}", currentAst)
 
-        self.__setCanvasGridOpacity(value)
+        self.__setViewGridOpacity(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasGridSize(self, currentAst):
+    def __executeActionSetViewGridSize(self, currentAst):
         """Set canvas grid size
 
-        :canvas.grid.size.width
-        :canvas.grid.size.main
+        :view.grid.size.width
+        :view.grid.size.main
         """
-        fctLabel='Action ***set canvas grid size***'
+        fctLabel='Action ***set view grid size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2, 3)
 
         width=self.__evaluate(currentAst.node(0))
@@ -2218,7 +2255,7 @@ class BSInterpreter(QObject):
 
         if p2 is None and p3 is None:
             # no other parameters provided, set default value
-            main=self.__scriptBlockStack.current().variable(':canvas.grid.size.main', 0)
+            main=self.__scriptBlockStack.current().variable(':view.grid.size.main', 0)
             unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
         elif p3 is None:
             # p2 has been provided
@@ -2226,7 +2263,7 @@ class BSInterpreter(QObject):
                 main=p2
                 unit=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
             else:
-                main=self.__scriptBlockStack.current().variable(':canvas.grid.size.main', 0)
+                main=self.__scriptBlockStack.current().variable(':view.grid.size.main', 0)
                 unit=p2
         else:
             # p2+p3 provided
@@ -2238,29 +2275,29 @@ class BSInterpreter(QObject):
 
         if not self.__checkParamDomain(currentAst, fctLabel, 'WIDTH', width>0, f"a positive number is expected (current={width})", False):
             # let default value being applied in this case
-            width=self.__scriptBlockStack.current().variable(':canvas.grid.size.width', width, True)
+            width=self.__scriptBlockStack.current().variable(':view.grid.size.width', width, True)
 
         if not self.__checkParamDomain(currentAst, fctLabel, 'MAIN', main>=0, f"a zero or positive number is expected (current={main})", False):
             # let default value being applied in this case
-            main=self.__scriptBlockStack.current().variable(':canvas.grid.size.main', main, True)
+            main=self.__scriptBlockStack.current().variable(':view.grid.size.main', main, True)
 
 
         self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"grid unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
 
-        self.verbose(f"set canvas grid size {self.__strValue(width)} {self.__strValue(main)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.grid.size.width', ':canvas.grid.size.main')}", currentAst)
+        self.verbose(f"set view grid size {self.__strValue(width)} {self.__strValue(main)} {self.__strValue(unit)}{self.__formatStoreResult(':view.grid.size.width', ':view.grid.size.main')}", currentAst)
 
-        self.__setCanvasGridSize(width, main, unit)
+        self.__setViewGridSize(width, main, unit)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasRulersColor(self, currentAst):
+    def __executeActionSetViewRulersColor(self, currentAst):
         """Set canvas rulers color
 
-        :canvas.rulers.color
-        :canvas.rulers.bgColor
+        :view.rulers.color
+        :view.rulers.bgColor
         """
-        fctLabel='Action ***set canvas rulers color***'
+        fctLabel='Action ***set view rulers color***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
         value=self.__evaluate(currentAst.node(0))
         valueBg=self.__evaluate(currentAst.node(1))
@@ -2270,61 +2307,61 @@ class BSInterpreter(QObject):
             self.__checkParamType(currentAst, fctLabel, 'BGCOLOR', valueBg, QColor)
 
         if not valueBg is None:
-            self.verbose(f"set canvas rulers color {self.__strValue(value)} {self.__strValue(valueBg)}{self.__formatStoreResult(':canvas.rulers.color', ':canvas.rulers.bgColor')}", currentAst)
+            self.verbose(f"set view rulers color {self.__strValue(value)} {self.__strValue(valueBg)}{self.__formatStoreResult(':view.rulers.color', ':view.rulers.bgColor')}", currentAst)
         else:
-            self.verbose(f"set canvas rulers color {self.__strValue(value)}{self.__formatStoreResult(':canvas.rulers.color')}", currentAst)
+            self.verbose(f"set view rulers color {self.__strValue(value)}{self.__formatStoreResult(':view.rulers.color')}", currentAst)
 
-        self.__setCanvasRulersColor(value)
+        self.__setViewRulersColor(value)
 
         if not valueBg is None:
-            self.__setCanvasRulersBgColor(valueBg)
+            self.__setViewRulersBgColor(valueBg)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasOriginColor(self, currentAst):
+    def __executeActionSetViewOriginColor(self, currentAst):
         """Set canvas origin color
 
-        :canvas.origin.color
+        :view.origin.color
         """
-        fctLabel='Action ***set canvas origin color***'
+        fctLabel='Action ***set view origin color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.verbose(f"set canvas origin color {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
+        self.verbose(f"set view origin color {self.__strValue(value)}{self.__formatStoreResult(':view.origin.color')}", currentAst)
 
-        self.__setCanvasOriginColor(value)
+        self.__setViewOriginColor(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasOriginStyle(self, currentAst):
+    def __executeActionSetViewOriginStyle(self, currentAst):
         """Set canvas origin style
 
-        :canvas.origin.style
+        :view.origin.style
         """
-        fctLabel='Action ***set canvas origin style***'
+        fctLabel='Action ***set view origin style***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamDomain(currentAst, fctLabel, 'STYLE', value in BSInterpreter.CONST_PEN_STYLE, f"style value for origin can be: {', '.join(BSInterpreter.CONST_PEN_STYLE)}")
 
-        self.verbose(f"set canvas origin style {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.style')}", currentAst)
+        self.verbose(f"set view origin style {self.__strValue(value)}{self.__formatStoreResult(':view.origin.style')}", currentAst)
 
-        self.__setCanvasOriginStyle(value)
+        self.__setViewOriginStyle(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasOriginOpacity(self, currentAst):
+    def __executeActionSetViewOriginOpacity(self, currentAst):
         """Set canvas origin opacity
 
-        :canvas.origin.color
+        :view.origin.color
         """
-        fctLabel='Action ***set canvas origin opacity***'
+        fctLabel='Action ***set view origin opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
@@ -2338,19 +2375,19 @@ class BSInterpreter(QObject):
             if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.verbose(f"set canvas origin opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.color')}", currentAst)
+        self.verbose(f"set view origin opacity {self.__strValue(value)}{self.__formatStoreResult(':view.origin.color')}", currentAst)
 
-        self.__setCanvasOriginOpacity(value)
+        self.__setViewOriginOpacity(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasOriginSize(self, currentAst):
+    def __executeActionSetViewOriginSize(self, currentAst):
         """Set canvas origin size
 
-        :canvas.origin.size
+        :view.origin.size
         """
-        fctLabel='Action ***set canvas origin size***'
+        fctLabel='Action ***set view origin size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
@@ -2363,61 +2400,39 @@ class BSInterpreter(QObject):
 
         if unit:
             self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-            self.verbose(f"set canvas origin size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.origin.size')}", currentAst)
+            self.verbose(f"set view origin size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':view.origin.size')}", currentAst)
         else:
-            self.verbose(f"set canvas origin size {self.__strValue(value)}{self.__formatStoreResult(':canvas.origin.size')}", currentAst)
+            self.verbose(f"set view origin size {self.__strValue(value)}{self.__formatStoreResult(':view.origin.size')}", currentAst)
 
-        self.__setCanvasOriginSize(value, unit)
-
-        self.__delay()
-        return None
-
-    def __executeActionSetCanvasOriginPosition(self, currentAst):
-        """Set canvas origin position
-
-        :canvas.origin.position.absissa
-        :canvas.origin.position.ordinate
-        """
-        fctLabel='Action ***set canvas origin position***'
-        self.__checkParamNumber(currentAst, fctLabel, 2)
-
-        absissa=self.__evaluate(currentAst.node(0))
-        ordinate=self.__evaluate(currentAst.node(1))
-
-        self.__checkParamDomain(currentAst, fctLabel, 'ABSISSA', absissa in BSInterpreter.CONST_HALIGN, f"absissa position value can be: {', '.join(BSInterpreter.CONST_HALIGN)}")
-        self.__checkParamDomain(currentAst, fctLabel, 'ORDINATE', ordinate in BSInterpreter.CONST_VALIGN, f"ordinate position value can be: {', '.join(BSInterpreter.CONST_VALIGN)}")
-
-        self.verbose(f"set canvas origin position {self.__strValue(absissa)} {self.__strValue(ordinate)}{self.__formatStoreResult(':canvas.origin.position.absissa', 'canvas.origin.position.ordinate')}", currentAst)
-
-        self.__setCanvasOriginPosition(absissa, ordinate)
+        self.__setViewOriginSize(value, unit)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasPositionColor(self, currentAst):
+    def __executeActionSetViewPositionColor(self, currentAst):
         """Set canvas position color
 
-        :canvas.position.color
+        :view.position.color
         """
-        fctLabel='Action ***set canvas position color***'
+        fctLabel='Action ***set view position color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.verbose(f"set canvas position color {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
+        self.verbose(f"set view position color {self.__strValue(value)}{self.__formatStoreResult(':view.position.color')}", currentAst)
 
-        self.__setCanvasPositionColor(value)
+        self.__setViewPositionColor(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasPositionOpacity(self, currentAst):
+    def __executeActionSetViewPositionOpacity(self, currentAst):
         """Set canvas position opacity
 
-        :canvas.position.color
+        :view.position.color
         """
-        fctLabel='Action ***set canvas position opacity***'
+        fctLabel='Action ***set view position opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
@@ -2431,19 +2446,19 @@ class BSInterpreter(QObject):
             if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.verbose(f"set canvas position opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.color')}", currentAst)
+        self.verbose(f"set view position opacity {self.__strValue(value)}{self.__formatStoreResult(':view.position.color')}", currentAst)
 
-        self.__setCanvasPositionOpacity(value)
+        self.__setViewPositionOpacity(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasPositionSize(self, currentAst):
+    def __executeActionSetViewPositionSize(self, currentAst):
         """Set canvas position size
 
-        :canvas.position.size
+        :view.position.size
         """
-        fctLabel='Action ***set canvas position size***'
+        fctLabel='Action ***set view position size***'
         self.__checkParamNumber(currentAst, fctLabel, 1, 2)
 
         value=self.__evaluate(currentAst.node(0))
@@ -2456,75 +2471,75 @@ class BSInterpreter(QObject):
 
         if unit:
             self.__checkParamDomain(currentAst, fctLabel, 'UNIT', unit in BSInterpreter.CONST_MEASURE_UNIT, f"size unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
-            self.verbose(f"set canvas position size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':canvas.position.size')}", currentAst)
+            self.verbose(f"set view position size {self.__strValue(value)} {self.__strValue(unit)}{self.__formatStoreResult(':view.position.size')}", currentAst)
         else:
-            self.verbose(f"set canvas position size {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.size')}", currentAst)
+            self.verbose(f"set view position size {self.__strValue(value)}{self.__formatStoreResult(':view.position.size')}", currentAst)
 
-        self.__setCanvasPositionSize(value, unit)
+        self.__setViewPositionSize(value, unit)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasPositionFulfill(self, currentAst):
+    def __executeActionSetViewPositionFulfill(self, currentAst):
         """Set canvas position fulfilled
 
-        :canvas.position.fulfill
+        :view.position.fulfill
         """
-        fctLabel='Action ***set canvas position fulfilled***'
+        fctLabel='Action ***set view position fulfilled***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.verbose(f"set canvas position fulfilled {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.fulfill')}", currentAst)
+        self.verbose(f"set view position fulfilled {self.__strValue(value)}{self.__formatStoreResult(':view.position.fulfill')}", currentAst)
 
-        self.__setCanvasPositionFulfill(value)
+        self.__setViewPositionFulfill(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasPositionAxis(self, currentAst):
+    def __executeActionSetViewPositionAxis(self, currentAst):
         """Set canvas position axis
 
-        :canvas.position.axis
+        :view.position.axis
         """
-        fctLabel='Action ***set canvas position axis***'
+        fctLabel='Action ***set view position axis***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'SWITCH', value, bool)
 
-        self.verbose(f"set canvas position axis {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.axis')}", currentAst)
+        self.verbose(f"set view position axis {self.__strValue(value)}{self.__formatStoreResult(':view.position.axis')}", currentAst)
 
-        self.__setCanvasPositionAxis(value)
+        self.__setViewPositionAxis(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasPositionModel(self, currentAst):
+    def __executeActionSetViewPositionModel(self, currentAst):
         """Set canvas position model
 
-        :canvas.position.model
+        :view.position.model
         """
-        fctLabel='Action ***set canvas position model***'
+        fctLabel='Action ***set view position model***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamDomain(currentAst, fctLabel, 'MODEL', value in BSInterpreter.CONST_POSITIONMODEL, f"model value for position can be: {', '.join(BSInterpreter.CONST_POSITIONMODEL)}")
 
-        self.verbose(f"set canvas position model {self.__strValue(value)}{self.__formatStoreResult(':canvas.position.model')}", currentAst)
+        self.verbose(f"set view position model {self.__strValue(value)}{self.__formatStoreResult(':view.position.model')}", currentAst)
 
-        self.__setCanvasPositionModel(value)
+        self.__setViewPositionModel(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasBackgroundOpacity(self, currentAst):
+    def __executeActionSetViewBackgroundOpacity(self, currentAst):
         """Set canvas background opacity
 
-        :canvas.background.opacity
+        :view.background.opacity
         """
-        fctLabel='Action ***set canvas background opacity***'
+        fctLabel='Action ***set view background opacity***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
@@ -2539,103 +2554,103 @@ class BSInterpreter(QObject):
             if not self.__checkParamDomain(currentAst, fctLabel, 'OPACITY', value>=0.0 and value<=1.0, f"allowed opacity value when provided as a decimal number is range [0.0;1.0] (current={value})", False):
                 value=min(1.0, max(0.0, value))
 
-        self.verbose(f"set canvas background opacity {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.opacity')}", currentAst)
+        self.verbose(f"set view background opacity {self.__strValue(value)}{self.__formatStoreResult(':view.background.opacity')}", currentAst)
 
-        self.__setCanvasBackgroundOpacity(value)
+        self.__setViewBackgroundOpacity(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasBackgroundFromColor(self, currentAst):
+    def __executeActionSetViewBackgroundFromColor(self, currentAst):
         """Set canvas background from color
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        fctLabel='Action ***set canvas background from color***'
+        fctLabel='Action ***set view background from color***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'COLOR', value, QColor)
 
-        self.verbose(f"set canvas background from color {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+        self.verbose(f"set view background from color {self.__strValue(value)}{self.__formatStoreResult(':view.background.source.type', ':view.background.source.value')}", currentAst)
 
-        self.__setCanvasBackgroundFromColor(value)
+        self.__setViewBackgroundFromColor(value)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasBackgroundFromDocument(self, currentAst):
+    def __executeActionSetViewBackgroundFromDocument(self, currentAst):
         """Set canvas background from document
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        fctLabel='Action ***set canvas background from document***'
+        fctLabel='Action ***set view background from document***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.verbose(f"set canvas background from document {self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+        self.verbose(f"set view background from document {self.__formatStoreResult(':view.background.source.type', ':view.background.source.value')}", currentAst)
 
-        self.__setCanvasBackgroundFromDocument()
+        self.__setViewBackgroundFromDocument()
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasBackgroundFromLayerActive(self, currentAst):
+    def __executeActionSetViewBackgroundFromLayerActive(self, currentAst):
         """Set canvas background from layer active
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        fctLabel='Action ***set canvas background from layer active***'
+        fctLabel='Action ***set view background from layer active***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
-        self.verbose(f"set canvas background from layer active {self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+        self.verbose(f"set view background from layer active {self.__formatStoreResult(':view.background.source.type', ':view.background.source.value')}", currentAst)
 
-        self.__setCanvasBackgroundFromLayerActive()
+        self.__setViewBackgroundFromLayerActive()
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasBackgroundFromLayerName(self, currentAst):
+    def __executeActionSetViewBackgroundFromLayerName(self, currentAst):
         """Set canvas background from layer name
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        fctLabel='Action ***set canvas background from layer name***'
+        fctLabel='Action ***set view background from layer name***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'NAME', value, str)
 
-        self.verbose(f"set canvas background from layer name {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+        self.verbose(f"set view background from layer name {self.__strValue(value)}{self.__formatStoreResult(':view.background.source.type', ':view.background.source.value')}", currentAst)
 
-        layerApplied=self.__setCanvasBackgroundFromLayerName(value)
+        layerApplied=self.__setViewBackgroundFromLayerName(value)
         if layerApplied[0]!='layer name':
             self.warning(f"Unable to find a layer with given name '*{value}*', active layer will be used instead", currentAst)
 
         self.__delay()
         return None
 
-    def __executeActionSetCanvasBackgroundFromLayerId(self, currentAst):
+    def __executeActionSetViewBackgroundFromLayerId(self, currentAst):
         """Set canvas background from layer id
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        fctLabel='Action ***set canvas background from layer id***'
+        fctLabel='Action ***set view background from layer id***'
         self.__checkParamNumber(currentAst, fctLabel, 1)
 
         value=self.__evaluate(currentAst.node(0))
 
         self.__checkParamType(currentAst, fctLabel, 'ID', value, str)
 
-        self.verbose(f"set canvas background from layer id {self.__strValue(value)}{self.__formatStoreResult(':canvas.background.source.type', ':canvas.background.source.value')}", currentAst)
+        self.verbose(f"set view background from layer id {self.__strValue(value)}{self.__formatStoreResult(':view.background.source.type', ':view.background.source.value')}", currentAst)
 
-        layerApplied=self.__setCanvasBackgroundFromLayerId(value)
+        layerApplied=self.__setViewBackgroundFromLayerId(value)
         if layerApplied[0]!='layer id':
             self.warning(f"Unable to find a layer with given Id '*{value}*', active layer will be used instead", currentAst)
 
@@ -3101,6 +3116,122 @@ class BSInterpreter(QObject):
         self.verbose(f"draw star {self.__strValue(branches)} {self.__strValue(oRadius)} {self.__strValue(unitORadius)} {self.__strValue(iRadius)} {self.__strValue(unitIRadius)}", currentAst)
 
         self.__drawStar(branches, oRadius, iRadius, unitORadius, unitIRadius)
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapePolygon(self, currentAst):
+        """Draw polygon"""
+        fctLabel='Action ***draw polygon***'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3)
+
+        edges=self.__evaluate(currentAst.node(0))
+        radius=self.__evaluate(currentAst.node(1))
+        unitRadius=self.__evaluate(currentAst.node(2))
+
+        if unitRadius is None:
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+
+        self.__checkParamType(currentAst, fctLabel, 'EDGES', edges, int)
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'R-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+
+        self.verbose(f"draw polygon {self.__strValue(edges)} {self.__strValue(radius)} {self.__strValue(unitRadius)}", currentAst)
+
+        self.__drawPolygon(edges, radius, unitRadius)
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapePie(self, currentAst):
+        """Draw pie"""
+        fctLabel='Action ***draw pie***'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3, 4)
+
+        radius=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is angle
+            angle=p2
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # second parameter is a string, consider it's a radius unit
+                unitRadius=p2
+                angle=p3
+                unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+            else:
+                # second parameter is not a string, consider it's angle
+                angle=p2
+                unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitAngle=p3
+        elif len(currentAst.nodes())==4:
+            unitRadius=p2
+            angle=p3
+            unitAngle=p4
+
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius, str)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE', angle, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle in BSInterpreter.CONST_ROTATION_UNIT, f"rotation unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.verbose(f"draw pie {self.__strValue(radius)} {self.__strValue(unitRadius)} {self.__strValue(angle)} {self.__strValue(unitAngle)}", currentAst)
+
+        self.__drawPie(radius, angle, unitRadius, unitAngle)
+
+        self.__delay()
+        return None
+
+    def __executeActionDrawShapeArc(self, currentAst):
+        """Draw arc"""
+        fctLabel='Action ***draw arc***'
+        self.__checkParamNumber(currentAst, fctLabel, 2, 3, 4)
+
+        radius=self.__evaluate(currentAst.node(0))
+        p2=self.__evaluate(currentAst.node(1))
+        p3=self.__evaluate(currentAst.node(2))
+        p4=self.__evaluate(currentAst.node(3))
+
+        if len(currentAst.nodes())==2:
+            # second parameter is angle
+            angle=p2
+            unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+            unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+        elif len(currentAst.nodes())==3:
+            if isinstance(p2, str):
+                # second parameter is a string, consider it's a radius unit
+                unitRadius=p2
+                angle=p3
+                unitAngle=self.__scriptBlockStack.current().variable(':unit.rotation', 'DEGREE')
+            else:
+                # second parameter is not a string, consider it's angle
+                angle=p2
+                unitRadius=self.__scriptBlockStack.current().variable(':unit.canvas', 'PX')
+                unitAngle=p3
+        elif len(currentAst.nodes())==4:
+            unitRadius=p2
+            angle=p3
+            unitAngle=p4
+
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS', radius, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius, str)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE', angle, int, float)
+        self.__checkParamType(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle, str)
+
+        self.__checkParamDomain(currentAst, fctLabel, 'RADIUS-UNIT', unitRadius in BSInterpreter.CONST_MEASURE_UNIT, f"radius unit value can be: {', '.join(BSInterpreter.CONST_MEASURE_UNIT)}")
+        self.__checkParamDomain(currentAst, fctLabel, 'ANGLE-UNIT', unitAngle in BSInterpreter.CONST_ROTATION_UNIT, f"rotation unit value can be: {', '.join(BSInterpreter.CONST_ROTATION_UNIT)}")
+
+        self.verbose(f"draw arc {self.__strValue(radius)} {self.__strValue(unitRadius)} {self.__strValue(angle)} {self.__strValue(unitAngle)}", currentAst)
+
+        self.__drawArc(radius, angle, unitRadius, unitAngle)
 
         self.__delay()
         return None
@@ -3593,152 +3724,152 @@ class BSInterpreter(QObject):
         self.__delay()
         return None
 
-    def __executeActionCanvasShowGrid(self, currentAst):
+    def __executeActionViewShowGrid(self, currentAst):
         """Show canvas grid
 
-        :canvas.grid.visibility
+        :view.grid.visibility
         """
         fctLabel='Action ***show canvas grid***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"show canvas grid", currentAst)
 
-        self.__setCanvasGridVisible(True)
+        self.__setViewGridVisible(True)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasHideGrid(self, currentAst):
+    def __executeActionViewHideGrid(self, currentAst):
         """Hide canvas grid
 
-        :canvas.grid.visibility
+        :view.grid.visibility
         """
         fctLabel='Action ***hide canvas grid***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"hide canvas grid", currentAst)
 
-        self.__setCanvasGridVisible(False)
+        self.__setViewGridVisible(False)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasShowOrigin(self, currentAst):
+    def __executeActionViewShowOrigin(self, currentAst):
         """Show canvas origin
 
-        :canvas.origin.visibility
+        :view.origin.visibility
         """
         fctLabel='Action ***show canvas origin***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"show canvas origin", currentAst)
 
-        self.__setCanvasOriginVisible(True)
+        self.__setViewOriginVisible(True)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasHideOrigin(self, currentAst):
+    def __executeActionViewHideOrigin(self, currentAst):
         """Hide canvas origin
 
-        :canvas.origin.visibility
+        :view.origin.visibility
         """
         fctLabel='Action ***hide canvas origin***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"hide canvas origin", currentAst)
 
-        self.__setCanvasOriginVisible(False)
+        self.__setViewOriginVisible(False)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasShowPosition(self, currentAst):
+    def __executeActionViewShowPosition(self, currentAst):
         """Show canvas position
 
-        :canvas.position.visibility
+        :view.position.visibility
         """
         fctLabel='Action ***show canvas position***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"show canvas position", currentAst)
 
-        self.__setCanvasPositionVisible(True)
+        self.__setViewPositionVisible(True)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasHidePosition(self, currentAst):
+    def __executeActionViewHidePosition(self, currentAst):
         """Hide canvas position
 
-        :canvas.position.visibility
+        :view.position.visibility
         """
         fctLabel='Action ***hide canvas position***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"hide canvas position", currentAst)
 
-        self.__setCanvasPositionVisible(False)
+        self.__setViewPositionVisible(False)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasShowBackground(self, currentAst):
+    def __executeActionViewShowBackground(self, currentAst):
         """Show canvas background
 
-        :canvas.background.visibility
+        :view.background.visibility
         """
         fctLabel='Action ***show canvas background***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"show canvas background", currentAst)
 
-        self.__setCanvasBackgroundVisible(True)
+        self.__setViewBackgroundVisible(True)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasHideBackground(self, currentAst):
+    def __executeActionViewHideBackground(self, currentAst):
         """Hide canvas background
 
-        :canvas.background.visibility
+        :view.background.visibility
         """
         fctLabel='Action ***hide canvas background***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"hide canvas background", currentAst)
 
-        self.__setCanvasBackgroundVisible(False)
+        self.__setViewBackgroundVisible(False)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasShowRulers(self, currentAst):
+    def __executeActionViewShowRulers(self, currentAst):
         """Show canvas rulers
 
-        :canvas.rulers.visibility
+        :view.rulers.visibility
         """
         fctLabel='Action ***show canvas rulers***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"show canvas rulers", currentAst)
 
-        self.__setCanvasRulersVisible(True)
+        self.__setViewRulersVisible(True)
 
         self.__delay()
         return None
 
-    def __executeActionCanvasHideRulers(self, currentAst):
+    def __executeActionViewHideRulers(self, currentAst):
         """Hide canvas rulers
 
-        :canvas.rulers.visibility
+        :view.rulers.visibility
         """
         fctLabel='Action ***hide canvas rulers***'
         self.__checkParamNumber(currentAst, fctLabel, 0)
 
         self.verbose(f"hide canvas rulers", currentAst)
 
-        self.__setCanvasRulersVisible(False)
+        self.__setViewRulersVisible(False)
 
         self.__delay()
         return None
@@ -3964,6 +4095,88 @@ class BSInterpreter(QObject):
 
         scriptBlock=self.__scriptBlockStack.current()
         scriptBlock.setVariable(variableName, WDialogStrInput.display(title, message, defaultValue=defaultValue), BSVariableScope.CURRENT)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogFontInput(self, currentAst):
+        """Open dialog for font input"""
+        fctLabel='Action ***open dialog for font input***'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=''
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, str)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+        scriptBlock.setVariable(variableName, WDialogFontInput.display(title, message, defaultValue=defaultValue, optionFilter=True), BSVariableScope.CURRENT)
+
+        #self.__delay()
+        return None
+
+    def __executeActionUIDialogFileNameInput(self, currentAst):
+        """Open dialog for file name input"""
+        fctLabel='Action ***open dialog for file name input***'
+
+        if len(currentAst.nodes())<1:
+            # at least need one parameter
+            self.__checkParamNumber(currentAst, fctLabel, 1)
+
+        # no need to check if is a user variable (parser already check it)
+        variableName=currentAst.node(0).value()
+
+        message=''
+        title='BuliScript message!'
+        defaultValue=''
+
+        for index, node in enumerate(currentAst.nodes()):
+            if index==0:
+                continue
+
+            # node must be an ASTItem
+            self.__checkOption(currentAst, fctLabel, node)
+
+            if node.id()=="Action_UIDialog_Option_With_Message":
+                message=self.__executeActionUIDialogOptionWithMessage(node)
+            elif node.id()=="Action_UIDialog_Option_With_Title":
+                title=self.__executeActionUIDialogOptionWithTitle(node)
+            elif node.id()=="Action_UIDialog_Option_With_Default_Value":
+                defaultValue=self.__executeActionUIDialogOptionWithDefaultValue(node, str)
+            else:
+                # force to raise an error
+                self.__checkOption(currentAst, fctLabel, node, True)
+
+        scriptBlock=self.__scriptBlockStack.current()
+
+        fileDialog=WEFileDialog(title, defaultValue, i18n("All images (*.png *.jpg *.jpeg);;Portable Network Graphics (*.png);;JPEG Image (*.jpg *.jpeg)"), message)
+        fileDialog.setFileMode(WEFileDialog.ExistingFile)
+        if fileDialog.exec() == WEFileDialog.Accepted:
+            scriptBlock.setVariable(variableName, fileDialog.file(), BSVariableScope.CURRENT)
+        else:
+            scriptBlock.setVariable(variableName, None, BSVariableScope.CURRENT)
 
         #self.__delay()
         return None
@@ -5241,6 +5454,7 @@ class BSInterpreter(QObject):
             return isinstance(value, list)
         else:
             # shouldn't occurs
+            print('fctName', fctName)
             raise EInterpreterInternalError(f"Function {fctName}() hasn't been implemented!?", currentAst)
 
     def __executeEvaluationExpressionParenthesis(self, currentAst):
@@ -5938,8 +6152,11 @@ class BSInterpreter(QObject):
         """
         self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
         if self.__painter:
+            size=BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX')
+            if size<=0:
+                return
             font=self.__painter.font()
-            font.setPixelSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
+            font.setPixelSize(size)
             self.__painter.setFont(font)
 
     def __setTextBold(self, value):
@@ -6058,254 +6275,254 @@ class BSInterpreter(QObject):
             else:
                 self.__painter.setOpacity(value)
 
-    def __setCanvasGridColor(self, value):
-        """Set canvas grid color
+    def __setDrawOrigin(self, absissa, ordinate):
+        """Set draw origin
 
-        :canvas.grid.color
+        :draw.origin.absissa
+        :draw.origin.ordinate
         """
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenColor(value)
-
-    def __setCanvasGridBgColor(self, value):
-        """Set canvas grid color
-
-        :canvas.grid.bgColor
-        """
-        self.__scriptBlockStack.setVariable(':canvas.grid.bgColor', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridBrushColor(value)
-
-    def __setCanvasGridStyleMain(self, value):
-        """Set canvas grid style
-
-        :canvas.grid.style.main
-        """
-        self.__scriptBlockStack.setVariable(':canvas.grid.style.main', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenStyleMain(BSInterpreter.__CONV_PEN_STYLE[value])
-
-    def __setCanvasGridStyleSecondary(self, value):
-        """Set canvas grid style
-
-        :canvas.grid.style.secondary
-        """
-        self.__scriptBlockStack.setVariable(':canvas.grid.style.secondary', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenStyleSecondary(BSInterpreter.__CONV_PEN_STYLE[value])
-
-    def __setCanvasGridOpacity(self, value):
-        """Set canvas grid opacity
-
-        :canvas.grid.color
-        """
-        color=self.__scriptBlockStack.current().variable(':canvas.grid.color', QColor(0,0,0))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':canvas.grid.color', color, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenOpacity(color.alphaF())
-
-    def __setCanvasGridSize(self, width, main, unit=None):
-        """Set canvas grid size
-
-        :canvas.grid.size.width
-        :canvas.grid.size.main
-        """
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.width', width, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.grid.size.main', main, BSVariableScope.GLOBAL)
-
-        self.__renderedScene.setGridSize(BSConvertUnits.convertMeasure(width, self.__unitCanvas(unit), 'PX'), main)
-
-    def __setCanvasRulersColor(self, value):
-        """Set canvas rulers color
-
-        :canvas.rulers.color
-        """
-        self.__scriptBlockStack.setVariable(':canvas.rulers.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridPenRulerColor(value)
-
-    def __setCanvasRulersBgColor(self, value):
-        """Set canvas rulers color
-
-        :canvas.rulers.bgColor
-        """
-        self.__scriptBlockStack.setVariable(':canvas.rulers.bgColor', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setGridBrushRulerColor(value)
-
-    def __setCanvasOriginColor(self, value):
-        """Set canvas origin color
-
-        :canvas.origin.color
-        """
-        self.__scriptBlockStack.setVariable(':canvas.origin.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPenColor(value)
-
-    def __setCanvasOriginStyle(self, value):
-        """Set canvas origin style
-
-        :canvas.origin.style
-        """
-        self.__scriptBlockStack.setVariable(':canvas.origin.style', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPenStyle(BSInterpreter.__CONV_PEN_STYLE[value])
-
-    def __setCanvasOriginOpacity(self, value):
-        """Set canvas origin opacity
-
-        :canvas.origin.color
-        """
-        color=self.__scriptBlockStack.current().variable(':canvas.origin.color', QColor(60,60,128))
-        if isinstance(value, int):
-            color.setAlpha(value)
-        else:
-            color.setAlphaF(value)
-
-        self.__scriptBlockStack.setVariable(':canvas.origin.color', color, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginPenOpacity(color.alphaF())
-
-    def __setCanvasOriginSize(self, value, unit=None):
-        """Set canvas origin size
-
-        :canvas.origin.size
-        """
-        self.__scriptBlockStack.setVariable(':canvas.origin.size', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setOriginSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
-
-    def __setCanvasOriginPosition(self, absissa, ordinate):
-        """Set canvas origin position
-
-        :canvas.origin.position.absissa
-        :canvas.origin.position.ordinate
-        """
-        self.__scriptBlockStack.setVariable(':canvas.origin.position.absissa', absissa, BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.origin.position.ordinate', ordinate, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':draw.origin.absissa', absissa, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':draw.origin.ordinate', ordinate, BSVariableScope.GLOBAL)
         self.__renderedScene.setOriginPosition(BSInterpreter.__CONST_HALIGN[absissa], BSInterpreter.__CONST_VALIGN[ordinate])
         self.__updateGeometry()
         self.__renderer.setGeometry(self.__currentDocumentGeometry)
 
-    def __setCanvasPositionColor(self, value):
-        """Set canvas position color
+    def __setViewGridColor(self, value):
+        """Set canvas grid color
 
-        :canvas.position.color
+        :view.grid.color
         """
-        self.__scriptBlockStack.setVariable(':canvas.position.color', value, BSVariableScope.GLOBAL)
-        self.__renderedScene.setPositionPenColor(value)
+        self.__scriptBlockStack.setVariable(':view.grid.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenColor(value)
 
-    def __setCanvasPositionOpacity(self, value):
-        """Set canvas position opacity
+    def __setViewGridBgColor(self, value):
+        """Set canvas grid color
 
-        :canvas.position.color
+        :view.grid.bgColor
         """
-        color=self.__scriptBlockStack.current().variable(':canvas.position.color', QColor(60,60,128))
+        self.__scriptBlockStack.setVariable(':view.grid.bgColor', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridBrushColor(value)
+
+    def __setViewGridStyleMain(self, value):
+        """Set canvas grid style
+
+        :view.grid.style.main
+        """
+        self.__scriptBlockStack.setVariable(':view.grid.style.main', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenStyleMain(BSInterpreter.__CONV_PEN_STYLE[value])
+
+    def __setViewGridStyleSecondary(self, value):
+        """Set canvas grid style
+
+        :view.grid.style.secondary
+        """
+        self.__scriptBlockStack.setVariable(':view.grid.style.secondary', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenStyleSecondary(BSInterpreter.__CONV_PEN_STYLE[value])
+
+    def __setViewGridOpacity(self, value):
+        """Set canvas grid opacity
+
+        :view.grid.color
+        """
+        color=self.__scriptBlockStack.current().variable(':view.grid.color', QColor(0,0,0))
         if isinstance(value, int):
             color.setAlpha(value)
         else:
             color.setAlphaF(value)
 
-        self.__scriptBlockStack.setVariable(':canvas.position.color', color, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.grid.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenOpacity(color.alphaF())
+
+    def __setViewGridSize(self, width, main, unit=None):
+        """Set canvas grid size
+
+        :view.grid.size.width
+        :view.grid.size.main
+        """
+        self.__scriptBlockStack.setVariable(':view.grid.size.width', width, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.grid.size.main', main, BSVariableScope.GLOBAL)
+
+        self.__renderedScene.setGridSize(BSConvertUnits.convertMeasure(width, self.__unitCanvas(unit), 'PX'), main)
+
+    def __setViewRulersColor(self, value):
+        """Set canvas rulers color
+
+        :view.rulers.color
+        """
+        self.__scriptBlockStack.setVariable(':view.rulers.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridPenRulerColor(value)
+
+    def __setViewRulersBgColor(self, value):
+        """Set canvas rulers color
+
+        :view.rulers.bgColor
+        """
+        self.__scriptBlockStack.setVariable(':view.rulers.bgColor', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setGridBrushRulerColor(value)
+
+    def __setViewOriginColor(self, value):
+        """Set canvas origin color
+
+        :view.origin.color
+        """
+        self.__scriptBlockStack.setVariable(':view.origin.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenColor(value)
+
+    def __setViewOriginStyle(self, value):
+        """Set canvas origin style
+
+        :view.origin.style
+        """
+        self.__scriptBlockStack.setVariable(':view.origin.style', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenStyle(BSInterpreter.__CONV_PEN_STYLE[value])
+
+    def __setViewOriginOpacity(self, value):
+        """Set canvas origin opacity
+
+        :view.origin.color
+        """
+        color=self.__scriptBlockStack.current().variable(':view.origin.color', QColor(60,60,128))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.setVariable(':view.origin.color', color, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginPenOpacity(color.alphaF())
+
+    def __setViewOriginSize(self, value, unit=None):
+        """Set canvas origin size
+
+        :view.origin.size
+        """
+        self.__scriptBlockStack.setVariable(':view.origin.size', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setOriginSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
+
+    def __setViewPositionColor(self, value):
+        """Set canvas position color
+
+        :view.position.color
+        """
+        self.__scriptBlockStack.setVariable(':view.position.color', value, BSVariableScope.GLOBAL)
+        self.__renderedScene.setPositionPenColor(value)
+
+    def __setViewPositionOpacity(self, value):
+        """Set canvas position opacity
+
+        :view.position.color
+        """
+        color=self.__scriptBlockStack.current().variable(':view.position.color', QColor(60,60,128))
+        if isinstance(value, int):
+            color.setAlpha(value)
+        else:
+            color.setAlphaF(value)
+
+        self.__scriptBlockStack.setVariable(':view.position.color', color, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionPenOpacity(color.alphaF())
 
-    def __setCanvasPositionSize(self, value, unit=None):
+    def __setViewPositionSize(self, value, unit=None):
         """Set canvas position size
 
-        :canvas.position.size
+        :view.position.size
         """
-        self.__scriptBlockStack.setVariable(':canvas.position.size', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.position.size', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionSize(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
 
-    def __setCanvasPositionFulfill(self, value):
+    def __setViewPositionFulfill(self, value):
         """Set canvas position fulfilled
 
-        :canvas.position.fulfill
+        :view.position.fulfill
         """
-        self.__scriptBlockStack.setVariable(':canvas.position.fulfill', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.position.fulfill', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionFulfill(value)
 
-    def __setCanvasPositionAxis(self, value):
+    def __setViewPositionAxis(self, value):
         """Set canvas position axis
 
-        :canvas.position.axis
+        :view.position.axis
         """
-        self.__scriptBlockStack.setVariable(':canvas.position.axis', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.position.axis', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionAxis(value)
 
-    def __setCanvasPositionModel(self, value):
+    def __setViewPositionModel(self, value):
         """Set canvas position model
 
-        :canvas.position.model
+        :view.position.model
         """
-        self.__scriptBlockStack.setVariable(':canvas.position.model', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.position.model', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionModel(value)
 
-    def __setCanvasBackgroundOpacity(self, value):
+    def __setViewBackgroundOpacity(self, value):
         """Set canvas background opacity
 
-        :canvas.background.opacity
+        :view.background.opacity
         """
-        self.__scriptBlockStack.setVariable(':canvas.background.opacity', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.opacity', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setBackgroundOpacity(value)
 
-    def __setCanvasBackgroundFromColor(self, value):
+    def __setViewBackgroundFromColor(self, value):
         """Set canvas background from color
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'color', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.source.type', 'color', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.source.value', value, BSVariableScope.GLOBAL)
 
         pixmap=QPixmap(self.__currentDocumentBounds.size())
         pixmap.fill(value)
 
         self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
 
-    def __setCanvasBackgroundFromDocument(self):
+    def __setViewBackgroundFromDocument(self):
         """Set canvas background from document
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'document', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentDocument.fileName(), BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.source.type', 'document', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.source.value', self.__currentDocument.fileName(), BSVariableScope.GLOBAL)
 
         self.__currentDocument.refreshProjection()
         pixmap=QPixmap.fromImage(self.__currentDocument.projection(self.__currentDocumentBounds.left(), self.__currentDocumentBounds.top(), self.__currentDocumentBounds.width(), self.__currentDocumentBounds.height()))
 
         self.__renderedScene.setBackgroundImage(pixmap, self.__currentDocumentBounds)
 
-    def __setCanvasBackgroundFromLayerActive(self):
+    def __setViewBackgroundFromLayerActive(self):
         """Set canvas background from layer active
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
-        self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer active', BSVariableScope.GLOBAL)
-        self.__scriptBlockStack.setVariable(':canvas.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.source.type', 'layer active', BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.source.value', self.__currentLayer.name(), BSVariableScope.GLOBAL)
 
         pixmap=EKritaNode.toQPixmap(self.__currentLayer)
         self.__renderedScene.setBackgroundImage(pixmap, self.__currentLayerBounds)
         return ('layer active', self.__currentLayer.name())
 
-    def __setCanvasBackgroundFromLayerName(self, value):
+    def __setViewBackgroundFromLayerName(self, value):
         """Set canvas background from layer name
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
         node=EKritaDocument.findFirstLayerByName(self.__currentDocument, value)
         if node is None:
-            return self.__setCanvasBackgroundFromLayerActive()
+            return self.__setViewBackgroundFromLayerActive()
         else:
-            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer name', BSVariableScope.GLOBAL)
-            self.__scriptBlockStack.setVariable(':canvas.background.source.value', value, BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':view.background.source.type', 'layer name', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':view.background.source.value', value, BSVariableScope.GLOBAL)
 
         pixmap=EKritaNode.toQPixmap(node)
         self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
         return ('layer name', value)
 
-    def __setCanvasBackgroundFromLayerId(self, value):
+    def __setViewBackgroundFromLayerId(self, value):
         """Set canvas background from layer id
 
-        :canvas.background.source.type
-        :canvas.background.source.value
+        :view.background.source.type
+        :view.background.source.value
         """
         try:
             uuid=QUuid(value)
@@ -6314,10 +6531,10 @@ class BSInterpreter(QObject):
             node=None
 
         if node is None:
-            return self.__setCanvasBackgroundFromLayerActive()
+            return self.__setViewBackgroundFromLayerActive()
         else:
-            self.__scriptBlockStack.setVariable(':canvas.background.source.type', 'layer id', BSVariableScope.GLOBAL)
-            self.__scriptBlockStack.setVariable(':canvas.background.source.value', str(node.uniqueId()), BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':view.background.source.type', 'layer id', BSVariableScope.GLOBAL)
+            self.__scriptBlockStack.setVariable(':view.background.source.value', str(node.uniqueId()), BSVariableScope.GLOBAL)
 
         pixmap=EKritaNode.toQPixmap(node)
         self.__renderedScene.setBackgroundImage(pixmap, node.bounds())
@@ -6345,44 +6562,44 @@ class BSInterpreter(QObject):
 
         self.__scriptBlockStack.setVariable(':script.randomize.seed', randSeed, BSVariableScope.GLOBAL)
 
-    def __setCanvasGridVisible(self, value):
+    def __setViewGridVisible(self, value):
         """Show canvas grid
 
-        :canvas.grid.visibility
+        :view.grid.visibility
         """
-        self.__scriptBlockStack.setVariable(':canvas.grid.visibility', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.grid.visibility', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setGridVisible(value)
 
-    def __setCanvasOriginVisible(self, value):
+    def __setViewOriginVisible(self, value):
         """Show canvas origin
 
-        :canvas.origin.visibility
+        :view.origin.visibility
         """
-        self.__scriptBlockStack.setVariable(':canvas.origin.visibility', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.origin.visibility', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setOriginVisible(value)
 
-    def __setCanvasPositionVisible(self, value):
+    def __setViewPositionVisible(self, value):
         """Show canvas position
 
-        :canvas.position.visibility
+        :view.position.visibility
         """
-        self.__scriptBlockStack.setVariable(':canvas.position.visibility', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.position.visibility', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setPositionVisible(value)
 
-    def __setCanvasBackgroundVisible(self, value):
+    def __setViewBackgroundVisible(self, value):
         """Show canvas background
 
-        :canvas.background.visibility
+        :view.background.visibility
         """
-        self.__scriptBlockStack.setVariable(':canvas.background.visibility', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.background.visibility', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setBackgroundVisible(value)
 
-    def __setCanvasRulersVisible(self, value):
+    def __setViewRulersVisible(self, value):
         """Show canvas rulers
 
-        :canvas.rulers.visibility
+        :view.rulers.visibility
         """
-        self.__scriptBlockStack.setVariable(':canvas.rulers.visibility', value, BSVariableScope.GLOBAL)
+        self.__scriptBlockStack.setVariable(':view.rulers.visibility', value, BSVariableScope.GLOBAL)
         self.__renderedScene.setGridRulerVisible(value)
 
     def __setDrawShapeStatus(self, value):
@@ -6648,8 +6865,6 @@ class BSInterpreter(QObject):
             boundRect=QRectF(QPointF(dX, dY), QSizeF(boundWidth, boundHeight))
             #boundRect.translate(dX, dY)
 
-            self.verbose(f"__drawText: '{text}' hAlign({hAlign}) vAlign({vAlign}) calculatedBounds({boundRect})")
-
             self.__painter.save()
             self.__painter.scale(1,-1)
 
@@ -6692,6 +6907,64 @@ class BSInterpreter(QObject):
                 angleI+=angle
 
             self.__painter.drawPolygon(*points)
+
+    def __drawPolygon(self, edges, radius, unitRadius=None):
+        """Draw a polygon, with given number of `edges`
+
+        Radius is defined by `radius` + `unitRadius` (if provided)
+        """
+        if self.__painter:
+            angle=math.tau/edges   # 2 PI / branches
+
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+
+            # calculate points
+            angleO=math.pi/2
+            points=[]
+            for vertex in range(edges):
+                points.append(QPointF(radiusPx*math.cos(angleO), radiusPx*math.sin(angleO)))
+
+                angleO+=angle
+
+            self.__painter.drawPolygon(*points)
+
+    def __drawPie(self, radius, angle, unitRadius=None, unitAngle=None):
+        """Draw a pie
+
+        Radius is defined by `radius` + `unitRadius` (if provided)
+        Angle is defined by `angle` + `unitAngle` (if provided)
+        """
+        if self.__painter:
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+            angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unitAngle), 'DEGREE')
+
+            rectangle=QRect(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
+
+            # According to the documentation: "The startAngle and spanAngle must be specified in 1/16th of a degree, i.e. a full circle equals 5760 (16 * 360)"
+            # what!??? X_X
+            startAngle=-90*16
+            spanAngle=round(-angleDegree*16)
+
+            self.__painter.drawPie(rectangle, startAngle, spanAngle)
+
+    def __drawArc(self, radius, angle, unitRadius=None, unitAngle=None):
+        """Draw an arc
+
+        Radius is defined by `radius` + `unitRadius` (if provided)
+        Angle is defined by `angle` + `unitAngle` (if provided)
+        """
+        if self.__painter:
+            radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
+            angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unitAngle), 'DEGREE')
+
+            rectangle=QRect(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
+
+            # According to the documentation: "The startAngle and spanAngle must be specified in 1/16th of a degree, i.e. a full circle equals 5760 (16 * 360)"
+            # what!??? X_X
+            startAngle=-90*16
+            spanAngle=round(-angleDegree*16)
+
+            self.__painter.drawArc(rectangle, startAngle, spanAngle)
 
     def __drawClearCanvas(self):
         """Clear current canvas content"""

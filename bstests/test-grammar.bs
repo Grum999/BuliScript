@@ -1,0 +1,1122 @@
+#---------------------------------------------------------------------
+# A testing script for BuliScript language
+#
+# This script doesn't do anything, it can be used to test and validate:
+# - Tokenizer
+#   . From code editor, allows to check that syntax is properly highlighted)
+# - Parser
+#   . Allows to check if parser+grammar are able to build AST
+#   
+# Note:
+# - This script tries to cover language elements as most as possible
+# - Interpreter might not be able to execute it as even if syntax is correct,
+#   there's some invalid things from interpreter point of view
+#
+# ------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------
+# flow import
+# ------------------------------------------------------------------------------
+import buliscript file "test.bs"
+
+import file into image library from "/home/grum/Temporaire/TempKrita/testFormat/testPng/z03n2c08.png" as "test file"
+import layer into image library from id "{00000000-0000-0000-0000-000000000000}" as  "test layer id"
+import layer into image library from name "layer2" as  "test layer by name"
+import layer into image library from name "/group1/group2/layer3" as "test layer by path+name"
+import layer into image library from current as "test layer"  
+import document into image library as "test document"
+import canvas into image library as "test canvas"
+
+
+# ------------------------------------------------------------------------------
+# flow define macro
+# ------------------------------------------------------------------------------
+define macro "macro test 1" as
+    print ">> Execution of macro test 1"
+    return 0
+
+define macro "macro test 2" with parameters :v1 as
+    print ">> Execution of macro test 2" :v1
+    set variable :v1 = :v1 * 2
+    set global variable :vg.test = :v1 / 2
+    return :v1
+
+define macro "macro test 3" with parameters :v1 :v2 as
+    print ">> Execution of macro test 3" :v1 :v2
+    set variable :v1 = :v1 * :v2
+    return :v1
+
+
+    # test
+define macro "macro test 4"
+as
+# test
+# test
+# test
+  # test
+    # test
+
+    print "test"
+
+# ------------------------------------------------------------------------------
+# flow set variables
+# ------------------------------------------------------------------------------
+set variable :color = #4c1e5051
+
+set variable :unitM = MM
+set variable :unitR = DEGREE
+
+set variable :numInt = 10
+set variable :numDec = 10.0
+
+set variable :penStyle = SOLID
+set variable :penCap = SQUARE
+set variable :penJoin = BEVEL
+
+set variable :fillRule = EVEN
+
+set variable :text = "Test"
+set variable :text = "Test "
+                     "texte " + string.upper("toto")
+
+set variable :boolean = ON
+
+set variable :boolean = ON
+set variable :boolean = OFF
+
+set variable :boolean = not ON
+set variable :boolean = ON or OFF
+
+set variable :halign = LEFT
+set variable :valign = TOP
+
+set variable :blending = SOURCE_OVER
+
+set variable :list = [1,2,3,4]
+
+set variable :testUiDialog = OFF
+
+set global variable :vg.test = 0
+
+# ------------------------------------------------------------------------------
+# set unit
+# ------------------------------------------------------------------------------
+set unit canvas PX
+set unit canvas PCT
+set unit canvas MM
+set unit canvas INCH
+
+set unit rotation DEGREE
+set unit rotation RADIAN
+
+# ------------------------------------------------------------------------------
+# set pen
+# ------------------------------------------------------------------------------
+set pen color #ffcc99
+
+set pen size 10
+set pen size 10 PX
+set pen size 10 MM
+set pen size 10 INCH
+set pen size 10 PCT
+
+set pen style SOLID
+set pen style DASHDOT
+set pen style DASH
+set pen style DOT
+
+set pen cap SQUARE
+set pen cap FLAT
+set pen cap ROUNDCAP
+
+set pen join BEVEL
+set pen join MITTER
+set pen join ROUNDJOIN
+
+set pen opacity 1.0
+set pen opacity 255
+
+# ------------------------------------------------------------------------------
+# set fill
+# ------------------------------------------------------------------------------
+set fill color #ffcc99
+
+set fill rule EVEN
+set fill rule WINDING
+
+set fill opacity 1.0
+set fill opacity 255
+
+# ------------------------------------------------------------------------------
+# set text
+# ------------------------------------------------------------------------------
+set text color #ffcc99
+
+set text opacity 1.0
+set text opacity 255
+
+set text font "monospace"
+
+set text size 10
+set text size 10 PX
+set text size 10 MM
+set text size 10 INCH
+set text size 10 PCT
+
+set text bold ON
+set text bold OFF
+
+set text italic ON
+set text italic OFF
+
+set text letter spacing 10
+set text letter spacing 10 PX
+set text letter spacing 10 MM
+set text letter spacing 10 INCH
+set text letter spacing 10 PCT
+
+set text stretch 100
+set text stretch 1.0
+
+
+set text horizontal alignment LEFT
+set text horizontal alignment CENTER
+set text horizontal alignment RIGHT
+
+set text vertical alignment TOP
+set text vertical alignment MIDDLE
+set text vertical alignment BOTTOM
+
+# ------------------------------------------------------------------------------
+# set draw
+# ------------------------------------------------------------------------------
+set draw antialiasing ON
+set draw antialiasing OFF
+
+set draw blending mode NORMAL
+set draw blending mode SOURCE_OVER
+set draw blending mode DESTINATION_OVER
+set draw blending mode DESTINATION_CLEAR
+set draw blending mode SOURCE_IN
+set draw blending mode SOURCE_OUT
+set draw blending mode DESTINATION_IN
+set draw blending mode DESTINATION_OUT
+set draw blending mode SOURCE_ATOP
+set draw blending mode DESTINATION_ATOP
+set draw blending mode EXCLUSIVE_OR
+set draw blending mode PLUS
+set draw blending mode MULTIPLY
+set draw blending mode SCREEN
+set draw blending mode OVERLAY
+set draw blending mode DARKEN
+set draw blending mode LIGHTEN
+set draw blending mode COLORDODGE
+set draw blending mode COLORBURN
+set draw blending mode HARD_LIGHT
+set draw blending mode SOFT_LIGHT
+set draw blending mode DIFFERENCE
+set draw blending mode EXCLUSION
+set draw blending mode BITWISE_S_OR_D
+set draw blending mode BITWISE_S_AND_D
+set draw blending mode BITWISE_S_XOR_D
+set draw blending mode BITWISE_S_NOR_D
+set draw blending mode BITWISE_S_NAND_D
+set draw blending mode BITWISE_NS_XOR_D
+set draw blending mode BITWISE_S_NOT
+set draw blending mode BITWISE_NS_AND_D
+set draw blending mode BITWISE_S_AND_ND
+set draw blending mode BITWISE_NS_OR_D
+set draw blending mode BITWISE_CLEAR
+set draw blending mode BITWISE_SET
+set draw blending mode BITWISE_NOT_D
+set draw blending mode BITWISE_S_OR_ND
+
+set draw opacity 255
+set draw opacity 1.0
+
+set draw origin CENTER MIDDLE
+set draw origin LEFT TOP
+set draw origin RIGHT BOTTOM
+
+# ------------------------------------------------------------------------------
+# set canvas
+# ------------------------------------------------------------------------------
+set view grid color #ffcc99
+set view grid color #ffcc99 #303030
+
+set view grid style SOLID
+set view grid style DASHDOT DOT
+set view grid style DASH DOT
+set view grid style DOT DOT
+
+set view grid opacity 1.0
+set view grid opacity 255
+
+set view grid size 10
+set view grid size 10 5 
+set view grid size 10 PX
+set view grid size 10 5 PX
+set view grid size 10 5 MM
+set view grid size 10 5 INCH
+set view grid size 10 5 PCT
+
+set view rulers color #ffcc99
+set view rulers color #ffcc99 #303030
+
+
+set view origin color #ffcc99
+
+set view origin style SOLID
+set view origin style DASHDOT
+set view origin style DASH
+set view origin style DOT
+
+set view origin size 10
+set view origin size 10 PX
+set view origin size 10 MM
+set view origin size 10 INCH
+set view origin size 10 PCT
+
+set view origin opacity 1.0
+set view origin opacity 255
+
+
+set view position color #ffcc99
+
+set view position opacity 1.0
+set view position opacity 255
+
+set view position size 10
+set view position size 10 PX
+set view position size 10 MM
+set view position size 10 INCH
+set view position size 10 PCT
+
+set view position fulfilled ON
+set view position fulfilled OFF
+
+set view position axis ON
+set view position axis OFF
+
+set view position model BASIC
+set view position model ARROWHEAD
+set view position model UPWARD
+
+set view background opacity 1.0
+set view background opacity 255
+
+set view background from color #80ff0000
+set view background from document
+set view background from layer id "test1"
+set view background from layer name "test1"
+set view background from layer active
+
+
+# ------------------------------------------------------------------------------
+# set script
+# ------------------------------------------------------------------------------
+set script execution verbose OFF
+set script execution verbose ON
+
+
+set script randomize seed 100
+
+
+# ------------------------------------------------------------------------------
+# draw shape
+# ------------------------------------------------------------------------------
+draw line 10 
+draw line 10 PX 
+draw line 10 MM
+draw line 10 INCH
+draw line 10 PCT
+
+
+draw square 10
+draw square 10 PX
+draw square 10 MM
+draw square 10 INCH
+draw square 10 PCT
+
+draw round square 10 5
+draw round square 10 PX 5
+draw round square 10 2 PX
+draw round square 10 PX 2 PX
+draw round square 10 MM 2 MM
+draw round square 10 INCH 2 INCH
+draw round square 10 PCT 2 PCT
+draw round square 10 PCT 2 RPCT
+
+
+draw rect 10 15
+draw rect 10 15 PX
+draw rect 10 15 MM
+draw rect 10 15 INCH
+draw rect 10 15 PCT
+
+draw round rect 10 5 2
+draw round rect 10 5 PX 2
+draw round rect 10 5 2 PX
+draw round rect 10 5 PX 2 PX
+draw round rect 10 5 MM 2 MM
+draw round rect 10 5 INCH 2 INCH
+draw round rect 10 5 PCT 2 PCT
+draw round rect 10 5 PCT 2 RPCT
+
+
+draw circle 10
+draw circle 10 PX
+draw circle 10 MM
+draw circle 10 INCH
+draw circle 10 PCT
+
+
+draw ellipse 10 15
+draw ellipse 10 15 PX
+draw ellipse 10 15 MM
+draw ellipse 10 15 INCH
+draw ellipse 10 15 PCT
+
+
+draw dot
+
+
+draw pixel
+
+
+draw image "test file"
+
+
+draw scaled image "test file" 10 20
+draw scaled image "test file" 10 PX 20
+draw scaled image "test file" 10 20 PX
+draw scaled image "test file" 10 PX 20 PX
+draw scaled image "test file" 10 MM 20 MM
+draw scaled image "test file" 10 INCH 20 INCH
+draw scaled image "test file" 10 PCT 20 PCT 
+draw scaled image "test file" 10 RPCT 20 RPCT 
+
+
+draw text "Testing text!"
+draw text "Testing text!\nSecond line"
+
+
+draw star 5 10 4
+draw star 5 10 PX 4
+draw star 5 10 4 PX
+draw star 5 10 PX 4 PX
+draw star 5 10 MM 4 MM
+draw star 5 10 INCH 4 INCH
+draw star 5 10 PCT 4 PCT
+draw star 5 10 PCT 8 RPCT
+
+
+draw polygon 5 10
+draw polygon 5 10 PX 
+draw polygon 5 10 PX 
+draw polygon 5 10 MM 
+draw polygon 5 10 INCH 
+draw polygon 5 10 PCT 
+draw polygon 5 10 PCT 
+
+
+draw pie 40 25 
+draw pie 40 PX 25 
+draw pie 40 25 DEGREE 
+draw pie 40 PX 25 DEGREE 
+draw pie 40 MM 0.1 RADIAN
+draw pie 40 INCH 25 DEGREE 
+draw pie 40 PCT 25 DEGREE 
+
+draw arc 40 25 
+draw arc 40 PX 25 
+draw arc 40 25 DEGREE 
+draw arc 40 PX 25 DEGREE 
+draw arc 40 MM 0.1 RADIAN
+draw arc 40 INCH 25 DEGREE 
+draw arc 40 PCT 25 DEGREE 
+
+
+
+# ------------------------------------------------------------------------------
+# draw misc
+# ------------------------------------------------------------------------------
+clear canvas
+
+
+fill canvas from color #88ff0000
+fill canvas from image "test layer"
+fill canvas from image "test file"
+    with tiling
+    with scale 150 PX 150 PX
+    with offset 50 PX 50 PX
+    with rotation left 15
+    with rotation right 15
+
+
+# ------------------------------------------------------------------------------
+# draw fill
+# ------------------------------------------------------------------------------
+start to draw shape
+stop to draw shape
+
+
+activate fill
+deactivate fill
+
+
+# ------------------------------------------------------------------------------
+# draw pen
+# ------------------------------------------------------------------------------
+pen up
+pen down
+
+# ------------------------------------------------------------------------------
+# draw move
+# ------------------------------------------------------------------------------
+move home
+
+move forward 10
+move forward 10 PX
+move forward 10 MM
+move forward 10 INCH
+move forward 10 PCT
+
+move backward 10
+move backward 10 PX
+move backward 10 MM
+move backward 10 INCH
+move backward 10 PCT
+
+move left 10
+move left 10 PX
+move left 10 MM
+move left 10 INCH
+move left 10 PCT
+
+move right 10
+move right 10 PX
+move right 10 MM
+move right 10 INCH
+move right 10 PCT
+
+move to 10 5
+move to 10 5 PX
+move to 10 5 MM
+move to 10 5 INCH
+move to 10 5 PCT
+
+
+# ------------------------------------------------------------------------------
+# draw turn
+# ------------------------------------------------------------------------------
+turn left 90
+turn left 90 DEGREE
+turn left :math.pi/2 RADIAN
+
+
+turn right 90
+turn right 90 DEGREE
+turn right :math.pi/2 RADIAN
+
+
+turn to 90
+turn to 90 DEGREE
+turn to :math.pi/2 RADIAN
+
+
+# ------------------------------------------------------------------------------
+# state
+# ------------------------------------------------------------------------------
+push state
+pop state
+
+
+# ------------------------------------------------------------------------------
+# canvas
+# ------------------------------------------------------------------------------
+hide view grid
+show view grid
+
+hide view origin
+show view origin
+
+hide view position
+show view position
+
+hide view background
+show view background
+
+hide view rulers
+show view rulers
+
+
+
+# ------------------------------------------------------------------------------
+# UIConsole
+# ------------------------------------------------------------------------------
+set variable :textFmt = "Test *italic* and **bold** test, with #g#green# color"
+set variable :textNFmt = "2 * 3 - 4 * 4"
+
+print :textFmt :textNFmt
+print error :textFmt :textNFmt
+print warning :textFmt :textNFmt
+print verbose :textFmt :textNFmt 
+print valid :textFmt :textNFmt 
+
+print formatted :textFmt :textNFmt
+print formatted error :textFmt :textNFmt
+print formatted warning :textFmt :textNFmt
+print formatted verbose :textFmt :textNFmt 
+print formatted valid :textFmt :textNFmt 
+
+
+# ------------------------------------------------------------------------------
+# UIDialog
+# ------------------------------------------------------------------------------
+if :testUiDialog then
+    open dialog for message
+    open dialog for message
+        with message "<h1>test</h1><p>Oyoyo!!</p>"
+        with title "yop!"
+
+    open dialog for boolean input :bool
+    print "Boolean entry" :bool
+    open dialog for boolean input :bool
+        with message "test - bool input"
+        with title "yop!"
+    print "Boolean entry" :bool
+
+
+    open dialog for integer input :numInt
+    print "Integer entry" :numInt
+    open dialog for integer input :numInt
+        with message "test - int input"
+        with title "yop!"
+    print "Integer entry" :numInt
+
+
+    open dialog for integer input :numInt
+    open dialog for integer input :numInt
+        with message "test - int min/max"
+        with title "yop!"
+        with minimum value -5
+        with maximum value 100
+        with default value math.random(-5, 100)
+
+
+    open dialog for decimal input :numDec
+    print "Decimal entry" :numDec
+    open dialog for decimal input :numDec
+        with message "test"
+        with title "yop!"
+        with minimum value -10.0
+        with maximum value 10.0
+        with default value math.random(-10.0, 10.0)
+    print "Decimal entry" :numDec
+
+
+    open dialog for color input :color
+    print "Color entry" :color
+    open dialog for color input :color
+        with message "test"
+        with title "yop!"
+        with default value #cc99dd
+    print "Color entry" :color
+
+
+    open dialog for string input :text
+    print "String entry" :text
+    open dialog for string input :text
+        with message "test"
+        with title "yop!"
+        with default value string.lower("TEST default value")
+    print "String entry" :text
+
+
+    open dialog for single choice input :result
+        with message "test"
+        with title "yop!"
+        with combobox choices ["Item A", 
+                            "Item B",
+                            "Item C"]
+        with default index 1 
+    print "Choice entry" :result
+    
+    open dialog for single choice input :result
+        with message "test"
+        with title "yop!"
+        with radio button choices ["Item A", 
+                                "Item B",
+                                "Item C"]
+        with default index 2 
+    print "Choice entry" :result
+
+    open dialog for multiple choice input :result
+        with message "test"
+        with title "yop!"
+        with choices ["Item A", 
+                    "Item B",
+                    "Item C",
+                    "Item D",
+                    "Item E"]
+        with default index [0, 2] 
+        with minimum choices 3
+    print "Choices entries" :result
+
+
+    open dialog for font input :text
+    print "Font entry" :text
+    open dialog for font input :text
+        with message "test"
+        with title "yop!"
+        with default value "Monospace"
+    print "Font entry" :text
+
+
+
+# ------------------------------------------------------------------------------
+# flow call macro
+# ------------------------------------------------------------------------------
+set variable :numDec = 2.5
+set variable :v1 = 100
+
+print "Values before macro call" ":v1=" :v1 ":vg.test=" :vg.test
+
+call macro "macro test 1"
+call macro "macro test 2" 45/:numDec
+call macro "macro test 3" 10 5
+
+call macro "macro test 1" and store result into variable :v2
+print "Values after 'macro test 1' call" ":v1=" :v1 ":v2=" :v2
+
+call macro "macro test 2" 45/:numDec
+     and store result into variable :v2
+print "Values after 'macro test 2' call" ":v1=" :v1 ":v2=" :v2 ":vg.test" :vg.test
+
+call macro "macro test 3" 10 5
+     and store result into variable :v2
+print "Values after 'macro test 3' call" ":v1=" :v1 ":v2=" :v2
+
+
+# ------------------------------------------------------------------------------
+# flow if
+# ------------------------------------------------------------------------------
+set variable :numInt = 50
+
+
+if ON then
+    print "test1"
+
+if :numInt >= 45
+then
+    print "test2"
+
+if boolean.isString(:text) and ((:numInt >= 10) or (:numInt <= 5)) then
+    print "test3"
+
+if ON then
+    print "test4-a ==> OK!"
+else
+    print "test4-b ==> KO"
+ 
+if OFF then
+    print "test5-a ==> KO"
+else
+    print "test5-b ==> OK!"
+ 
+    
+if ON then
+    print "test6-a ==> OK!"
+else if ON then
+    print "test6-b ==> KO"
+else 
+    print "test6-c ==> KO"
+
+if OFF then
+    print "test7-a ==> KO"
+else if ON then
+    print "test7-b ==> OK!"
+else 
+    print "test7-c ==> KO"
+
+if OFF then
+    print "test8-a ==> KO"
+else if OFF then
+    print "test8-b ==> KO"
+else 
+    print "test8-c ==> OK!"
+
+
+if ON then 
+    print ":numInt in if ... then" :numInt "=50"
+    set variable :numInt = 80 
+    print ":numInt in if ... then" :numInt "=80"
+print ":numInt out if ... then" :numInt "=80"
+
+
+# ------------------------------------------------------------------------------
+# flow return
+# ------------------------------------------------------------------------------
+return
+return "test"
+return 45/:numDec
+
+
+# ------------------------------------------------------------------------------
+# flow repeat
+# ------------------------------------------------------------------------------
+set variable :x = 0
+repeat 4 times
+    set variable :x = :x + 1
+    print ':repeat.totalIteration=' :repeat.totalIteration
+    print ':repeat.currentIteration=' :repeat.currentIteration
+    print ':repeat.isFirstIteration=' :repeat.isFirstIteration
+    print ':repeat.isLastIteration=' :repeat.isLastIteration
+    print ':repeat.incAngle=' :repeat.incAngle
+    print ':repeat.currentAngle=' :repeat.currentAngle 
+
+    print ':x=' :x
+    
+print 'done> :x=' :x "=4"
+
+
+repeat math.random(1,15) times
+    print :repeat.currentIteration "/" :repeat.totalIteration
+
+
+
+# ------------------------------------------------------------------------------
+# flow foreach
+# ------------------------------------------------------------------------------
+set variable :x = 0
+for each item from [0,2,4,6,8] as :number do
+    set variable :x = :x + 1
+    print ':foreach.totalIteration=' :foreach.totalIteration
+    print ':foreach.currentIteration=' :foreach.currentIteration
+    print ':foreach.isFirstIteration=' :foreach.isFirstIteration
+    print ':foreach.isLastIteration=' :foreach.isLastIteration
+    print ':foreach.incAngle=' :foreach.incAngle
+    print ':foreach.currentAngle=' :foreach.currentAngle 
+    
+    print ':number=' :number
+    print ':x=' :x
+    
+print 'done> :x=' :x "=5"
+
+
+set variable :x = 0
+for each item from "testing!" as :letter do
+    set variable :x = :x + 1
+    print ':foreach.totalIteration=' :foreach.totalIteration
+    print ':foreach.currentIteration=' :foreach.currentIteration
+    print ':foreach.isFirstIteration=' :foreach.isFirstIteration
+    print ':foreach.isLastIteration=' :foreach.isLastIteration
+    print ':foreach.incAngle=' :foreach.incAngle
+    print ':foreach.currentAngle=' :foreach.currentAngle 
+    
+    print ':letter=' :letter
+    print ':x=' :x
+    
+print 'done> :x=' :x "=5"
+
+# ------------------------------------------------------------------------------
+# functions
+# ------------------------------------------------------------------------------
+set unit rotation RADIAN
+
+set variable :v = 44
+
+set variable :x = math.random()
+set variable :x = math.random(1, 5)
+set variable :x = math.absolute(-:v)
+set variable :x = math.sign(:v)
+set variable :x = math.even(:v)
+set variable :x = math.odd(:v)
+set variable :x = math.exp(2)
+set variable :x = math.power(2, 3)
+set variable :x = math.squareRoot(2)
+set variable :x = math.logn(2)
+set variable :x = math.log(2)
+set variable :x = math.convert(4, PX, MM)
+set variable :x = math.minimum(1, 2, 3, 4, 5, 0.5)
+set variable :x = math.maximum(1, [2, 3.0, 8], 4, 5)
+set variable :x = math.average(1, 2, 3, 4, 5)
+set variable :x = math.sum(1, 2, 3, 4, 5)
+set variable :x = math.product(1, 2, 3, 4, 5)
+set variable :x = math.ceil(1.1499)
+set variable :x = math.floor(1.1499)
+set variable :x = math.round(1.1499)
+set variable :x = math.round(1.1499, 2)
+set variable :x = math.cos(3.14/3)
+set variable :x = math.sin(3.14/3)
+set variable :x = math.tan(3.14/3)
+set variable :x = math.acos(0.25)
+set variable :x = math.asin(0.25)
+set variable :x = math.atan(0.25)
+set variable :x = math.cosh(3.14/3)
+set variable :x = math.sinh(3.14/3)
+set variable :x = math.tanh(3.14/3)
+set variable :x = math.acosh(3.14/3)
+set variable :x = math.asinh(3.14/3)
+set variable :x = math.atanh(0.25)
+set variable :x = string.length("Testing text functions")
+set variable :x = string.upper("Testing text functions")
+set variable :x = string.lower("TESTING TEXT FUNCTIONS")
+set variable :x = string.substring(:text, 6)
+set variable :x = string.substring(:text, 6, 5)
+set variable :x = string.substring(:text, -10, 5)
+set variable :x = string.substring(:text, -4)
+set variable :x = string.format("Hi {0}, the color is {2} and number is {1}", "John", 4, #ffccdd)
+set variable :x = color.hsl(255,255,255)
+set variable :x = color.hsla(1.0,1.0,1.0,1.0)
+set variable :x = color.hsla(255,255,255,255)
+set variable :x = color.hsv(1.0,1.0,1.0)
+set variable :x = color.hsv(255,255,255)
+set variable :x = color.hsva(1.0,1.0,1.0,1.0)
+set variable :x = color.hsva(255,255,255,255)
+set variable :x = color.rgb(1.0,1.0,1.0)
+set variable :x = color.rgb(255,255,255)
+set variable :x = color.rgba(1.0,1.0,1.0,0.9)
+set variable :x = color.rgba(255,255,255,250)
+set variable :x = color.cmyk(1.0,1.0,0.5,0.5)
+set variable :x = color.cmyk(255, 0, 255, 191)
+set variable :x = color.cmyka(1.0,1.0,1.0,1.0,1.0)
+set variable :x = color.cmyka(255,255,255,255,255)
+set variable :x = color.red(#55364347)
+set variable :x = color.green(#55364347)
+set variable :x = color.blue(#55364347)
+set variable :x = color.cyan(#55364347)
+set variable :x = color.magenta(#55364347)
+set variable :x = color.yellow(#55364347)
+set variable :x = color.black(#55364347)
+set variable :x = color.hue(#55364347)
+set variable :x = color.saturation(#55364347)
+set variable :x = color.value(#55364347)
+set variable :x = color.lightness(#55364347)
+set variable :x = color.opacity(#55364347)
+set variable :x = list.length([1,2,3])
+set variable :x = list.join([1,2,3])
+set variable :x = list.join([1,2,3], ";")
+set variable :x = string.split("1,2,3")
+set variable :x = string.split("1;2;3", ";")
+set variable :x = list.rotate([1,2,3,4], -1)
+set variable :x = list.rotate([1,2,3,4], 1)
+set variable :x = list.rotate([1,2,3,4], 10)
+set variable :x = list.revert([1,2,3])
+set variable :x = list.sort([1,8,4,3,5,7], ON)
+set variable :x = list.sort([1,8,4,3,5,7], OFF)
+set variable :x = list.sort([1,8,4,3,5,7])
+set variable :x = list.unique([1,2,4,7,1,2,4,2,1])
+set variable :x = list.shuffle([1,
+                                2,
+                                3,
+                                4,5,6,7,8])
+set variable :x = list.index([1,2,3,4], 1)
+set variable :x = list.index([1,2,3,4], -1)
+set variable :x = list.index([1,2,3,4], 4)
+set variable :x = list.index([1,2,3,4], 0, '--')
+set variable :x = list.index([1,2,3,4], 25, '--')
+
+set variable :x = boolean.isString(:text)
+set variable :x = boolean.isNumber(:numInt)
+set variable :x = boolean.isInteger(:numInt)
+set variable :x = boolean.isDecimal(:numDec)
+set variable :x = boolean.isBoolean(:boolean)
+set variable :x = boolean.isColor(:color)
+set variable :x = boolean.isList(:list)
+
+
+# ------------------------------------------------------------------------------
+# testing conversions
+# ------------------------------------------------------------------------------
+print "-- Tests made for a document 500x500PX with a resolution of 96dpi --"
+print :canvas.geometry.width
+print :canvas.geometry.height
+print :canvas.geometry.resolution
+
+print "-- PX"
+print math.convert(10, PX, MM) "~2.64583"
+print math.convert(10, PX, INCH) "~0.10416"
+print math.convert(10, PX, PCT, 'W') "=2.0"
+print math.convert(10, PX, PCT, 'H') "=2.0"
+
+print "-- MM"
+print math.convert(10, MM, PX) "~37.79527"
+print math.convert(10, MM, INCH) "~0.39370"
+print math.convert(10, MM, PCT, 'W') "~7.55905"
+print math.convert(10, MM, PCT, 'H') "~7.55905"
+
+print "-- INCH"
+print math.convert(10, INCH, PX) "=960"
+print math.convert(10, INCH, MM) "=254"
+print math.convert(10, INCH, PCT, 'W') "=192"
+print math.convert(10, INCH, PCT, 'H') "=192"
+
+print "-- PCT"
+print math.convert(10, PCT, PX, 'W') "=50"
+print math.convert(10, PCT, MM, 'W') "=13.22915"
+print math.convert(10, PCT, INCH, 'W') "=0.5208"
+print math.convert(10, PCT, PX, 'H') "=50"
+print math.convert(10, PCT, MM, 'H') "=13.22915"
+print math.convert(10, PCT, INCH, 'H') "=0.5208"
+
+
+print "-- DEGREE"
+print math.convert(0, DEGREE, RADIAN)
+print math.convert(1, DEGREE, RADIAN)
+print math.convert(180, DEGREE, RADIAN)
+print math.convert(360, DEGREE, RADIAN)
+
+print "-- RADIAN"
+print math.convert(0, RADIAN, DEGREE)
+print math.convert(:math.pi/180, RADIAN, DEGREE)
+print math.convert(:math.pi, RADIAN, DEGREE)
+print math.convert(:math.pi/2, RADIAN, DEGREE)
+
+# ------------------------------------------------------------------------------
+# testing reserved variables
+# ------------------------------------------------------------------------------
+
+print ":math.pi" :math.pi
+print ":math.e" :math.e
+print ":math.phi" :math.phi
+
+print ":position.x" :position.x
+print ":position.y" :position.y
+print ":rotation.angle" :rotation.angle
+
+print ":unit.rotation" :unit.rotation
+print ":unit.canvas" :unit.canvas
+
+print ":pen.color" :pen.color
+print ":pen.size" :pen.size
+print ":pen.style" :pen.style
+print ":pen.cap" :pen.cap
+print ":pen.join" :pen.join
+print ":pen.status" :pen.status
+
+print ":fill.color" :fill.color
+print ":fill.rule" :fill.rule
+print ":fill.status" :fill.status
+
+print ":draw.antialiasing" :draw.antialiasing
+print ":draw.blendingMode" :draw.blendingMode
+print ":draw.shape.status" :draw.shape.status
+print ":draw.origin.absissa" :draw.origin.absissa
+print ":draw.origin.ordinate" :draw.origin.ordinate
+
+print ":text.color" :text.color
+print ":text.font" :text.font
+print ":text.size" :text.size
+print ":text.bold" :text.bold
+print ":text.italic" :text.italic
+print ":text.letterSpacing.spacing" :text.letterSpacing.spacing
+print ":text.letterSpacing.unit" :text.letterSpacing.unit
+print ":text.stretch" :text.stretch
+print ":text.alignment.horizontal" :text.alignment.horizontal
+print ":text.alignment.vertical" :text.alignment.vertical
+
+print ":view.grid.color" :view.grid.color
+print ":view.grid.bgColor" :view.grid.bgColor
+print ":view.grid.visibility" :view.grid.visibility
+print ":view.grid.size.major" :view.grid.size.major
+print ":view.grid.size.minor" :view.grid.size.minor
+print ":view.grid.size.unit" :view.grid.size.unit
+print ":view.grid.style" :view.grid.style
+print ":view.grid.opacity" :view.grid.opacity
+
+print ":view.origin.color" :view.origin.color
+print ":view.origin.visibility" :view.origin.visibility
+print ":view.origin.size" :view.origin.size
+print ":view.origin.style" :view.origin.style
+print ":view.origin.opacity" :view.origin.opacity
+
+print ":view.position.color" :view.position.color
+print ":view.position.visibility" :view.position.visibility
+print ":view.position.size" :view.position.size
+print ":view.position.style" :view.position.style
+print ":view.position.opacity" :view.position.opacity
+print ":view.position.fulfill" :view.position.fulfill
+
+print ":view.background.visibility" :view.background.visibility
+print ":view.background.opacity" :view.background.opacity
+
+print ":view.rulers.visibility" :view.rulers.visibility
+print ":view.rulers.color" :view.rulers.color
+print ":view.rulers.bgColor" :view.rulers.bgColor
+
+print ":canvas.geometry.width" :canvas.geometry.width
+print ":canvas.geometry.height" :canvas.geometry.height
+print ":canvas.geometry.left" :canvas.geometry.left
+print ":canvas.geometry.right" :canvas.geometry.right
+print ":canvas.geometry.top" :canvas.geometry.top
+print ":canvas.geometry.bottom" :canvas.geometry.bottom
+print ":canvas.geometry.resolution" :canvas.geometry.resolution
+
+print ":script.execution.verbose" :script.execution.verbose
+print ":script.randomize.seed" :script.randomize.seed
+
+# -- not available outside a repeat flow --
+# print ":repeat.currentIteration" :repeat.currentIteration
+# print ":repeat.totalIteration" :repeat.totalIteration
+# print ":repeat.isFirstIteration" :repeat.isFirstIteration
+# print ":repeat.isLastIteration" :repeat.isLastIteration
+# print ":repeat.incAngle" :repeat.incAngle
+# print ":repeat.currentAngle" :repeat.currentAngle
+
+# -- not available outside a for each flow --
+# print ":foreach.currentIteration" :foreach.currentIteration
+# print ":foreach.totalIteration" :foreach.totalIteration
+# print ":foreach.isFirstIteration" :foreach.isFirstIteration
+# print ":foreach.isLastIteration" :foreach.isLastIteration
+# print ":foreach.incAngle" :foreach.incAngle
+# print ":foreach.currentAngle" :foreach.currentAngle
+
+
+
+# ------------------------------------------------------------------------------
+# testing expressions
+# ------------------------------------------------------------------------------
+
+# ===> need to formalise this test properly // check tests_parser-evaluation.bs & test_operators.bs
+set variable :x = [[11,12,13],
+                   [21,22,23],
+                   [31,32,33]]
+print :x[1]
+print :x[1][2]
+print :x
+
+
+
+
+set variable :text = "Test" " multiple"
+    ' string'
+        ` lines`
+
+set variable :z = 10
+set variable :x = 2 * :z
+set variable :x = 2 * (3 + :z)
+set variable :x = (2 * (3 + :z))/4
+set variable :x = :z%3
+set variable :x = :z//3
+set variable :x = (2 - 3) * (10 + 5)
+set variable :x = :z > 10
+set variable :x = :z >= 10
+set variable :x = :z < 10
+set variable :x = :z <= 10
+set variable :x = :z = 10
+set variable :x = :z <> 10
+set variable :x = ON xor ON
+set variable :x = OFF xor OFF
+set variable :x = OFF and OFF
+set variable :x = not OFF or OFF
+
+
+# ------------------------------------------------------------------------------
+# flow stop
+# ------------------------------------------------------------------------------
+stop script
+
+print "Should not be executed!"

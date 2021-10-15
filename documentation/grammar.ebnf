@@ -93,11 +93,7 @@ Action  ::= (
                 Action_Set_Fill |
                 Action_Set_Text |
                 Action_Set_Draw |
-                Action_Set_Canvas |
-                /*
-                Action_Set_Layer |
-                Action_Set_Selection |
-                */
+                Action_Set_View |
                 Action_Set_Script_Execution |
                 Action_Draw_Shape |
                 Action_Draw_Misc |
@@ -161,13 +157,14 @@ Action_Set_Draw
         ::= 'set' 'draw' (
                 ( 'antialiasing'        Evaluate_Boolean_Expression ) |
                 ( 'blending' 'mode'     BlendingMode_Expression ) |
-                ( 'opacity'             Evaluate_Number_Expression )
+                ( 'opacity'             Evaluate_Number_Expression ) |
+                ( 'origin'              PositionH_Expression PositionV_Expression )
             )
 
 
-/* Settings: Canvas grid */
-Action_Set_Canvas
-        ::= 'set' 'canvas' (
+/* Settings: view properties */
+Action_Set_View
+        ::= 'set' 'view' (
                 ( 'grid' | 'rulers' ) ( 'color' Color_Expression Color_Expression? ) |
 
                 (  'origin' | 'position' ) ( 'color'   Color_Expression ) |
@@ -177,8 +174,6 @@ Action_Set_Canvas
                 ( 'grid' 'size'  Evaluate_Number_Expression Evaluate_Number_Expression? Unit_M_Expression? ) |
                 ( ( 'origin' | 'position' ) 'size'  Evaluate_Number_Expression Unit_M_Expression? ) |
 
-
-                ( 'origin' 'position' PositionH_Expression PositionV_Expression ) |
                 ( 'grid' | 'origin' | 'position' | 'background' ) ( 'opacity' Evaluate_Number_Expression ) |
                 'position' (
                     ( 'fulfilled' Evaluate_Boolean_Expression ) |
@@ -193,13 +188,6 @@ Action_Set_Canvas
             )
 
 
-/*
-Action_Set_Layer
-        ::= 'TODO: define Set layer'
-
-Action_Set_Selection
-        ::= 'TODO: define Set selection'
-*/
 
 Action_Set_Script_Execution
         ::= 'set' 'script' (
@@ -225,7 +213,10 @@ Action_Draw_Shape
                 ( 'image' Evaluate_String_Expression ) |
                 ( 'scaled' 'image' Evaluate_String_Expression Evaluate_Number_Expression Unit_RM_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
                 ( 'text' Evaluate_String_Expression ) |
-                ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? )
+                ( 'star' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_RM_Expression? ) |
+                ( 'polygon' Evaluate_Number_Expression Evaluate_Number_Expression Unit_M_Expression? ) |
+                ( 'pie' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_R_Expression? ) |
+                ( 'arc' Evaluate_Number_Expression Unit_M_Expression? Evaluate_Number_Expression Unit_R_Expression? )
             ) |
             ('start' | 'stop' ) 'to' 'draw' 'shape'
 
@@ -335,6 +326,20 @@ Action_UIDialog
                             'with' ( 'default' 'index' (List_Expression|Evaluate_Number_Expression) ) |
                                    ( 'minimum' 'choices' Evaluate_Number_Expression)
                         )*
+                    ) |
+                    /* FONT NAME INPUT */
+                    (
+                        'font' 'input' Variable
+                        (
+                            'with' ( 'default' 'value' Evaluate_String_Expression )
+                        )?
+                    ) |
+                    /* FILE NAME INPUT */
+                    (
+                        'file' 'name' 'input' Variable
+                        (
+                            'with' ( 'default' 'value' Evaluate_String_Expression )
+                        )?
                     )
                 )
             )
