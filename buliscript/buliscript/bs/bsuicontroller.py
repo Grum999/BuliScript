@@ -906,6 +906,7 @@ class BSUIController(QObject):
             return ""
 
         if self.__currentDocument:
+            print(self.__currentDocument)
             #self.__interpreter.setOptionVerboseMode(True)
             if self.__dwConsoleOutput and self.__dwConsoleOutput.option(BSDockWidgetConsoleOutput.OPTION_AUTOCLEAR):
                 self.__dwConsoleOutput.console().clear()
@@ -918,9 +919,10 @@ class BSUIController(QObject):
             except EInterpreter as e:
                 if e.errorLevel()==EInterpreter.ERROR_LEVEL_STOP:
                     self.__interpreter.valid(f" *##lg#**SCRIPT EXECUTION STOPPED**:# {str(e)}", e.ast())
+                    print(e.ast())
                 else:
                     self.__interpreter.error(f" *##lr#**SCRIPT EXECUTION IN ERROR**:# #r#*{str(e)}", e.ast())
-                    Debug.print('traceback:', traceback.format_exc())
+                    print(e.ast())
                 return
             except Exception as e:
                 self.__interpreter.error(f" *##lr#**PYTHON ERROR**:# #r#*{str(e)}\n *##lr#**Traceback:*\n{traceback.format_exc()}")
@@ -934,8 +936,10 @@ class BSUIController(QObject):
             except EInterpreter as e:
                 if e.errorLevel()==EInterpreter.ERROR_LEVEL_STOP:
                     self.__interpreter.valid(f" *##lg#**SCRIPT EXECUTION STOPPED**:# #g#*{str(e)}", e.ast())
+                    print(e.ast())
                 else:
                     self.__interpreter.error(f" *##lr#**SCRIPT EXECUTION IN ERROR**:# #r#*{str(e)}", e.ast())
+                    print(e.ast())
                 return
             except Exception as e:
                 self.__interpreter.error(f" *##lr#**PYTHON ERROR**:# #r#*{str(e)}\n *##lr#**Traceback:**\n{traceback.format_exc()}")

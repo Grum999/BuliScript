@@ -292,6 +292,7 @@ class BSMainWindow(QMainWindow):
             def onEnter(dummy=None):
                 self.__uiController.commandDockLangageQuickHelpSet(self.sender().property('insert').split('\x01')[0])
 
+            #print(autoCompletion[0])
             action=WMenuForCommand(html.escape(autoCompletion[0]), menuTree[-1])
             action.setProperty('insert', autoCompletion[0])
             if len(autoCompletion)>1 and isinstance(autoCompletion[1], str):

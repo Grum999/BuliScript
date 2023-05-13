@@ -126,6 +126,7 @@ class BuliScript(Extension):
 
         if checkKritaVersion(5,0,0):
             # windowCreated signal has been implemented with krita 5.0.0
+            Krita.instance().notifier().setActive(True)
             Krita.instance().notifier().windowCreated.connect(windowCreated)
 
 

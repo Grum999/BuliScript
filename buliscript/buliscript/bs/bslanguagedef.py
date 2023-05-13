@@ -51,7 +51,7 @@ from buliscript.pktk.modules.tokenizer import (
 class BSLanguageDef(LanguageDef):
     # define token types
 
-    class ITokenType(TokenType, Enum):
+    class ITokenType(TokenType):
         STRING = ('String', 'A STRING value')
         NUMBER = ('Number', 'A NUMBER (integer, decimal) value')
         COLOR_CODE = ('Color code', 'A #RRGGBB or #AARRGGBB color code')
@@ -83,7 +83,6 @@ class BSLanguageDef(LanguageDef):
         ACTION_UICONSOLE = ('uiConsole', 'A <CONSOLE> action')
         ACTION_UIDIALOG = ('uiDialog', 'A <DIALOG> action')
         ACTION_UIDIALOG_OPTION = ('uiDialogOpt', 'A <DIALOG> option action')
-
 
         ACTION_UNCOMPLETE = ('uncompleteAct', 'An uncomplete action definition')
 
@@ -144,7 +143,8 @@ class BSLanguageDef(LanguageDef):
         CONSTANT_COLORLABEL = ('constColorlabel', 'A color label value')
         CONSTANT_POSITIONMODEL = ('constPositionModel', 'A position model')
 
-        TEXT=('default text', 'a default text')
+        TEXT = ('default text', 'a default text')
+
 
 
     def __init__(self):
