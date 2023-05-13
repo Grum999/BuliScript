@@ -6152,7 +6152,7 @@ class BSInterpreter(QObject):
         """
         self.__scriptBlockStack.setVariable(':text.size', value, BSVariableScope.CURRENT)
         if self.__painter:
-            size=BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX')
+            size=round(BSConvertUnits.convertMeasure(value, self.__unitCanvas(unit), 'PX'))
             if size<=0:
                 return
             font=self.__painter.font()
@@ -6704,7 +6704,7 @@ class BSInterpreter(QObject):
                 self.__painter.drawLine(QPointF(0, 0), QPointF(pt.x()-pt2.x(), pt.y()-pt2.y()) )
                 self.__renderer.setRotation(p['r'])
             else:
-                self.__painter.drawLine(0, 0, -dx, -dy)
+                self.__painter.drawLine(QPointF(0, 0), QPointF(-dx, -dy))
 
     def __drawShapeCircle(self, radius, unit):
         """Draw circle"""
@@ -6938,7 +6938,7 @@ class BSInterpreter(QObject):
             radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
             angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unitAngle), 'DEGREE')
 
-            rectangle=QRect(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
+            rectangle=QRectF(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
 
             # According to the documentation: "The startAngle and spanAngle must be specified in 1/16th of a degree, i.e. a full circle equals 5760 (16 * 360)"
             # what!??? X_X
@@ -6957,7 +6957,7 @@ class BSInterpreter(QObject):
             radiusPx=BSConvertUnits.convertMeasure(radius, self.__unitCanvas(unitRadius), 'PX')
             angleDegree=BSConvertUnits.convertMeasure(angle, self.__unitCanvas(unitAngle), 'DEGREE')
 
-            rectangle=QRect(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
+            rectangle=QRectF(-radiusPx, -radiusPx, 2*radiusPx, 2*radiusPx)
 
             # According to the documentation: "The startAngle and spanAngle must be specified in 1/16th of a degree, i.e. a full circle equals 5760 (16 * 360)"
             # what!??? X_X
@@ -6972,7 +6972,7 @@ class BSInterpreter(QObject):
             self.__painter.save()
             self.__painter.resetTransform()
             self.__painter.setCompositionMode(QPainter.CompositionMode_Clear)
-            self.__painter.eraseRect(QRect(QPoint(0, 0), self.__renderer.geometry().size()))
+            self.__painter.eraseRect(QRectF(QPoint(0, 0), self.__renderer.geometry().size()))
             self.__painter.restore()
 
     def __drawFillCanvasColor(self, color):
@@ -6981,7 +6981,7 @@ class BSInterpreter(QObject):
             self.__painter.save()
             self.__painter.resetTransform()
             self.__painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
-            self.__painter.fillRect(QRect(QPoint(0, 0), self.__renderer.geometry().size()), QBrush(color))
+            self.__painter.fillRect(QRectF(QPoint(0, 0), self.__renderer.geometry().size()), QBrush(color))
             self.__painter.restore()
 
     def __drawFillCanvasImage(self, imageReference, tiling, scale, offset, rotation):
@@ -7073,7 +7073,7 @@ class BSInterpreter(QObject):
                     transform.translate(oX, oY)
 
                 brush.setTransform(transform)
-                self.__painter.fillRect(QRect(QPoint(0, 0), self.__renderer.geometry().size()), brush)
+                self.__painter.fillRect(QRectF(QPoint(0, 0), self.__renderer.geometry().size()), brush)
             else:
                 # calculate position
                 if oX!=0 or oY!=0:

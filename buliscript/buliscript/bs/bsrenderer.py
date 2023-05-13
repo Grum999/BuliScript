@@ -87,7 +87,7 @@ class BSWRendererView(QGraphicsView):
             ptC=self.mapToScene(QPoint(rulerProperties['ruler_size']+1, rulerProperties['ruler_size']+1))
 
             # calculate size for secondary ticks
-            secondarySize=rulerProperties['ruler_size']-(rulerProperties['ruler_size']-rulerProperties['ruler_font_height'])/2
+            secondarySize=rulerProperties['ruler_size']-(rulerProperties['ruler_size']-rulerProperties['ruler_font_height'])//2
 
             # generate ticks lines
             lines=[]
@@ -334,7 +334,7 @@ class BSWRendererScene(QGraphicsScene):
         self.__positionBrush=QBrush(QColor("#808000FF"))
         self.__positionSize = 20
         self.__positionFulfill = False
-        self.__positionPosition=QPoint()
+        self.__positionPosition=QPointF()
         self.__positionAngle=0
         self.__positionVisible=True
         self.__positionAxis=False
@@ -410,19 +410,19 @@ class BSWRendererScene(QGraphicsScene):
         # generate vertical grid lines
         for positionX in range(firstLeftStroke, right, self.__gridSizeWidth):
             if (positionX % mainStroke != 0):
-                self.__gridStrokesSecondary.append(QLine(positionX, top, positionX, bottom))
+                self.__gridStrokesSecondary.append(QLineF(positionX, top, positionX, bottom))
                 self.__gridStrokesRulerH.append((False, positionX))
             else:
-                self.__gridStrokesMain.append(QLine(positionX, top, positionX, bottom))
+                self.__gridStrokesMain.append(QLineF(positionX, top, positionX, bottom))
                 self.__gridStrokesRulerH.append((True, positionX))
 
         # generate horizontal grid lines
         for positionY in range(firstTopStroke, bottom, self.__gridSizeWidth):
             if (positionY % mainStroke != 0):
-                self.__gridStrokesSecondary.append(QLine(left, positionY, right, positionY))
+                self.__gridStrokesSecondary.append(QLineF(left, positionY, right, positionY))
                 self.__gridStrokesRulerV.append((False, positionY))
             else:
-                self.__gridStrokesMain.append(QLine(left, positionY, right, positionY))
+                self.__gridStrokesMain.append(QLineF(left, positionY, right, positionY))
                 self.__gridStrokesRulerV.append((True, positionY))
 
     def __generateGridRulerNumbers(self, rect):
@@ -464,24 +464,24 @@ class BSWRendererScene(QGraphicsScene):
 
             if direction=='L':
                 size=-size
-                points.append(QPoint(size-BSWRendererScene.__ARROW_SIZE, 0))
-                points.append(QPoint(size, BSWRendererScene.__ARROW_SIZE))
-                points.append(QPoint(size, -BSWRendererScene.__ARROW_SIZE))
+                points.append(QPointF(size-BSWRendererScene.__ARROW_SIZE, 0))
+                points.append(QPointF(size, BSWRendererScene.__ARROW_SIZE))
+                points.append(QPointF(size, -BSWRendererScene.__ARROW_SIZE))
             elif direction=='R':
-                points.append(QPoint(size+BSWRendererScene.__ARROW_SIZE, 0))
-                points.append(QPoint(size, BSWRendererScene.__ARROW_SIZE))
-                points.append(QPoint(size, -BSWRendererScene.__ARROW_SIZE))
+                points.append(QPointF(size+BSWRendererScene.__ARROW_SIZE, 0))
+                points.append(QPointF(size, BSWRendererScene.__ARROW_SIZE))
+                points.append(QPointF(size, -BSWRendererScene.__ARROW_SIZE))
             elif direction=='T':
                 size=-size
-                points.append(QPoint(0, size-BSWRendererScene.__ARROW_SIZE))
-                points.append(QPoint(BSWRendererScene.__ARROW_SIZE, size))
-                points.append(QPoint(-BSWRendererScene.__ARROW_SIZE, size))
+                points.append(QPointF(0, size-BSWRendererScene.__ARROW_SIZE))
+                points.append(QPointF(BSWRendererScene.__ARROW_SIZE, size))
+                points.append(QPointF(-BSWRendererScene.__ARROW_SIZE, size))
             elif direction=='B':
-                points.append(QPoint(0, size+BSWRendererScene.__ARROW_SIZE))
-                points.append(QPoint(BSWRendererScene.__ARROW_SIZE, size))
-                points.append(QPoint(-BSWRendererScene.__ARROW_SIZE, size))
+                points.append(QPointF(0, size+BSWRendererScene.__ARROW_SIZE))
+                points.append(QPointF(BSWRendererScene.__ARROW_SIZE, size))
+                points.append(QPointF(-BSWRendererScene.__ARROW_SIZE, size))
 
-            return QPolygon(points)
+            return QPolygonF(points)
 
         if len(self.__originStrokes)>0:
             # strokes are already generated, does nothing
@@ -492,8 +492,8 @@ class BSWRendererScene(QGraphicsScene):
 
         # absissa, ordinate
         self.__originStrokes=[
-                QLine(-size, 0, size, 0),
-                QLine(0, -size, 0, size)
+                QLineF(-size, 0, size, 0),
+                QLineF(0, -size, 0, size)
             ]
 
         # absissa
@@ -531,34 +531,34 @@ class BSWRendererScene(QGraphicsScene):
 
         if self.__positionModel==BSWRendererScene.POSITION_MODEL_ARROWHEAD:
             self.__positionPoints=[
-                    QPoint(0, size),
-                    QPoint(size*math.cos(-angle), size*math.sin(-angle)),
-                    QPoint(0, -size*0.25),
-                    QPoint(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
+                    QPointF(0, size),
+                    QPointF(size*math.cos(-angle), size*math.sin(-angle)),
+                    QPointF(0, -size*0.25),
+                    QPointF(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
                 ]
         elif self.__positionModel==BSWRendererScene.POSITION_MODEL_UPWARD:
             self.__positionPoints=[
-                    QPoint(0, size),
-                    QPoint(size*math.cos(-angle), size*math.sin(-angle)),
-                    QPoint(size*math.cos(-angle)/2, size*math.sin(-angle)),
-                    QPoint(size*math.cos(-angle)/2, -1.25*size),
-                    QPoint(size*math.cos(math.pi+angle)/2, -1.25*size),
-                    QPoint(size*math.cos(math.pi+angle)/2, size*math.sin(math.pi+angle)),
-                    QPoint(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
+                    QPointF(0, size),
+                    QPointF(size*math.cos(-angle), size*math.sin(-angle)),
+                    QPointF(size*math.cos(-angle)/2, size*math.sin(-angle)),
+                    QPointF(size*math.cos(-angle)/2, -1.25*size),
+                    QPointF(size*math.cos(math.pi+angle)/2, -1.25*size),
+                    QPointF(size*math.cos(math.pi+angle)/2, size*math.sin(math.pi+angle)),
+                    QPointF(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
                 ]
         else:
             # BASIC
             self.__positionPoints=[
-                    QPoint(0, size),
-                    QPoint(size*math.cos(-angle), size*math.sin(-angle)),
-                    QPoint(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
+                    QPointF(0, size),
+                    QPointF(size*math.cos(-angle), size*math.sin(-angle)),
+                    QPointF(size*math.cos(math.pi+angle), size*math.sin(math.pi+angle))
                 ]
 
 
         # axis
         self.__positionStrokes=[
-                QLine(0, self.__positionAxisLength, 0, -self.__positionAxisLength),
-                QLine(-self.__positionAxisLength, 0, self.__positionAxisLength, 0)
+                QLineF(0, self.__positionAxisLength, 0, -self.__positionAxisLength),
+                QLineF(-self.__positionAxisLength, 0, self.__positionAxisLength, 0)
             ]
 
 
@@ -700,7 +700,7 @@ class BSWRendererScene(QGraphicsScene):
                 painter.setRenderHints(QPainter.Antialiasing, True)
                 painter.drawLines(*self.__positionStrokes)
             else:
-                painter.drawEllipse(QPoint(0, 0), self.__positionSize/10, self.__positionSize/10)
+                painter.drawEllipse(QPointF(0, 0), self.__positionSize/10, self.__positionSize/10)
             painter.restore()
 
         self.__gridStrokesRect=rect
@@ -1500,4 +1500,4 @@ class BSGeometry:
         return self.__vTranslate
 
     def size(self):
-        return QSize(self.__width, self.__height)
+        return QSizeF(self.__width, self.__height)
