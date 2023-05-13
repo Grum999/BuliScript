@@ -21,8 +21,6 @@ import sys
 import os
 import json
 import base64
-from types import FunctionType
-
 
 import xml.etree.ElementTree as ET
 
@@ -528,16 +526,6 @@ class Debug(object):
     def setEnabled(value):
         """set Debug enabled or not"""
         Debug.__enabled = value
-
-    @staticmethod
-    def print(value, *argv):
-        """Print value to console, using argv for formatting"""
-        if Debug.__enabled and isinstance(value, str):
-            sys.stdout = sys.__stdout__
-            if len(argv) > 0:
-                print('DEBUG:', value.format(*argv))
-            else:
-                print('DEBUG:', value)
 
     @staticmethod
     def swPrint(pattern=None):
